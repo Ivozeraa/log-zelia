@@ -1,7 +1,7 @@
 import React from 'react'
 
-export const Home = () => {
+export const Home = ({ username }) => {
   return (
-    <div>Home</div>
+    <div>Bem vindo(a), <span>{username}</span></div>
   )
 }
