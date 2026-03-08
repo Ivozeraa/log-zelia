@@ -1,27 +1,30 @@
+import { NavLink } from 'react-router-dom'
+
+// Ícones
 import { FaHome, FaExclamationCircle, FaPaste, FaCog } from 'react-icons/fa'
 
 export const Sidebar = () => {
   return (
-    <nav className='flex flex-col gap-5'>
-      <span className='flex items-center gap-2'>
+    <aside className='flex flex-col gap-5 fixed'>
+      <NavLink to="/"className='flex items-center gap-2 cursor-pointer'>
         <FaHome />
         <p>Início</p>
-      </span>
+      </NavLink>
 
-      <span className='flex items-center gap-2'>
+      <NavLink to="/advertencias" className='flex items-center gap-2 cursor-pointer'>
         <FaExclamationCircle />
         <p>Advertências</p>
-      </span>
+      </NavLink>
 
-      <span className='flex items-center gap-2'>
+      <NavLink to="/gestao" className='flex items-center gap-2 cursor-pointer'>
         <FaPaste />
         <p>Gestão</p>
-      </span>
+      </NavLink>
 
-      <span className='flex items-center gap-2'>
+      <NavLink to="/configuracoes" className='flex items-center  gap-2 cursor-pointer'>
         <FaCog />
         <p>Configurações</p>
-      </span>
-    </nav>
+      </NavLink>
+    </aside>
   )
 }
