@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { HashRouter as Router, Routes, Route } from "react-router-dom";
 
 import Layout from "./Layout";
 
@@ -10,6 +10,7 @@ import ProtectedRoute from "./routers/ProtectedRoute";
 import { Login } from "./pages/Login";
 
 function App() {
+
   return (
     <Router>
       <Routes>
@@ -22,7 +23,7 @@ function App() {
             </ProtectedRoute>
           }
         >
-          
+
           <Route index element={<Home username={"Usuário"} />} />
           <Route path="advertencias" element={<Occurrences />} />
           <Route path="gestao" element={<Management />} />
