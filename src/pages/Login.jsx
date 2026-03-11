@@ -4,12 +4,12 @@ import { useNavigate } from "react-router-dom"
 
 export const Login = () => {
 
-  const [email,setEmail] = useState("")
-  const [senha,setSenha] = useState("")
+  const [email, setEmail] = useState("")
+  const [senha, setSenha] = useState("")
 
   const navigate = useNavigate()
 
-  async function handleLogin(e){
+  async function handleLogin(e) {
     e.preventDefault()
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -17,7 +17,7 @@ export const Login = () => {
       password: senha
     })
 
-    if(error){
+    if (error) {
       alert("Erro no login")
       return
     }
@@ -26,10 +26,8 @@ export const Login = () => {
     navigate("/")
   }
 
-  return(
-
+  return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-
       <form
         onSubmit={handleLogin}
         className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md space-y-5"
@@ -43,14 +41,14 @@ export const Login = () => {
           type="email"
           placeholder="Email"
           className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          onChange={e=>setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
         />
 
         <input
           type="password"
           placeholder="Senha"
           className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          onChange={e=>setSenha(e.target.value)}
+          onChange={e => setSenha(e.target.value)}
         />
 
         <button
