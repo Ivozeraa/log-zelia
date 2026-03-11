@@ -3,7 +3,7 @@ import { useAuth } from "../contexts/AuthContext"
 import { Card } from '../components/Card'
 
 export const Home = () => {
-   const { user } = useAuth()
+  const { user } = useAuth()
 
   return (
     <div className='flex flex-col gap-10'>
@@ -11,7 +11,7 @@ export const Home = () => {
 
       <div>
         <span className='flex gap-2 items-center justify-center bg-red-900 p-2 rounded-xl cursor-pointer'>
-          <FaExclamationTriangle size={20} className='text-white'/>
+          <FaExclamationTriangle size={20} className='text-white' />
           <p className='text-white '>Adicionar Advertência</p>
         </span>
       </div>

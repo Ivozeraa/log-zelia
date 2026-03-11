@@ -3,7 +3,7 @@ import { useAuth } from "../contexts/AuthContext"
 import { FaBell, FaRegUserCircle } from "react-icons/fa"
 
 export const Header = () => {
-   const { user } = useAuth()
+  const { user } = useAuth()
   return (
     <header className="flex justify-between items-center py-2 fixed w-full px-10 border-b-2 border-gray-300 bg-white left-0 top-0">      <div className="flex items-center gap-2">
       <img className="w-25" src={logo} alt="Logo Log Zélia" />
