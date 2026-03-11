@@ -1,5 +1,3 @@
-import { NavLink } from 'react-router-dom'
-
 import { SidebarOptions as So } from './SidebarOptions'
 
 // Ícones
