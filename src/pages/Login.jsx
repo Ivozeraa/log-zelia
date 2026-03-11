@@ -2,7 +2,7 @@ import { useState } from "react"
 import { supabase } from "../utils/supabase"
 import { useNavigate } from "react-router-dom"
 
-import img from "../assets/images/img.jpg"
+import img from "../assets/images/escola-frente.jpg"
 
 export const Login = () => {
 
@@ -30,13 +30,6 @@ export const Login = () => {
   return (
     <div className="flex h-screen">
 
-      <div className="w-1/2 h-full">
-        <img
-          src={img}
-          alt="Imagem de login"
-          className="w-full h-full object-cover"
-        />
-      </div>
 
       <div className="w-1/2 flex items-center justify-center bg-gray-100">
         <form
@@ -71,6 +64,13 @@ export const Login = () => {
         </form>
       </div>
 
+      <div className="w-1/2 h-full">
+        <img
+          src={img}
+          alt="Imagem de login"
+          className="w-full h-full object-cover"
+        />
+      </div>
     </div>
   )
 }
