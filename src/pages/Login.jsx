@@ -2,7 +2,9 @@ import { useState } from "react"
 import { supabase } from "../utils/supabase"
 import { useNavigate } from "react-router-dom"
 
-import img from "../assets/images/escola-frente.jpg"
+import bgImg from "../assets/images/escola-frente.jpg"
+import logo from "../assets/images/logo-login.png"
+
 
 export const Login = () => {
 
@@ -30,8 +32,21 @@ export const Login = () => {
   return (
     <div className="flex h-screen">
 
+      <section className="w-1/2 h-full relative">
+        <img
+          src={bgImg}
+          alt="Imagem de login"
+          className="w-full h-full object-cover rounded-r-2xl"
+        />
 
-      <div className="w-1/2 flex items-center justify-center bg-gray-100">
+        <div className="absolute inset-0 bg-gradient-to-b from-green-700/50 to-green-900/70 rounded-r-2xl"></div>
+
+        <div className="absolute top-0 left-0 flex items-center justify-center w-full h-full">
+          <img src={logo} alt="Logo" />
+        </div>
+      </section>
+
+      <div className="w-1/2 flex items-center justify-center">
         <form
           onSubmit={handleLogin}
           className="p-8 w-full max-w-md space-y-5"
@@ -64,13 +79,6 @@ export const Login = () => {
         </form>
       </div>
 
-      <div className="w-1/2 h-full">
-        <img
-          src={img}
-          alt="Imagem de login"
-          className="w-full h-full object-cover"
-        />
-      </div>
     </div>
   )
 }
