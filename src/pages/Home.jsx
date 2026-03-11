@@ -1,11 +1,13 @@
 import { FaExclamationTriangle } from 'react-icons/fa'
-
+import { useAuth } from "../contexts/AuthContext"
 import { Card } from '../components/Card'
 
-export const Home = ({ username }) => {
+export const Home = () => {
+   const { user } = useAuth()
+
   return (
     <div className='flex flex-col gap-10'>
-      <p className='text-3xl'>Bem vindo(a), <span className='text-green-700'>{username}</span>!</p>
+      <p className='text-3xl'>Bem vindo(a), <span className='text-green-700'>{user?.nome}</span>!</p>
 
       <div>
         <span className='flex gap-2 items-center justify-center bg-red-900 p-2 rounded-xl cursor-pointer'>
