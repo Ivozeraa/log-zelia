@@ -2,6 +2,7 @@ import { FaExclamationTriangle } from 'react-icons/fa'
 import { useAuth } from "../contexts/AuthContext"
 import { Card } from '../components/Card'
 
+
 export const Home = () => {
   const { user } = useAuth()
 
