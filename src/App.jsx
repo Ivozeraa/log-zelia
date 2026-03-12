@@ -24,7 +24,7 @@ function App() {
           }
         >
 
-          <Route index element={<Home username={"Usuário"} />} />
+          <Route index element={<Home />} />
           <Route path="advertencias" element={<Occurrences />} />
           <Route path="gestao" element={<Management />} />
           <Route path="configuracoes" element={<Settings />} />

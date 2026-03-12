@@ -8,7 +8,7 @@ function Layout() {
       <Header username={"Usuário"} />
       <div className='flex pt-25'>
         <Sidebar />
-        <div className="ml-85 pt-10 pr-10"><Outlet /></div>
+        <div className="ml-85 pt-10 pr-10 w-full"><Outlet /></div>
       </div>
     </div>
   )
