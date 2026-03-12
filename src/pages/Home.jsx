@@ -17,10 +17,13 @@ export const Home = () => {
         </span>
       </div>
 
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full'>
-        <Card title="Ocorrências" content="180" subtitle="no ano" />
-        <Card title="Pendentes" content="45" subtitle="atualmente" />
-        <Card title="Resolvidas" content="135" subtitle="no ano" />
+      <div className='flex flex-col gap-2'>
+        <p className='font-bold'>Dashboard</p>
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full'>
+          <Card title="Ocorrências" content="180" subtitle="no ano" />
+          <Card title="Pendentes" content="45" subtitle="atualmente" />
+          <Card title="Resolvidas" content="135" subtitle="no ano" />
+        </div>
       </div>
     </div>
   )
