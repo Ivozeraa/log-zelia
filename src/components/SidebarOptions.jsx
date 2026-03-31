@@ -14,7 +14,7 @@ export const SidebarOptions = ({ to, icon: Icon, text }) => {
           <p>{text}</p>
 
           <span
-            className={`absolute left-0 bottom-0 h-0.5 w-full bg-green-700 origin-left  ${isActive ? "scale-x-0" : "scale-x-0 group-hover:scale-x-100 transition-transform duration-300bd"
+            className={`absolute left-0 bottom-0 h-0.5 w-full bg-green-700 origin-left  ${isActive ? "scale-x-0" : "scale-x-0 group-hover:scale-x-100 transition-transform duration-300"
               }`}
           ></span>
         </div>

@@ -23,7 +23,12 @@ function App() {
             </ProtectedRoute>
           }
         >
+<<<<<<< HEAD
           <Route index element={<Home username={"Usuário"} />} />
+=======
+
+          <Route index element={<Home />} />
+>>>>>>> 165dea22fa7088c69c5df1924f7a3bc82c2d6280
           <Route path="advertencias" element={<Occurrences />} />
           <Route path="gestao" element={<Management />} />
           <Route path="configuracoes" element={<Settings />} />

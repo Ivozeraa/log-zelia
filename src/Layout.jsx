@@ -6,9 +6,9 @@ function Layout() {
   return (
     <div className='text-2xl font-inter '>
       <Header username={"Usuário"} />
-      <div className='flex pt-25'>
+      <div className='flex pt-25 -z-30'>
         <Sidebar />
-        <div className="ml-85 pt-10 pr-10"><Outlet /></div>
+        <div className="ml-85 pt-10 pr-10  w-full"><Outlet /></div>
       </div>
     </div>
   )

@@ -13,5 +13,3 @@ async function teste(){
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-
-        
