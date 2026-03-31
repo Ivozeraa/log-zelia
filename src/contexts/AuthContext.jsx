@@ -19,13 +19,19 @@ export function AuthProvider({ children }) {
         return
       }
 
+      const authUser = data.user
+
       const { data: perfil } = await supabase
         .from("usuarios")
         .select("nome, role_id, escola_id")
-        .eq("id", data.user.id)
+        .eq("id", authUser.id)
         .single()
 
-      setUser(perfil)
+      setUser({
+        id: authUser.id,
+        ...perfil
+      })
+
       setLoading(false)
     }
 

@@ -1,6 +1,7 @@
 import { FaExclamationTriangle } from 'react-icons/fa'
 import { useAuth } from "../contexts/AuthContext"
 import { Card } from '../components/Card'
+import { UploadAvatar } from '../components/UploadAvatar'
 
 
 export const Home = () => {
@@ -19,6 +20,7 @@ export const Home = () => {
 
       <div>
         <Card />
+        <UploadAvatar />
       </div>
     </div>
   )

@@ -23,7 +23,6 @@ function App() {
             </ProtectedRoute>
           }
         >
-
           <Route index element={<Home username={"Usuário"} />} />
           <Route path="advertencias" element={<Occurrences />} />
           <Route path="gestao" element={<Management />} />
