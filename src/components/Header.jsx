@@ -1,11 +1,14 @@
 import { useState } from "react"
-import { useAuth } from "../contexts/AuthContext"
+import { useAuth } from "../hooks/useAuth"
 import logo from "../assets/images/logo.png"
 import { UserSidebar } from "./UserSidebar"
-import { FaBell, FaRegUserCircle } from "react-icons/fa"
+import { FaBell } from "react-icons/fa"
 import { CurrentUserAvatar } from "./CurrentUserAvatar"
+import { useCurrentUserName } from "../hooks/useCurrentUserName"
 
+export function Header() {
   const { user } = useAuth()
+  const name = useCurrentUserName()
   const [open, setOpen] = useState(false)
 
   function toggleSidebar() {
@@ -30,8 +33,8 @@ import { CurrentUserAvatar } from "./CurrentUserAvatar"
             className="flex items-center gap-2 cursor-pointer"
             onClick={toggleSidebar}
           >
-            <p>{user?.nome}</p>
-            <FaRegUserCircle size={30} />
+            <p>{user?.nome || name || "Usuário"}</p>
+            <CurrentUserAvatar />
           </div>
         </div>
 
@@ -48,3 +51,4 @@ import { CurrentUserAvatar } from "./CurrentUserAvatar"
     </>
   )
 }
+

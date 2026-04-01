@@ -1,6 +1,8 @@
 import { NavLink } from "react-router-dom"
 
-export const SidebarOptions = ({ to, icon: Icon, text }) => {
+export const SidebarOptions = ({ to, icon, text }) => {
+  const IconComponent = icon
+
   return (
     <NavLink to={to}>
       {({ isActive }) => (
@@ -10,7 +12,7 @@ export const SidebarOptions = ({ to, icon: Icon, text }) => {
             : "text-gray-700 hover:text-green-700"
             }`}
         >
-          <Icon />
+          <IconComponent />
           <p>{text}</p>
 
           <span

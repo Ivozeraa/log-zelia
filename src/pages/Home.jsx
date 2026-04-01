@@ -1,5 +1,5 @@
 import { FaExclamationTriangle } from 'react-icons/fa'
-import { useAuth } from "../contexts/AuthContext"
+import { useAuth } from "../hooks/useAuth"
 import { Card } from '../components/Card'
 import { UploadAvatar } from '../components/UploadAvatar'
 

@@ -10,5 +10,9 @@ export async function getPerfil() {
     .eq("id", userData.user.id)
     .single()
 
+  if (error) {
+    throw error
+  }
+
   return data
 }

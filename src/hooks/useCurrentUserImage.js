@@ -1,22 +1,6 @@
-import { useEffect, useState } from "react"
-import { supabase } from "../utils/supabase"
+import { useAuth } from "./useAuth"
 
 export function useCurrentUserImage(){
-
-  const [image,setImage] = useState(null)
-
-  useEffect(()=>{
-
-    async function load(){
-
-      const { data } = await supabase.auth.getUser()
-
-      setImage(data.user?.user_metadata?.avatar_url)
-    }
-
-    load()
-
-  },[])
-
-  return image
+  const { user } = useAuth()
+  return user?.avatar_url || null
 }

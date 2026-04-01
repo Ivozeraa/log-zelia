@@ -25,15 +25,22 @@ export async function uploadAvatar(file){
     return
   }
 
-  const { data: publicUrl } = supabase
+  const { data: publicUrlData } = supabase
     .storage
     .from("avatars")
     .getPublicUrl(filePath)
 
+  const publicUrl = publicUrlData?.publicUrl
+  if(!publicUrl){
+    console.error("Não foi possível gerar URL pública do avatar")
+    return null
+  }
+
   await supabase.auth.updateUser({
     data:{
-      avatar_url: publicUrl.publicUrl
+      avatar_url: publicUrl
     }
   })
 
+  return publicUrl
 }
