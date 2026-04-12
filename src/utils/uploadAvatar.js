@@ -10,7 +10,8 @@ export async function uploadAvatar(file){
 
   const ext = file.name.split(".").pop()
 
-  const filePath = `${user.id}.${ext}`
+  const filePath = `${userId}/avatar.jpg`
+
 
   const { error: uploadError } = await supabase
     .storage
