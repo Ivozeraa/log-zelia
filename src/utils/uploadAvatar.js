@@ -3,19 +3,14 @@ import { supabase } from "./supabase";
 export async function uploadAvatar(file) {
   const { data, error } = await supabase.auth.getUser();
 
-  const { data, error } = await supabase.auth.getUser()
-
   if(error || !data.user || !file){
     console.error("Usuário não autenticado ou arquivo inválido")
     return
   }
 
   const user = data.user
-  const userId = user.id
 
   const filePath = `${user.id}/avatar.${ext}`;
-
-  const filePath = `${userId}/avatar.${ext}`
 
   const { error: uploadError } = await supabase
     .storage
