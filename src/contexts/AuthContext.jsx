@@ -35,7 +35,7 @@ export function AuthProvider({ children }) {
     }
 
     const finalName = perfil?.nome || authUser.user_metadata?.name || authUser.email || "Usuário"
-    const finalAvatar = authUser.user_metadata?.avatar_url || (perfil && perfil.avatar_url) || null
+    const finalAvatar = authUser.user_metadata?.avatar_url || null
 
     setUser({
       id: authUser.id,
@@ -65,8 +65,13 @@ export function AuthProvider({ children }) {
     }
   },[])
 
+  async function logout(){
+    await supabase.auth.signOut()
+    setUser(null)
+  }
+
   return (
-    <AuthContext.Provider value={{user,loading,refreshUser: loadUser}}>
+    <AuthContext.Provider value={{user,loading,refreshUser: loadUser, logout}}>
       {children}
     </AuthContext.Provider>
   )

@@ -1,46 +1,47 @@
-import { supabase } from "./supabase"
+import { supabase } from "./supabase";
 
-export async function uploadAvatar(file){
+export async function uploadAvatar(file) {
+  const { data, error } = await supabase.auth.getUser();
 
-  const { data } = await supabase.auth.getUser()
+  if (error || !data.user || !file) {
+    console.error("Usuário não autenticado ou arquivo inválido");
+    return;
+  }
 
-  const user = data.user
+  const user = data.user;
 
-  if(!user || !file) return
+  const ext = file.name.split(".").pop();
 
-  const ext = file.name.split(".").pop()
+  const filePath = `${user.id}/avatar.${ext}`;
 
-  const filePath = `${user.id}.${ext}`
-
-  const { error: uploadError } = await supabase
-    .storage
+  const { error: uploadError } = await supabase.storage
     .from("avatars")
     .upload(filePath, file, {
       upsert: true,
-      contentType: file.type
-    })
+      contentType: file.type,
+    });
 
-  if(uploadError){
-    console.error(uploadError)
-    return
+  if (uploadError) {
+    console.error(uploadError);
+    return;
   }
 
-  const { data: publicUrlData } = supabase
-    .storage
+  const { data: signedData, error: urlError } = await supabase.storage
     .from("avatars")
-    .getPublicUrl(filePath)
+    .createSignedUrl(filePath, 60 * 60);
 
-  const publicUrl = publicUrlData?.publicUrl
-  if(!publicUrl){
-    console.error("Não foi possível gerar URL pública do avatar")
-    return null
+  if (urlError || !signedData?.signedUrl) {
+    console.error("Erro ao gerar URL:", urlError);
+    return null;
   }
+
+  const avatarUrl = signedData.signedUrl;
 
   await supabase.auth.updateUser({
-    data:{
-      avatar_url: publicUrl
-    }
-  })
+    data: {
+      avatar_url: avatarUrl,
+    },
+  });
 
-  return publicUrl
+  return avatarUrl;
 }
