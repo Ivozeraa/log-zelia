@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { FaExclamationTriangle } from 'react-icons/fa'
 import { useAuth } from "../hooks/useAuth"
 import { Card } from '../components/Card'
-import { DivBackground } from '../components/DivBackground'
+import { Modal } from '../components/Modal'
 
 export const Home = () => {
   const { user } = useAuth()
@@ -33,7 +33,10 @@ export const Home = () => {
         </div>
       </div>
 
-      {open && <DivBackground close={() => setOpen(false)} />}
+      <Modal isOpen={open} onClose={() => setOpen(!open)} title="Adicionar Advertência">  
+        
+      
+      </Modal>
     </div>
   )
 }
