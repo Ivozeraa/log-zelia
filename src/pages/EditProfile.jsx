@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "../hooks/useAuth"
 import { uploadAvatar } from "../utils/uploadAvatar"
 import { supabase } from "../utils/supabase"
@@ -6,15 +6,29 @@ import { FaUser, FaCamera, FaSave } from "react-icons/fa"
 
 export const EditProfile = () => {
   const { user, refreshUser } = useAuth()
-  const [nome, setNome] = useState(user?.nome || "")
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
+  const [nome, setNome] = useState("")
+  const [loadingNome, setLoadingNome] = useState(false)
+  const [errorNome, setErrorNome] = useState(null)
+  const [successNome, setSuccessNome] = useState(null)
+  const [loadingAvatar, setLoadingAvatar] = useState(false)
+  const [errorAvatar, setErrorAvatar] = useState(null)
+  const [successAvatar, setSuccessAvatar] = useState(null)
 
-  async function handleSave() {
-    setLoading(true)
-    setError(null)
-    setSuccess(null)
+  useEffect(() => {
+    if (user?.nome) {
+      setNome(user.nome)
+    }
+  }, [])
+
+  async function handleSaveNome() {
+    if (!nome.trim()) {
+      setErrorNome("O nome não pode estar vazio")
+      return
+    }
+
+    setLoadingNome(true)
+    setErrorNome(null)
+    setSuccessNome(null)
 
     try {
       const { error } = await supabase
@@ -25,35 +39,38 @@ export const EditProfile = () => {
       if (error) throw error
 
       await refreshUser()
-      setSuccess("Perfil atualizado com sucesso!")
+      setSuccessNome("Nome atualizado com sucesso!")
+      setTimeout(() => setSuccessNome(null), 3000)
     } catch (err) {
-      console.error("Erro ao atualizar perfil:", err)
-      setError("Falha ao atualizar perfil")
+      console.error("Erro ao atualizar nome:", err)
+      setErrorNome("Falha ao atualizar nome")
     } finally {
-      setLoading(false)
+      setLoadingNome(false)
     }
   }
 
-  async function handleAvatarChange(e) {
+  async function handleSaveAvatar(e) {
     const file = e.target.files?.[0]
     if (!file) return
 
     console.log("Arquivo selecionado:", file.name, "Tipo:", file.type, "Tamanho:", file.size)
-    setLoading(true)
-    setError(null)
-    setSuccess(null)
+    setLoadingAvatar(true)
+    setErrorAvatar(null)
+    setSuccessAvatar(null)
 
     try {
       const publicUrl = await uploadAvatar(file)
       if (!publicUrl) throw new Error("Upload falhou")
+      
       await refreshUser()
-      setSuccess("Avatar atualizado com sucesso!")
+      setSuccessAvatar("Avatar atualizado com sucesso!")
+      setTimeout(() => setSuccessAvatar(null), 3000)
     } catch (err) {
       console.error("Falha upload avatar:", err)
-      setError(`Falha ao enviar a foto: ${err.message}`)
+      setErrorAvatar(`Falha ao enviar a foto: ${err.message}`)
     } finally {
-      setLoading(false)
-      e.target.value = "" // Limpar input
+      setLoadingAvatar(false)
+      e.target.value = ""
     }
   }
 
@@ -64,26 +81,15 @@ export const EditProfile = () => {
         Editar Perfil
       </h1>
 
-      {/* Avatar atual */}
-      <div className="flex justify-center mb-6">
-        {user?.avatar_url ? (
-          <img
-            src={user.avatar_url}
-            alt="Avatar atual"
-            className="w-24 h-24 rounded-full object-cover border-4 border-gray-200"
-          />
-        ) : (
-          <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
-            <FaUser size={32} className="text-gray-400" />
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-6">
+     
+      <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 mb-6">
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-blue-700">
+          <FaUser />
+          Alterar Nome
+        </h2>
         <div>
-          <label className="flex items-center gap-2 text-sm font-medium mb-2">
-            <FaUser className="text-gray-500" />
-            Nome
+          <label className="block text-sm font-medium mb-2 text-gray-700">
+            Novo nome
           </label>
           <input
             type="text"
@@ -93,31 +99,52 @@ export const EditProfile = () => {
             placeholder="Digite seu nome"
           />
         </div>
+        <button
+          onClick={handleSaveNome}
+          disabled={loadingNome}
+          className="w-full mt-4 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg"
+        >
+          <FaSave />
+          {loadingNome ? "Salvando..." : "Salvar Nome"}
+        </button>
+        {errorNome && <p className="text-red-600 text-center bg-red-50 p-3 rounded-lg mt-3">{errorNome}</p>}
+        {successNome && <p className="text-green-600 text-center bg-green-50 p-3 rounded-lg mt-3">{successNome}</p>}
+      </div>
 
+
+      <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6">
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-green-700">
+          <FaCamera />
+          Alterar Foto
+        </h2>
+        <div className="flex justify-center mb-4">
+          {user?.avatar_url ? (
+            <img
+              src={user.avatar_url}
+              alt="Avatar atual"
+              className="w-24 h-24 rounded-full object-cover border-4 border-green-300"
+            />
+          ) : (
+            <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
+              <FaUser size={32} className="text-gray-400" />
+            </div>
+          )}
+        </div>
         <div>
-          <label className="flex items-center gap-2 text-sm font-medium mb-2">
-            <FaCamera className="text-gray-500" />
-            Avatar
+          <label className="block text-sm font-medium mb-2 text-gray-700">
+            Selecione uma nova foto
           </label>
           <input
             type="file"
             accept="image/*"
-            onChange={handleAvatarChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all"
+            onChange={handleSaveAvatar}
+            disabled={loadingAvatar}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
-
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-linear-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-        >
-          <FaSave />
-          {loading ? "Salvando..." : "Salvar"}
-        </button>
-
-        {error && <p className="text-red-600 text-center bg-red-50 p-3 rounded-lg">{error}</p>}
-        {success && <p className="text-green-600 text-center bg-green-50 p-3 rounded-lg">{success}</p>}
+        {loadingAvatar && <p className="text-blue-600 text-center mt-3">Enviando foto...</p>}
+        {errorAvatar && <p className="text-red-600 text-center bg-red-50 p-3 rounded-lg mt-3">{errorAvatar}</p>}
+        {successAvatar && <p className="text-green-600 text-center bg-green-50 p-3 rounded-lg mt-3">{successAvatar}</p>}
       </div>
     </div>
   )

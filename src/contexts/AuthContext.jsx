@@ -23,28 +23,46 @@ export function AuthProvider({ children }) {
     }
 
     const authUser = data.user
-
-    const { data: perfil, error: perfilError } = await supabase
-      .from("usuarios")
-      .select("nome, role_id, escola_id")
-      .eq("id", authUser.id)
-      .single()
-
-    if(perfilError && perfilError.code !== "42703"){
-      console.error("Erro buscando perfil:", perfilError)
+    
+    if(!authUser.id){
+      console.error("authUser.id não encontrado")
+      setLoading(false)
+      return
     }
 
-    const finalName = perfil?.nome || authUser.user_metadata?.name || authUser.email || "Usuário"
-    const finalAvatar = authUser.user_metadata?.avatar_url || null
+    try {
+      const { data: perfil, error: perfilError } = await supabase
+        .from("usuarios")
+        .select("id, nome, role_id, escola_id")
+        .eq("id", authUser.id)
+        .single()
 
-    setUser({
-      id: authUser.id,
-      nome: finalName,
-      role_id: perfil?.role_id || null,
-      escola_id: perfil?.escola_id || null,
-      email: authUser.email,
-      avatar_url: finalAvatar,
-    })
+      if(perfilError){
+        console.error("Erro buscando perfil:", perfilError)
+      }
+
+      const finalName = perfil?.nome || authUser.user_metadata?.name || "Usuário"
+      const finalAvatar = authUser.user_metadata?.avatar_url || null
+
+      setUser({
+        id: authUser.id,
+        nome: finalName,
+        role_id: perfil?.role_id || null,
+        escola_id: perfil?.escola_id || null,
+        email: authUser.email,
+        avatar_url: finalAvatar,
+      })
+    } catch (err) {
+      console.error("Erro em loadUser:", err)
+      setUser({
+        id: authUser.id,
+        nome: authUser.user_metadata?.name || "Usuário",
+        role_id: null,
+        escola_id: null,
+        email: authUser.email,
+        avatar_url: authUser.user_metadata?.avatar_url || null,
+      })
+    }
 
     setLoading(false)
   }
