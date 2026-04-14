@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { supabase } from "../utils/supabase"
 import { useNavigate } from "react-router-dom"
+import { FaEye, FaEyeSlash } from "react-icons/fa"
 
 import bgImg from "../assets/images/escola-frente.jpg"
 import logo from "../assets/images/logo-login.png"
@@ -10,6 +11,7 @@ export const Login = () => {
 
   const [email, setEmail] = useState("")
   const [senha, setSenha] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
 
   const navigate = useNavigate()
 
@@ -63,12 +65,21 @@ export const Login = () => {
             onChange={e => setEmail(e.target.value)}
           />
 
-          <input
-            type="password"
-            placeholder="Senha"
-            className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            onChange={e => setSenha(e.target.value)}
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Senha"
+              className="w-full border border-gray-300 rounded-lg p-3 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={e => setSenha(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </button>
+          </div>
 
           <button
             className="w-full bg-green-700 shadow-md text-white p-3 rounded-lg hover:bg-green-800 transition"

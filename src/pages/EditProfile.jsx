@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { useAuth } from "../hooks/useAuth"
 import { uploadAvatar } from "../utils/uploadAvatar"
 import { supabase } from "../utils/supabase"
-import { FaUser, FaCamera, FaSave } from "react-icons/fa"
+import { FaUser, FaCamera, FaSave, FaKey } from "react-icons/fa"
 
 export const EditProfile = () => {
   const { user, refreshUser } = useAuth()
@@ -13,12 +13,17 @@ export const EditProfile = () => {
   const [loadingAvatar, setLoadingAvatar] = useState(false)
   const [errorAvatar, setErrorAvatar] = useState(null)
   const [successAvatar, setSuccessAvatar] = useState(null)
+  const [novaSenha, setNovaSenha] = useState("")
+  const [confirmarSenha, setConfirmarSenha] = useState("")
+  const [loadingSenha, setLoadingSenha] = useState(false)
+  const [errorSenha, setErrorSenha] = useState(null)
+  const [successSenha, setSuccessSenha] = useState(null)
 
   useEffect(() => {
     if (user?.nome) {
       setNome(user.nome)
     }
-  }, [])
+  }, [user?.nome])
 
   async function handleSaveNome() {
     if (!nome.trim()) {
@@ -71,6 +76,45 @@ export const EditProfile = () => {
     } finally {
       setLoadingAvatar(false)
       e.target.value = ""
+    }
+  }
+
+  async function handleSaveSenha() {
+    if (!novaSenha.trim() || !confirmarSenha.trim()) {
+      setErrorSenha("Preencha a nova senha e confirmação")
+      return
+    }
+
+    if (novaSenha !== confirmarSenha) {
+      setErrorSenha("A nova senha e a confirmação não coincidem")
+      return
+    }
+
+    if (novaSenha.length < 6) {
+      setErrorSenha("A nova senha deve ter pelo menos 6 caracteres")
+      return
+    }
+
+    setLoadingSenha(true)
+    setErrorSenha(null)
+    setSuccessSenha(null)
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: novaSenha
+      })
+
+      if (error) throw error
+
+      setSuccessSenha("Senha atualizada com sucesso!")
+      setNovaSenha("")
+      setConfirmarSenha("")
+      setTimeout(() => setSuccessSenha(null), 3000)
+    } catch (err) {
+      console.error("Erro ao atualizar senha:", err)
+      setErrorSenha("Falha ao atualizar senha")
+    } finally {
+      setLoadingSenha(false)
     }
   }
 
@@ -145,6 +189,50 @@ export const EditProfile = () => {
         {loadingAvatar && <p className="text-blue-600 text-center mt-3">Enviando foto...</p>}
         {errorAvatar && <p className="text-red-600 text-center bg-red-50 p-3 rounded-lg mt-3">{errorAvatar}</p>}
         {successAvatar && <p className="text-green-600 text-center bg-green-50 p-3 rounded-lg mt-3">{successAvatar}</p>}
+      </div>
+
+      {/* SEÇÃO DE ALTERAÇÃO DE SENHA */}
+      <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6">
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-red-700">
+          <FaKey />
+          Alterar Senha
+        </h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-700">
+              Nova senha
+            </label>
+            <input
+              type="password"
+              value={novaSenha}
+              onChange={(e) => setNovaSenha(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+              placeholder="Digite a nova senha (mínimo 6 caracteres)"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-700">
+              Confirmar nova senha
+            </label>
+            <input
+              type="password"
+              value={confirmarSenha}
+              onChange={(e) => setConfirmarSenha(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+              placeholder="Confirme a nova senha"
+            />
+          </div>
+        </div>
+        <button
+          onClick={handleSaveSenha}
+          disabled={loadingSenha}
+          className="w-full mt-4 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg"
+        >
+          <FaKey />
+          {loadingSenha ? "Alterando..." : "Alterar Senha"}
+        </button>
+        {errorSenha && <p className="text-red-600 text-center bg-red-50 p-3 rounded-lg mt-3">{errorSenha}</p>}
+        {successSenha && <p className="text-green-600 text-center bg-green-50 p-3 rounded-lg mt-3">{successSenha}</p>}
       </div>
     </div>
   )
