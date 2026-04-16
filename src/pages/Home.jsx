@@ -17,6 +17,14 @@ export const Home = () => {
   const [turmaOpen, setTurmaOpen] = useState(false)
   const [alunoOpen, setAlunoOpen] = useState(false)
   const [alunoSearch, setAlunoSearch] = useState('')
+  const [dataOcorrido, setDataOcorrido] = useState('')
+  const [dataInicio, setDataInicio] = useState('')
+  const [dataTermino, setDataTermino] = useState('')
+  const [tipoAdvertencia, setTipoAdvertencia] = useState('')
+  const [tipoSituacao, setTipoSituacao] = useState('')
+  const [descricao, setDescricao] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [formMessage, setFormMessage] = useState('')
   const modalRef = useRef(null)
   const alunosFiltrados = alunos.filter((aluno) =>
     aluno.nome.toLowerCase().includes(alunoSearch.toLowerCase())
@@ -25,6 +33,76 @@ export const Home = () => {
   const selectedTurmaObj = turmas.find((turma) => turma.id === selectedTurma)
   const selectedAlunoObj = alunos.find((aluno) => aluno.id === selectedAluno)
 
+  const resetForm = () => {
+    setSelectedTurma('')
+    setSelectedAluno('')
+    setAlunoSearch('')
+    setDataOcorrido('')
+    setDataInicio('')
+    setDataTermino('')
+    setTipoAdvertencia('')
+    setTipoSituacao('')
+    setDescricao('')
+    setFormMessage('')
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    if (!user?.id) {
+      setFormMessage('Erro: usuário não autenticado.')
+      return
+    }
+
+    if (!selectedTurma || !selectedAluno || !dataOcorrido || !dataInicio || !dataTermino || !tipoAdvertencia || !tipoSituacao || !descricao) {
+      setFormMessage('Preencha todos os campos antes de registrar a ocorrência.')
+      return
+    }
+
+    setSubmitting(true)
+    setFormMessage('')
+
+    const payload = {
+      aluno_id: selectedAluno,
+      professor_id: user.id,
+      turma_id: selectedTurma,
+      data_ocorrido: dataOcorrido,
+      data_inicio: dataInicio,
+      data_fim: dataTermino,
+      tipo: tipoSituacao,
+      categoria: tipoAdvertencia,
+      descricao: descricao,
+    }
+
+    console.log('user', user)
+    console.log('turma', selectedTurmaObj)
+    console.log('payload ocorrencia', payload)
+    const { error } = await supabase.from('ocorrencias').insert(payload)
+
+    if (error) {
+      console.error('Erro ao registrar ocorrência:', error)
+      setSubmitting(false)
+      setFormMessage('Ocorreu um erro ao registrar. Tente novamente.')
+      return
+    }
+
+    const { error: updateError } = await supabase
+      .from('alunos')
+      .update({ status: tipoAdvertencia })
+      .eq('id', selectedAluno)
+
+    setSubmitting(false)
+
+    if (updateError) {
+      console.error('Erro ao atualizar status do aluno:', updateError)
+      setFormMessage('Ocorrência registrada, mas não foi possível atualizar o status do aluno.')
+      return
+    }
+
+    setFormMessage('Ocorrência registrada com sucesso!')
+    resetForm()
+    setOpen(false)
+  }
+
   useEffect(() => {
     const loadTurmas = async () => {
       // Se é admin (role_id === 1), carrega todas as turmas
@@ -32,8 +110,7 @@ export const Home = () => {
         console.log('Usuário é admin, carregando todas as turmas...')
         const { data: allTurmas, error: allError } = await supabase
           .from('turmas')
-          .select('id, nome')
-          .order('nome', { ascending: true })
+        .select('id, nome, escola_id')
 
         if (allError) {
           console.error('Erro carregando todas as turmas:', allError)
@@ -57,7 +134,7 @@ export const Home = () => {
       setLoadingTurmas(true)
       const { data: turmasData, error: turmasError } = await supabase
         .from('turmas')
-        .select('id, nome')
+        .select('id, nome, escola_id')
         .eq('escola_id', user.escola_id)
         .order('nome', { ascending: true })
 
@@ -139,7 +216,12 @@ export const Home = () => {
       </div>
 
       <Modal isOpen={open} onClose={() => setOpen(!open)} title="Adicionar Advertência">
-        <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" ref={modalRef}>
+        <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" ref={modalRef} onSubmit={handleSubmit}>
+          {formMessage && (
+            <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              {formMessage}
+            </div>
+          )}
           <div className="relative flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700">Turma</label>
             <button
@@ -233,25 +315,55 @@ export const Home = () => {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-slate-700">Data</label>
+            <label className="text-sm font-semibold text-slate-700">Data da ocorrência</label>
             <input
               type="date"
+              value={dataOcorrido}
+              onChange={(event) => setDataOcorrido(event.target.value)}
+              className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-slate-700">Data de início</label>
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(event) => setDataInicio(event.target.value)}
+              className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-slate-700">Data de término</label>
+            <input
+              type="date"
+              value={dataTermino}
+              onChange={(event) => setDataTermino(event.target.value)}
               className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
             />
           </div>
 
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700">Tipo de advertência</label>
-            <select className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+            <select
+              value={tipoAdvertencia}
+              onChange={(event) => setTipoAdvertencia(event.target.value)}
+              className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            >
               <option value="">Selecionar tipo</option>
               <option value="ocorrencia">Ocorrência</option>
-              <option value="Suspenção">Suspenção</option>
+              <option value="suspensao">Suspensão</option>
             </select>
           </div>
 
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700">Tipo de situação</label>
-            <select className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+            <select
+              value={tipoSituacao}
+              onChange={(event) => setTipoSituacao(event.target.value)}
+              className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            >
               <option value="">Selecionar situação</option>
               <option value="indisciplina">Indisciplina</option>
               <option value="infrequencia">Infrequência</option>
@@ -266,6 +378,8 @@ export const Home = () => {
             <textarea
               placeholder="Descreva a ocorrência..."
               rows={5}
+              value={descricao}
+              onChange={(event) => setDescricao(event.target.value)}
               className="h-36 rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-none"
             />
           </div>
@@ -273,7 +387,10 @@ export const Home = () => {
           <div className="sm:col-span-2 flex flex-col gap-3 sm:flex-row sm:justify-end sm:items-center">
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false)
+                resetForm()
+              }}
               className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 sm:w-auto"
             >
               Cancelar
@@ -281,9 +398,10 @@ export const Home = () => {
 
             <button
               type="submit"
-              className="w-full rounded-xl bg-red-600 px-4 py-3 text-white transition hover:bg-red-700 sm:w-auto"
+              disabled={submitting}
+              className="w-full rounded-xl bg-red-600 px-4 py-3 text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-400 sm:w-auto"
             >
-              Registrar
+              {submitting ? 'Registrando...' : 'Registrar'}
             </button>
           </div>
         </form>
