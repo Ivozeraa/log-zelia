@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../hooks/useAuth"
 import { FaRegUserCircle, FaUserEdit, FaSignOutAlt } from "react-icons/fa"
+import { Modal } from "./Modal"
 
 export const UserSidebar = ({ open }) => {
   const { user, logout } = useAuth()
