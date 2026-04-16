@@ -2,12 +2,21 @@ import { useEffect, useState } from "react"
 
 export const Modal = ({ isOpen, onClose, children, title }) => {
   const [show, setShow] = useState(false)
+  const [animate, setAnimate] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
       setShow(true)
+
+      setTimeout(() => {
+        setAnimate(true)
+      }, 10)
     } else {
-      setTimeout(() => setShow(false), 200)
+      setAnimate(false)
+
+      setTimeout(() => {
+        setShow(false)
+      }, 200)
     }
   }, [isOpen])
 
@@ -17,8 +26,9 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
     <>
       <div
         onClick={onClose}
-        className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-200 ${isOpen ? "opacity-100" : "opacity-0"
-          }`}
+        className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-200 ${
+          animate ? "opacity-100" : "opacity-0"
+        }`}
       />
 
       <div className="fixed inset-0 flex items-center justify-center z-50">
@@ -27,9 +37,11 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
           className={`
             bg-white rounded-lg shadow-lg max-w-md w-full mx-4 p-6
             transform transition-all duration-200
-            ${isOpen
-              ? "opacity-100 scale-100 translate-y-0"
-              : "opacity-0 scale-95 translate-y-4"}
+            ${
+              animate
+                ? "opacity-100 scale-100 translate-y-0"
+                : "opacity-0 scale-95 translate-y-4"
+            }
           `}
         >
           {title && (
