@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FaExclamationTriangle } from 'react-icons/fa'
+import { supabase } from '../utils/supabase'
 import { useAuth } from "../hooks/useAuth"
 import { Card } from '../components/Card'
 import { Modal } from '../components/Modal'
@@ -7,6 +8,88 @@ import { Modal } from '../components/Modal'
 export const Home = () => {
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
+  const [turmas, setTurmas] = useState([])
+  const [alunos, setAlunos] = useState([])
+  const [selectedTurma, setSelectedTurma] = useState('')
+  const [selectedAluno, setSelectedAluno] = useState('')
+  const [loadingTurmas, setLoadingTurmas] = useState(false)
+  const [loadingAlunos, setLoadingAlunos] = useState(false)
+  const alunosFiltrados = alunos
+
+  useEffect(() => {
+    const loadTurmas = async () => {
+      // Se é admin (role_id === 1), carrega todas as turmas
+      if (user?.role_id === 1) {
+        console.log('Usuário é admin, carregando todas as turmas...')
+        const { data: allTurmas, error: allError } = await supabase
+          .from('turmas')
+          .select('id, nome')
+          .order('nome', { ascending: true })
+
+        if (allError) {
+          console.error('Erro carregando todas as turmas:', allError)
+          setTurmas([])
+        } else {
+          setTurmas(allTurmas || [])
+        }
+        setLoadingTurmas(false)
+        return
+      }
+
+      // Se não é admin, verifica se tem escola_id
+      if (!user?.escola_id) {
+        console.log('Usuário não é admin e não tem escola_id')
+        setTurmas([])
+        setLoadingTurmas(false)
+        return
+      }
+
+      // Carrega turmas da escola do usuário
+      setLoadingTurmas(true)
+      const { data: turmasData, error: turmasError } = await supabase
+        .from('turmas')
+        .select('id, nome')
+        .eq('escola_id', user.escola_id)
+        .order('nome', { ascending: true })
+
+      if (turmasError) {
+        console.error('Erro carregando turmas:', turmasError)
+        setTurmas([])
+      } else {
+        setTurmas(turmasData || [])
+      }
+      setLoadingTurmas(false)
+    }
+
+    loadTurmas()
+  }, [user?.escola_id, user?.role_id])
+
+  useEffect(() => {
+    const loadAlunos = async () => {
+      if (!selectedTurma) {
+        setAlunos([])
+        setSelectedAluno('')
+        return
+      }
+
+      setLoadingAlunos(true)
+      const { data: alunosData, error: alunosError } = await supabase
+        .from('alunos')
+        .select('id, nome')
+        .eq('turma_id', selectedTurma)
+        .order('nome', { ascending: true })
+
+      if (alunosError) {
+        console.error('Erro carregando alunos:', alunosError)
+        setAlunos([])
+      } else {
+        setAlunos(alunosData || [])
+      }
+      setLoadingAlunos(false)
+    }
+
+    loadAlunos()
+  }, [selectedTurma])
 
   return (
     <div className='flex flex-col gap-10 w-full'>
@@ -36,13 +119,48 @@ export const Home = () => {
       <Modal isOpen={open} onClose={() => setOpen(!open)} title="Adicionar Advertência">
         <form className="flex flex-col gap-4">
 
-          <select className="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <select
+            value={selectedTurma}
+            onChange={(event) => setSelectedTurma(event.target.value)}
+            className="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
             <option value="">Turma</option>
+            {loadingTurmas ? (
+              <option value="" disabled>Carregando turmas...</option>
+            ) : turmas.length > 0 ? (
+              turmas.map((turma) => (
+                <option key={turma.id} value={turma.id}>
+                  {turma.nome}
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>Nenhuma turma encontrada</option>
+            )}
           </select>
 
-          <select className="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <select
+            value={selectedAluno}
+            onChange={(event) => setSelectedAluno(event.target.value)}
+            disabled={!selectedTurma || loadingAlunos}
+            className="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+          >
             <option value="">Aluno</option>
-          </select> 
+            {selectedTurma ? (
+              loadingAlunos ? (
+                <option value="" disabled>Carregando alunos...</option>
+              ) : alunosFiltrados.length > 0 ? (
+                alunosFiltrados.map((aluno) => (
+                  <option key={aluno.id} value={aluno.id}>
+                    {aluno.nome}
+                  </option>
+                ))
+              ) : (
+                <option value="" disabled>Nenhum aluno nesta turma</option>
+              )
+            ) : (
+              <option value="" disabled>Selecione uma turma primeiro</option>
+            )}
+          </select>
           
           <input
             type="date"

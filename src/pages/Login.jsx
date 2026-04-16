@@ -41,7 +41,7 @@ export const Login = () => {
           className="w-full h-full object-cover rounded-r-2xl"
         />
 
-        <div className="absolute inset-0 bg-gradient-to-b from-green-700/50 to-green-900/70 rounded-r-2xl"></div>
+        <div className="absolute inset-0 bg-linear-to-b from-green-700/50 to-green-900/70 rounded-r-2xl"></div>
 
         <div className="absolute top-0 left-0 flex items-center justify-center w-full h-full">
           <img src={logo} alt="Logo" />
