@@ -48,7 +48,7 @@ export function Header() {
       )
       }
 
-      <UserSidebar open={open} />
+      <UserSidebar open={open} setOpen={setOpen}/>
     </>
   )
 }
