@@ -33,9 +33,61 @@ export const Home = () => {
         </div>
       </div>
 
-      <Modal isOpen={open} onClose={() => setOpen(!open)} title="Adicionar Advertência">  
-        
-      
+      <Modal isOpen={open} onClose={() => setOpen(!open)} title="Adicionar Advertência">
+        <form className="flex flex-col gap-4">
+
+          <select className="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Turma</option>
+          </select>
+
+          <select className="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Aluno</option>
+          </select> 
+          
+          <input
+            type="date"
+            className="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+
+          <select className="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Tipo de advertência</option>
+            <option value="ocorrencia">Ocorrência</option>
+            <option value="Suspenção">Suspenção</option>
+          </select>
+
+          <select className="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Tipo de situação</option>
+            <option value="indisciplina">Indisciplina</option>
+            <option value="infrequencia">Infrequência</option>
+            <option value="atraso">Atraso</option>
+            <option value="desrespeito">Desrespeito</option>
+            <option value="outro">Outro</option>
+          </select>
+
+          <textarea
+            placeholder="Descreva a ocorrência..."
+            rows={4}
+            className="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          />
+
+          <div className="flex justify-end gap-2 mt-4">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600"
+            >
+              Registrar
+            </button>
+          </div>
+
+        </form>
       </Modal>
     </div>
   )
