@@ -8,10 +8,13 @@ import { Modal } from '../components/Modal'
 export const Home = () => {
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
+  const [escolas, setEscolas] = useState([])
+  const [selectedEscola, setSelectedEscola] = useState('')
   const [turmas, setTurmas] = useState([])
   const [alunos, setAlunos] = useState([])
   const [selectedTurma, setSelectedTurma] = useState('')
   const [selectedAluno, setSelectedAluno] = useState('')
+  const [loadingEscolas, setLoadingEscolas] = useState(false)
   const [loadingTurmas, setLoadingTurmas] = useState(false)
   const [loadingAlunos, setLoadingAlunos] = useState(false)
   const [turmaOpen, setTurmaOpen] = useState(false)
@@ -46,6 +49,54 @@ export const Home = () => {
     setFormMessage('')
   }
 
+ useEffect(() => {
+  const loadEscolas = async () => {
+    if (!user) return
+
+    console.log('user:', user)
+
+    let query = supabase.from('escolas').select('id, nome')
+
+    // ADMIN → vê todas as escolas
+    if (Number(user.role_id) === 1) {
+      const { data, error } = await query
+
+      if (error) {
+        console.error('Erro carregando escolas:', error)
+        setEscolas([])
+        return
+      }
+
+      console.log('escolas carregadas:', data)
+
+      setEscolas(data || [])
+
+      if (data && data.length > 0) {
+        setSelectedEscola(data[0].id)
+      }
+    } 
+    // USUÁRIO NORMAL → só a escola dele
+    else if (user.escola_id) {
+      const { data, error } = await query
+        .eq('id', user.escola_id)
+        .single()
+
+      if (error) {
+        console.error('Erro carregando escola:', error)
+        setEscolas([])
+        return
+      }
+
+      console.log('escola do usuário:', data)
+
+      setEscolas([data])
+      setSelectedEscola(data?.id || '')
+    }
+  }
+
+  loadEscolas()
+}, [user])
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (!user?.id) {
@@ -53,7 +104,7 @@ export const Home = () => {
       return
     }
 
-    if (!selectedTurma || !selectedAluno || !dataOcorrido || !dataInicio || !dataTermino || !tipoAdvertencia || !tipoSituacao || !descricao) {
+    if (!selectedEscola || !selectedTurma || !selectedAluno || !dataOcorrido || !dataInicio || !dataTermino || !tipoAdvertencia || !tipoSituacao || !descricao) {
       setFormMessage('Preencha todos os campos antes de registrar a ocorrência.')
       return
     }
@@ -62,6 +113,7 @@ export const Home = () => {
     setFormMessage('')
 
     const payload = {
+      escola_id: selectedEscola,
       aluno_id: selectedAluno,
       professor_id: user.id,
       turma_id: selectedTurma,
@@ -105,37 +157,17 @@ export const Home = () => {
 
   useEffect(() => {
     const loadTurmas = async () => {
-      // Se é admin (role_id === 1), carrega todas as turmas
-      if (user?.role_id === 1) {
-        console.log('Usuário é admin, carregando todas as turmas...')
-        const { data: allTurmas, error: allError } = await supabase
-          .from('turmas')
-        .select('id, nome, escola_id')
-
-        if (allError) {
-          console.error('Erro carregando todas as turmas:', allError)
-          setTurmas([])
-        } else {
-          setTurmas(allTurmas || [])
-        }
-        setLoadingTurmas(false)
-        return
-      }
-
-      // Se não é admin, verifica se tem escola_id
-      if (!user?.escola_id) {
-        console.log('Usuário não é admin e não tem escola_id')
+      if (!selectedEscola) {
         setTurmas([])
-        setLoadingTurmas(false)
+        setSelectedTurma('')
         return
       }
 
-      // Carrega turmas da escola do usuário
       setLoadingTurmas(true)
       const { data: turmasData, error: turmasError } = await supabase
         .from('turmas')
         .select('id, nome, escola_id')
-        .eq('escola_id', user.escola_id)
+        .eq('escola_id', selectedEscola)
         .order('nome', { ascending: true })
 
       if (turmasError) {
@@ -148,7 +180,7 @@ export const Home = () => {
     }
 
     loadTurmas()
-  }, [user?.escola_id, user?.role_id])
+  }, [selectedEscola])
 
   useEffect(() => {
     const loadAlunos = async () => {
@@ -222,6 +254,25 @@ export const Home = () => {
               {formMessage}
             </div>
           )}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-slate-700">Escola</label>
+            <select
+              value={selectedEscola}
+              onChange={(event) => {
+                setSelectedEscola(event.target.value)
+                setSelectedTurma('')
+                setSelectedAluno('')
+              }}
+              className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            >
+              <option value="">Selecionar escola</option>
+              {escolas.map((escola) => (
+                <option key={escola.id} value={escola.id}>
+                  {escola.nome}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="relative flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700">Turma</label>
             <button
@@ -230,7 +281,8 @@ export const Home = () => {
                 setTurmaOpen((prev) => !prev)
                 setAlunoOpen(false)
               }}
-              className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              disabled={!selectedEscola || loadingTurmas}
+              className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-slate-100"
             >
               <span>{selectedTurmaObj?.nome || 'Selecionar turma'}</span>
               <span className="text-slate-500">▾</span>

@@ -55,12 +55,13 @@ export const Occurrences = () => {
           .select('id, nome, status, turma_id')
         const occurrenceQuery = supabase
           .from('ocorrencias')
-          .select('id, aluno_id, turma_id, categoria, tipo, data_ocorrido, descricao')
+          .select('*')
           .order('data_ocorrido', { ascending: false })
 
         if (user.role_id !== 1 && user.escola_id) {
           turmaQuery.eq('escola_id', user.escola_id)
           alunoQuery.eq('escola_id', user.escola_id)
+          occurrenceQuery.eq('escola_id', user.escola_id)
         }
 
         const [turmaResult, alunoResult, occurrenceResult] = await Promise.all([
@@ -71,7 +72,10 @@ export const Occurrences = () => {
 
         if (turmaResult.error) throw turmaResult.error
         if (alunoResult.error) throw alunoResult.error
-        if (occurrenceResult.error) throw occurrenceResult.error
+        if (occurrenceResult.error) {
+          console.error('Erro na query de ocorrências:', occurrenceResult.error)
+          throw occurrenceResult.error
+        }
 
         setTurmas(turmaResult.data || [])
         setAlunos(alunoResult.data || [])
