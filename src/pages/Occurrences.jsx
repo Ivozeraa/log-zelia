@@ -79,9 +79,10 @@ export const Occurrences = () => {
 
       for (const alunoId in grouped) {
         const { ocorrencias, suspensoes } = grouped[alunoId]
+
         let newStatus = 'normal'
-        
-        if (suspensoes >= 3) {
+
+        if (suspensoes = 3) {
           newStatus = 'expulso'
         } else if (suspensoes >= 1) {
           newStatus = 'suspenso'
