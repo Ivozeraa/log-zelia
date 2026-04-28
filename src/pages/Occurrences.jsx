@@ -6,6 +6,7 @@ export const Occurrences = () => {
   const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [selectedTurma, setSelectedTurma] = useState('')
+  const [apenasComOcorrencia, setApenasComOcorrencia] = useState(false) // novo filtro
   const [turmas, setTurmas] = useState([])
   const [alunos, setAlunos] = useState([])
   const [occurrences, setOccurrences] = useState([])
@@ -38,57 +39,65 @@ export const Occurrences = () => {
         ? aluno.nome.toLowerCase().includes(search.toLowerCase())
         : true
       const matchesTurma = selectedTurma ? aluno.turma_id === selectedTurma : true
-      return matchesName && matchesTurma
+      const matchesOcorrencia = apenasComOcorrencia ? !!alunoSummary[aluno.id] : true
+      return matchesName && matchesTurma && matchesOcorrencia
     })
-  }, [alunos, search, selectedTurma])
+  }, [alunos, search, selectedTurma, apenasComOcorrencia, alunoSummary])
 
   useEffect(() => {
-  const updateStudentStatus = async () => {
-    if (!occurrences.length || !alunos.length) return
+    const updateStudentStatus = async () => {
+      if (!occurrences.length || !alunos.length) return
 
-    const grouped = {}
+      const grouped = {}
 
-    occurrences.forEach((occ) => {
-      if (!grouped[occ.aluno_id]) {
-        grouped[occ.aluno_id] = {
-          ocorrencias: 0,
-          suspensoes: 0,
+      occurrences.forEach((occ) => {
+        if (!grouped[occ.aluno_id]) {
+          grouped[occ.aluno_id] = { ocorrencias: 0, suspensoes: 0 }
+        }
+        if (occ.categoria === 'suspensao') {
+          grouped[occ.aluno_id].suspensoes += 1
+        } else {
+          grouped[occ.aluno_id].ocorrencias += 1
+        }
+      })
+
+      const updates = []
+
+      for (const alunoId in grouped) {
+        const { ocorrencias, suspensoes } = grouped[alunoId]
+
+        let newStatus = 'normal'
+        if (suspensoes >= 3) {
+          newStatus = 'expulso'
+        } else if (ocorrencias >= 3) {
+          newStatus = 'suspenso'
+        }
+
+        const alunoAtual = alunos.find((a) => a.id === alunoId)
+
+        if (alunoAtual && alunoAtual.status !== newStatus) {
+          await supabase
+            .from('alunos')
+            .update({ status: newStatus })
+            .eq('id', alunoId)
+
+          updates.push({ id: alunoId, status: newStatus }) // coleta mudanças
         }
       }
 
-      if (occ.categoria === 'suspensao') {
-        grouped[occ.aluno_id].suspensoes += 1
-      } else {
-        grouped[occ.aluno_id].ocorrencias += 1
-      }
-    })
-
-    for (const alunoId in grouped) {
-      const { ocorrencias, suspensoes } = grouped[alunoId]
-
-      let newStatus = 'normal'
-
-      if (suspensoes >= 3) {
-        newStatus = 'expulso'
-      } else if (ocorrencias >= 3) {
-        newStatus = 'suspenso'
-      }
-
-      
-
-      const alunoAtual = alunos.find((a) => a.id === alunoId)
-
-      if (alunoAtual && alunoAtual.status !== newStatus) {
-        await supabase
-          .from('alunos')
-          .update({ status: newStatus })
-          .eq('id', alunoId)
+      // atualiza o state local para refletir na tela sem precisar recarregar
+      if (updates.length > 0) {
+        setAlunos((prev) =>
+          prev.map((aluno) => {
+            const update = updates.find((u) => u.id === aluno.id)
+            return update ? { ...aluno, status: update.status } : aluno
+          })
+        )
       }
     }
-  }
 
-  updateStudentStatus()
-}, [occurrences, alunos])
+    updateStudentStatus()
+  }, [occurrences, alunos])
 
   useEffect(() => {
     const loadData = async () => {
@@ -98,9 +107,7 @@ export const Occurrences = () => {
 
       try {
         const turmaQuery = supabase.from('turmas').select('id, nome')
-        const alunoQuery = supabase
-          .from('alunos')
-          .select('id, nome, status, turma_id')
+        const alunoQuery = supabase.from('alunos').select('id, nome, status, turma_id')
         const occurrenceQuery = supabase
           .from('ocorrencias')
           .select('*')
@@ -120,10 +127,7 @@ export const Occurrences = () => {
 
         if (turmaResult.error) throw turmaResult.error
         if (alunoResult.error) throw alunoResult.error
-        if (occurrenceResult.error) {
-          console.error('Erro na query de ocorrências:', occurrenceResult.error)
-          throw occurrenceResult.error
-        }
+        if (occurrenceResult.error) throw occurrenceResult.error
 
         setTurmas(turmaResult.data || [])
         setAlunos(alunoResult.data || [])
@@ -178,6 +182,20 @@ export const Occurrences = () => {
               </select>
             </div>
           </div>
+        </div>
+
+        {/* Filtro de alunos com ocorrência */}
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="apenasComOcorrencia"
+            checked={apenasComOcorrencia}
+            onChange={(e) => setApenasComOcorrencia(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 accent-red-600 cursor-pointer"
+          />
+          <label htmlFor="apenasComOcorrencia" className="text-sm text-slate-700 cursor-pointer">
+            Exibir somente alunos com ocorrência
+          </label>
         </div>
 
         <div className="grid gap-2 sm:grid-cols-3">
@@ -251,19 +269,11 @@ export const Occurrences = () => {
                     <td className="px-4 py-4 font-medium text-slate-900">{aluno.nome}</td>
                     <td className="px-4 py-4 text-slate-700 capitalize">{aluno.status || 'normal'}</td>
                     <td className="px-4 py-4 text-slate-700">{turma?.nome || '—'}</td>
-                    <td className="px-4 py-4 text-slate-700">
-                      {latest?.categoria || '—'}
-                    </td>
-                    <td className="px-4 py-4 text-slate-700">
-                      {latest?.tipo || '—'}
-                    </td>
-                    <td className="px-4 py-4 text-slate-700">
-                      {latest?.data_ocorrido || '—'}
-                    </td>
+                    <td className="px-4 py-4 text-slate-700">{latest?.categoria || '—'}</td>
+                    <td className="px-4 py-4 text-slate-700">{latest?.tipo || '—'}</td>
+                    <td className="px-4 py-4 text-slate-700">{latest?.data_ocorrido || '—'}</td>
                     <td className="px-4 py-4 text-slate-700">{summary.count}</td>
-                    <td className="px-4 py-4 text-slate-700 max-w-[320px] truncate">
-                      {latest?.descricao || '—'}
-                    </td>
+                    <td className="px-4 py-4 text-slate-700 max-w-[320px] truncate">{latest?.descricao || '—'}</td>
                   </tr>
                 )
               })
