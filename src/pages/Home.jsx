@@ -49,116 +49,116 @@ export const Home = () => {
     setFormMessage('')
   }
 
- useEffect(() => {
-  const loadEscolas = async () => {
-    if (!user) return
+  useEffect(() => {
+    const loadEscolas = async () => {
+      if (!user) return
 
-    console.log('user:', user)
+      console.log('user:', user)
 
-    let query = supabase.from('escolas').select('id, nome')
+      let query = supabase.from('escolas').select('id, nome')
 
-    // ADMIN → vê todas as escolas
-    if (Number(user.role_id) === 1) {
-      const { data, error } = await query
+      // ADMIN → vê todas as escolas
+      if (Number(user.role_id) === 1) {
+        const { data, error } = await query
 
-      if (error) {
-        console.error('Erro carregando escolas:', error)
-        setEscolas([])
-        return
+        if (error) {
+          console.error('Erro carregando escolas:', error)
+          setEscolas([])
+          return
+        }
+
+        console.log('escolas carregadas:', data)
+
+        setEscolas(data || [])
+
+        if (data && data.length > 0) {
+          setSelectedEscola(data[0].id)
+        }
       }
+      // USUÁRIO NORMAL → só a escola dele
+      else if (user.escola_id) {
+        const { data, error } = await query
+          .eq('id', user.escola_id)
+          .single()
 
-      console.log('escolas carregadas:', data)
+        if (error) {
+          console.error('Erro carregando escola:', error)
+          setEscolas([])
+          return
+        }
 
-      setEscolas(data || [])
+        console.log('escola do usuário:', data)
 
-      if (data && data.length > 0) {
-        setSelectedEscola(data[0].id)
+        setEscolas([data])
+        setSelectedEscola(data?.id || '')
       }
-    } 
-    // USUÁRIO NORMAL → só a escola dele
-    else if (user.escola_id) {
-      const { data, error } = await query
-        .eq('id', user.escola_id)
-        .single()
-
-      if (error) {
-        console.error('Erro carregando escola:', error)
-        setEscolas([])
-        return
-      }
-
-      console.log('escola do usuário:', data)
-
-      setEscolas([data])
-      setSelectedEscola(data?.id || '')
     }
-  }
 
-  loadEscolas()
-}, [user])
+    loadEscolas()
+  }, [user])
 
- const handleSubmit = async (event) => {
-  event.preventDefault()
-  if (!user?.id) {
-    setFormMessage('Erro: usuário não autenticado.')
-    return
-  }
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    if (!user?.id) {
+      setFormMessage('Erro: usuário não autenticado.')
+      return
+    }
 
-  if (!selectedEscola || !selectedTurma || !selectedAluno || !dataOcorrido || !dataInicio || !dataTermino || !tipoAdvertencia || !tipoSituacao || !descricao) {
-    setFormMessage('Preencha todos os campos antes de registrar a ocorrência.')
-    return
-  }
+    if (!selectedEscola || !selectedTurma || !selectedAluno || !dataOcorrido || !dataInicio || !dataTermino || !tipoAdvertencia || !tipoSituacao || !descricao) {
+      setFormMessage('Preencha todos os campos antes de registrar a ocorrência.')
+      return
+    }
 
-  setSubmitting(true)
-  setFormMessage('')
+    setSubmitting(true)
+    setFormMessage('')
 
-  const payload = {
-    escola_id: selectedEscola,
-    aluno_id: selectedAluno,
-    professor_id: user.id,
-    turma_id: selectedTurma,
-    data_ocorrido: dataOcorrido,
-    data_inicio: dataInicio,
-    data_fim: dataTermino,
-    tipo: tipoSituacao,
-    categoria: tipoAdvertencia,
-    descricao: descricao,
-  }
+    const payload = {
+      escola_id: selectedEscola,
+      aluno_id: selectedAluno,
+      professor_id: user.id,
+      turma_id: selectedTurma,
+      data_ocorrido: dataOcorrido,
+      data_inicio: dataInicio,
+      data_fim: dataTermino,
+      tipo: tipoSituacao,
+      categoria: tipoAdvertencia,
+      descricao: descricao,
+    }
 
-  console.log('user', user)
-  console.log('turma', selectedTurmaObj)
-  console.log('payload ocorrencia', payload)
-  const { error } = await supabase.from('ocorrencias').insert(payload)
+    console.log('user', user)
+    console.log('turma', selectedTurmaObj)
+    console.log('payload ocorrencia', payload)
+    const { error } = await supabase.from('ocorrencias').insert(payload)
 
-  if (error) {
-    console.error('Erro ao registrar ocorrência:', error)
+    if (error) {
+      console.error('Erro ao registrar ocorrência:', error)
+      setSubmitting(false)
+      setFormMessage('Ocorreu um erro ao registrar. Tente novamente.')
+      return
+    }
+
+    const statusMap = {
+      ocorrencia: 'normal',
+      suspensao: 'suspenso',
+    }
+
+    const { error: updateError } = await supabase
+      .from('alunos')
+      .update({ status: statusMap[tipoAdvertencia] ?? 'normal' })
+      .eq('id', selectedAluno)
+
     setSubmitting(false)
-    setFormMessage('Ocorreu um erro ao registrar. Tente novamente.')
-    return
+
+    if (updateError) {
+      console.error('Erro ao atualizar status do aluno:', updateError)
+      setFormMessage('Ocorrência registrada, mas não foi possível atualizar o status do aluno.')
+      return
+    }
+
+    setFormMessage('Ocorrência registrada com sucesso!')
+    resetForm()
+    setOpen(false)
   }
-
-  const statusMap = {
-    ocorrencia: 'normal',
-    suspensao: 'suspenso',
-  }
-
-  const { error: updateError } = await supabase
-    .from('alunos')
-    .update({ status: statusMap[tipoAdvertencia] ?? 'normal' })
-    .eq('id', selectedAluno)
-
-  setSubmitting(false)
-
-  if (updateError) {
-    console.error('Erro ao atualizar status do aluno:', updateError)
-    setFormMessage('Ocorrência registrada, mas não foi possível atualizar o status do aluno.')
-    return
-  }
-
-  setFormMessage('Ocorrência registrada com sucesso!')
-  resetForm()
-  setOpen(false)
-}
 
   useEffect(() => {
     const loadTurmas = async () => {
@@ -321,6 +321,7 @@ export const Home = () => {
 
           <div className="relative flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700">Aluno</label>
+
             <button
               type="button"
               onClick={() => {
@@ -329,14 +330,18 @@ export const Home = () => {
                 setTurmaOpen(false)
               }}
               disabled={!selectedTurma || loadingAlunos}
-              className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-slate-100"
+              className="flex w-full h-12 items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-slate-100"
             >
-              <span>{selectedAlunoObj ? `${selectedAlunoObj.nome} - ${selectedAlunoObj.matricula || 'sem matrícula'}` : 'Selecionar aluno'}</span>
-              <span className="text-slate-500">▾</span>
+              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                {selectedAlunoObj
+                  ? `${selectedAlunoObj.nome} - ${selectedAlunoObj.matricula || 'sem matrícula'}`
+                  : 'Selecionar aluno'}
+              </span>
+              <span className="text-slate-500 ml-2 shrink-0">▾</span>
             </button>
 
             {alunoOpen && (
-              <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+              <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
                 <div className="border-b border-slate-200 px-3 py-2">
                   <input
                     type="text"
@@ -346,6 +351,7 @@ export const Home = () => {
                     className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                   />
                 </div>
+
                 <div className="max-h-60 overflow-y-auto">
                   {loadingAlunos ? (
                     <div className="px-3 py-3 text-sm text-slate-500">Carregando alunos...</div>
@@ -371,6 +377,19 @@ export const Home = () => {
             )}
           </div>
 
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-slate-700">Tipo de advertência</label>
+            <select
+              value={tipoAdvertencia}
+              onChange={(event) => setTipoAdvertencia(event.target.value)}
+              className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            >
+              <option value="">Selecionar tipo</option>
+              <option value="ocorrencia">Ocorrência</option>
+              <option value="suspensao">Suspensão</option>
+            </select>
+          </div>
+          
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700">Data da ocorrência</label>
             <input
@@ -401,18 +420,7 @@ export const Home = () => {
             />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-slate-700">Tipo de advertência</label>
-            <select
-              value={tipoAdvertencia}
-              onChange={(event) => setTipoAdvertencia(event.target.value)}
-              className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-            >
-              <option value="">Selecionar tipo</option>
-              <option value="ocorrencia">Ocorrência</option>
-              <option value="suspensao">Suspensão</option>
-            </select>
-          </div>
+          
 
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700">Tipo de situação</label>
