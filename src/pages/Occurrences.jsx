@@ -6,29 +6,30 @@ export const Occurrences = () => {
   const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [selectedTurma, setSelectedTurma] = useState('')
-  const [apenasComOcorrencia, setApenasComOcorrencia] = useState(false) // novo filtro
+  const [apenasComOcorrencia, setApenasComOcorrencia] = useState(false)
   const [turmas, setTurmas] = useState([])
   const [alunos, setAlunos] = useState([])
   const [occurrences, setOccurrences] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const alunosMap = useMemo(
-    () => Object.fromEntries(alunos.map((aluno) => [aluno.id, aluno])),
-    [alunos]
-  )
-
   const alunoSummary = useMemo(() => {
     return occurrences.reduce((acc, occurrence) => {
       const existing = acc[occurrence.aluno_id] || { count: 0, latest: null }
+
       const currentDate = occurrence.data_ocorrido || ''
       const latestDate = existing.latest?.data_ocorrido || ''
-      const latest = !existing.latest || currentDate > latestDate ? occurrence : existing.latest
+
+      const latest =
+        !existing.latest || currentDate > latestDate
+          ? occurrence
+          : existing.latest
 
       acc[occurrence.aluno_id] = {
         count: existing.count + 1,
         latest,
       }
+
       return acc
     }, {})
   }, [occurrences])
@@ -38,8 +39,15 @@ export const Occurrences = () => {
       const matchesName = search
         ? aluno.nome.toLowerCase().includes(search.toLowerCase())
         : true
-      const matchesTurma = selectedTurma ? aluno.turma_id === selectedTurma : true
-      const matchesOcorrencia = apenasComOcorrencia ? !!alunoSummary[aluno.id] : true
+
+      const matchesTurma = selectedTurma
+        ? aluno.turma_id === selectedTurma
+        : true
+
+      const matchesOcorrencia = apenasComOcorrencia
+        ? !!alunoSummary[aluno.id]
+        : true
+
       return matchesName && matchesTurma && matchesOcorrencia
     })
   }, [alunos, search, selectedTurma, apenasComOcorrencia, alunoSummary])
@@ -52,9 +60,15 @@ export const Occurrences = () => {
 
       occurrences.forEach((occ) => {
         if (!grouped[occ.aluno_id]) {
-          grouped[occ.aluno_id] = { ocorrencias: 0, suspensoes: 0 }
+          grouped[occ.aluno_id] = {
+            ocorrencias: 0,
+            suspensoes: 0,
+          }
         }
-        if (occ.categoria === 'suspensao') {
+
+        const categoria = occ.categoria?.toLowerCase()
+
+        if (categoria === 'suspensao') {
           grouped[occ.aluno_id].suspensoes += 1
         } else {
           grouped[occ.aluno_id].ocorrencias += 1
@@ -65,10 +79,12 @@ export const Occurrences = () => {
 
       for (const alunoId in grouped) {
         const { ocorrencias, suspensoes } = grouped[alunoId]
-
         let newStatus = 'normal'
+        
         if (suspensoes >= 3) {
           newStatus = 'expulso'
+        } else if (suspensoes >= 1) {
+          newStatus = 'suspenso'
         } else if (ocorrencias >= 3) {
           newStatus = 'suspenso'
         }
@@ -76,38 +92,54 @@ export const Occurrences = () => {
         const alunoAtual = alunos.find((a) => a.id === alunoId)
 
         if (alunoAtual && alunoAtual.status !== newStatus) {
-          await supabase
+          const { error } = await supabase
             .from('alunos')
             .update({ status: newStatus })
             .eq('id', alunoId)
 
-          updates.push({ id: alunoId, status: newStatus }) // coleta mudanças
+          if (!error) {
+            updates.push({
+              id: alunoId,
+              status: newStatus,
+            })
+          } else {
+            console.error('Erro ao atualizar aluno:', error)
+          }
         }
       }
 
-      // atualiza o state local para refletir na tela sem precisar recarregar
       if (updates.length > 0) {
         setAlunos((prev) =>
           prev.map((aluno) => {
             const update = updates.find((u) => u.id === aluno.id)
-            return update ? { ...aluno, status: update.status } : aluno
+
+            return update
+              ? { ...aluno, status: update.status }
+              : aluno
           })
         )
       }
     }
 
     updateStudentStatus()
-  }, [occurrences, alunos])
+  }, [occurrences])
 
   useEffect(() => {
     const loadData = async () => {
       if (!user) return
+
       setLoading(true)
       setError('')
 
       try {
-        const turmaQuery = supabase.from('turmas').select('id, nome')
-        const alunoQuery = supabase.from('alunos').select('id, nome, status, turma_id')
+        const turmaQuery = supabase
+          .from('turmas')
+          .select('id, nome')
+
+        const alunoQuery = supabase
+          .from('alunos')
+          .select('id, nome, status, turma_id')
+
         const occurrenceQuery = supabase
           .from('ocorrencias')
           .select('*')
@@ -119,11 +151,12 @@ export const Occurrences = () => {
           occurrenceQuery.eq('escola_id', user.escola_id)
         }
 
-        const [turmaResult, alunoResult, occurrenceResult] = await Promise.all([
-          turmaQuery,
-          alunoQuery,
-          occurrenceQuery,
-        ])
+        const [turmaResult, alunoResult, occurrenceResult] =
+          await Promise.all([
+            turmaQuery,
+            alunoQuery,
+            occurrenceQuery,
+          ])
 
         if (turmaResult.error) throw turmaResult.error
         if (alunoResult.error) throw alunoResult.error
@@ -133,8 +166,10 @@ export const Occurrences = () => {
         setAlunos(alunoResult.data || [])
         setOccurrences(occurrenceResult.data || [])
       } catch (err) {
-        console.error('Erro carregando ocorrências:', err)
-        setError('Não foi possível carregar as ocorrências. Recarregue a página.')
+        console.error(err)
+        setError(
+          'Não foi possível carregar as ocorrências.'
+        )
       } finally {
         setLoading(false)
       }
