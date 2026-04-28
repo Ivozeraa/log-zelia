@@ -43,6 +43,54 @@ export const Occurrences = () => {
   }, [alunos, search, selectedTurma])
 
   useEffect(() => {
+  const updateStudentStatus = async () => {
+    if (!occurrences.length || !alunos.length) return
+
+    const grouped = {}
+
+    occurrences.forEach((occ) => {
+      if (!grouped[occ.aluno_id]) {
+        grouped[occ.aluno_id] = {
+          ocorrencias: 0,
+          suspensoes: 0,
+        }
+      }
+
+      if (occ.categoria === 'suspensao') {
+        grouped[occ.aluno_id].suspensoes += 1
+      } else {
+        grouped[occ.aluno_id].ocorrencias += 1
+      }
+    })
+
+    for (const alunoId in grouped) {
+      const { ocorrencias, suspensoes } = grouped[alunoId]
+
+      let newStatus = 'normal'
+
+      if (suspensoes >= 3) {
+        newStatus = 'expulso'
+      } else if (ocorrencias >= 3) {
+        newStatus = 'suspenso'
+      }
+
+      
+
+      const alunoAtual = alunos.find((a) => a.id === alunoId)
+
+      if (alunoAtual && alunoAtual.status !== newStatus) {
+        await supabase
+          .from('alunos')
+          .update({ status: newStatus })
+          .eq('id', alunoId)
+      }
+    }
+  }
+
+  updateStudentStatus()
+}, [occurrences, alunos])
+
+  useEffect(() => {
     const loadData = async () => {
       if (!user) return
       setLoading(true)

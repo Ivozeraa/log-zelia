@@ -97,63 +97,68 @@ export const Home = () => {
   loadEscolas()
 }, [user])
 
-  const handleSubmit = async (event) => {
-    event.preventDefault()
-    if (!user?.id) {
-      setFormMessage('Erro: usuário não autenticado.')
-      return
-    }
-
-    if (!selectedEscola || !selectedTurma || !selectedAluno || !dataOcorrido || !dataInicio || !dataTermino || !tipoAdvertencia || !tipoSituacao || !descricao) {
-      setFormMessage('Preencha todos os campos antes de registrar a ocorrência.')
-      return
-    }
-
-    setSubmitting(true)
-    setFormMessage('')
-
-    const payload = {
-      escola_id: selectedEscola,
-      aluno_id: selectedAluno,
-      professor_id: user.id,
-      turma_id: selectedTurma,
-      data_ocorrido: dataOcorrido,
-      data_inicio: dataInicio,
-      data_fim: dataTermino,
-      tipo: tipoSituacao,
-      categoria: tipoAdvertencia,
-      descricao: descricao,
-    }
-
-    console.log('user', user)
-    console.log('turma', selectedTurmaObj)
-    console.log('payload ocorrencia', payload)
-    const { error } = await supabase.from('ocorrencias').insert(payload)
-
-    if (error) {
-      console.error('Erro ao registrar ocorrência:', error)
-      setSubmitting(false)
-      setFormMessage('Ocorreu um erro ao registrar. Tente novamente.')
-      return
-    }
-
-    const { error: updateError } = await supabase
-      .from('alunos')
-      .update({ status: tipoAdvertencia })
-      .eq('id', selectedAluno)
-
-    setSubmitting(false)
-
-    if (updateError) {
-      console.error('Erro ao atualizar status do aluno:', updateError)
-      setFormMessage('Ocorrência registrada, mas não foi possível atualizar o status do aluno.')
-      return
-    }
-
-    setFormMessage('Ocorrência registrada com sucesso!')
-    resetForm()
-    setOpen(false)
+ const handleSubmit = async (event) => {
+  event.preventDefault()
+  if (!user?.id) {
+    setFormMessage('Erro: usuário não autenticado.')
+    return
   }
+
+  if (!selectedEscola || !selectedTurma || !selectedAluno || !dataOcorrido || !dataInicio || !dataTermino || !tipoAdvertencia || !tipoSituacao || !descricao) {
+    setFormMessage('Preencha todos os campos antes de registrar a ocorrência.')
+    return
+  }
+
+  setSubmitting(true)
+  setFormMessage('')
+
+  const payload = {
+    escola_id: selectedEscola,
+    aluno_id: selectedAluno,
+    professor_id: user.id,
+    turma_id: selectedTurma,
+    data_ocorrido: dataOcorrido,
+    data_inicio: dataInicio,
+    data_fim: dataTermino,
+    tipo: tipoSituacao,
+    categoria: tipoAdvertencia,
+    descricao: descricao,
+  }
+
+  console.log('user', user)
+  console.log('turma', selectedTurmaObj)
+  console.log('payload ocorrencia', payload)
+  const { error } = await supabase.from('ocorrencias').insert(payload)
+
+  if (error) {
+    console.error('Erro ao registrar ocorrência:', error)
+    setSubmitting(false)
+    setFormMessage('Ocorreu um erro ao registrar. Tente novamente.')
+    return
+  }
+
+  const statusMap = {
+    ocorrencia: 'normal',
+    suspensao: 'suspenso',
+  }
+
+  const { error: updateError } = await supabase
+    .from('alunos')
+    .update({ status: statusMap[tipoAdvertencia] ?? 'normal' })
+    .eq('id', selectedAluno)
+
+  setSubmitting(false)
+
+  if (updateError) {
+    console.error('Erro ao atualizar status do aluno:', updateError)
+    setFormMessage('Ocorrência registrada, mas não foi possível atualizar o status do aluno.')
+    return
+  }
+
+  setFormMessage('Ocorrência registrada com sucesso!')
+  resetForm()
+  setOpen(false)
+}
 
   useEffect(() => {
     const loadTurmas = async () => {
