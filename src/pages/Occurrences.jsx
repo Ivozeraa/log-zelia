@@ -1,194 +1,262 @@
-import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../utils/supabase'
-import { useAuth } from '../hooks/useAuth'
-import { ToastContainer, toast } from 'react-toastify';
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "../utils/supabase";
+import { useAuth } from "../hooks/useAuth";
+import { notify } from "../utils/notify";
 
 export const Occurrences = () => {
-  const { user } = useAuth()
-  const [search, setSearch] = useState('')
-  const [selectedTurma, setSelectedTurma] = useState('')
-  const [apenasComOcorrencia, setApenasComOcorrencia] = useState(false)
-  const [turmas, setTurmas] = useState([])
-  const [alunos, setAlunos] = useState([])
-  const [occurrences, setOccurrences] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const { user } = useAuth();
+
+  const [search, setSearch] = useState("");
+  const [selectedTurma, setSelectedTurma] = useState("");
+  const [apenasComOcorrencia, setApenasComOcorrencia] = useState(false);
+
+  const [turmas, setTurmas] = useState([]);
+  const [alunos, setAlunos] = useState([]);
+  const [occurrences, setOccurrences] = useState([]);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const [activityLog, setActivityLog] = useState([]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const alunoSummary = useMemo(() => {
     return occurrences.reduce((acc, occurrence) => {
-      const existing = acc[occurrence.aluno_id] || { count: 0, latest: null }
+      const existing = acc[occurrence.aluno_id] || {
+        count: 0,
+        latest: null,
+      };
 
-      const currentDate = occurrence.data_ocorrido || ''
-      const latestDate = existing.latest?.data_ocorrido || ''
+      const currentDate = occurrence.data_ocorrido || "";
+      const latestDate = existing.latest?.data_ocorrido || "";
 
       const latest =
         !existing.latest || currentDate > latestDate
           ? occurrence
-          : existing.latest
+          : existing.latest;
 
       acc[occurrence.aluno_id] = {
         count: existing.count + 1,
         latest,
-      }
+      };
 
-      return acc
-    }, {})
-  }, [occurrences])
-
-  const deleteOccurence = async (id) => {
-    const confirmar = window.confirm(
-      'Deseja realmente excluir essa ocorrência'
-    )
-
-    if(!confirmar) return
-
-    
-  }
+      return acc;
+    }, {});
+  }, [occurrences]);
 
   const filteredAlunos = useMemo(() => {
     return alunos.filter((aluno) => {
       const matchesName = search
         ? aluno.nome.toLowerCase().includes(search.toLowerCase())
-        : true
+        : true;
 
       const matchesTurma = selectedTurma
         ? aluno.turma_id === selectedTurma
-        : true
+        : true;
 
       const matchesOcorrencia = apenasComOcorrencia
         ? !!alunoSummary[aluno.id]
-        : true
+        : true;
 
-      return matchesName && matchesTurma && matchesOcorrencia
-    })
-  }, [alunos, search, selectedTurma, apenasComOcorrencia, alunoSummary])
+      return matchesName && matchesTurma && matchesOcorrencia;
+    });
+  }, [alunos, search, selectedTurma, apenasComOcorrencia, alunoSummary]);
+
+  const totalPages = Math.ceil(filteredAlunos.length / itemsPerPage);
+
+  const paginatedAlunos = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return filteredAlunos.slice(start, end);
+  }, [filteredAlunos, currentPage]);
 
   useEffect(() => {
-    const updateStudentStatus = async () => {
-      if (!occurrences.length || !alunos.length) return
+    setCurrentPage(1);
+  }, [search, selectedTurma, apenasComOcorrencia]);
 
-      const grouped = {}
+  async function validatePassword() {
+    const senha = window.prompt("Digite sua senha para confirmar a exclusão:");
 
-      occurrences.forEach((occ) => {
-        if (!grouped[occ.aluno_id]) {
-          grouped[occ.aluno_id] = {
-            ocorrencias: 0,
-            suspensoes: 0,
-          }
-        }
+    if (!senha) return false;
 
-        const categoria = occ.categoria?.toLowerCase()
+    const { error } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: senha,
+    });
 
-        if (categoria === 'suspensao') {
-          grouped[occ.aluno_id].suspensoes += 1
-        } else {
-          grouped[occ.aluno_id].ocorrencias += 1
-        }
-      })
-
-      const updates = []
-
-      for (const alunoId in grouped) {
-        const { ocorrencias, suspensoes } = grouped[alunoId]
-
-        let newStatus = 'normal'
-
-        if (suspensoes = 3) {
-          newStatus = 'expulso'
-        } else if (suspensoes >= 1) {
-          newStatus = 'suspenso'
-        } else if (ocorrencias >= 3) {
-          newStatus = 'suspenso'
-        }
-
-        const alunoAtual = alunos.find((a) => a.id === alunoId)
-
-        if (alunoAtual && alunoAtual.status !== newStatus) {
-          const { error } = await supabase
-            .from('alunos')
-            .update({ status: newStatus })
-            .eq('id', alunoId)
-
-          if (!error) {
-            updates.push({
-              id: alunoId,
-              status: newStatus,
-            })
-          } else {
-            console.error('Erro ao atualizar aluno:', error)
-          }
-        }
-      }
-
-      if (updates.length > 0) {
-        setAlunos((prev) =>
-          prev.map((aluno) => {
-            const update = updates.find((u) => u.id === aluno.id)
-
-            return update
-              ? { ...aluno, status: update.status }
-              : aluno
-          })
-        )
-      }
+    if (error) {
+      notify.error("Senha incorreta.");
+      return false;
     }
 
-    updateStudentStatus()
-  }, [occurrences])
+    return true;
+  }
+
+  async function deleteOccurence(id) {
+    const confirmar = window.confirm(
+      "Deseja realmente remover esta ocorrência?",
+    );
+
+    if (!confirmar) return;
+
+    const senhaOk = await validatePassword();
+
+    if (!senhaOk) return;
+
+    const motivo = window.prompt("Informe o motivo da exclusão:");
+
+    if (!motivo || motivo.trim().length < 3) {
+      notify.error("Motivo inválido.");
+      return;
+    }
+
+    const occurrenceToDelete = occurrences.find((o) => o.id === id);
+
+    if (!occurrenceToDelete) {
+      notify.error("Ocorrência não encontrada.");
+      return;
+    }
+
+    const alunoData = alunos.find(
+      (aluno) => aluno.id === occurrenceToDelete.aluno_id,
+    );
+
+    const payload = {
+      ocorrencia_id: occurrenceToDelete.id,
+
+      aluno_id: occurrenceToDelete.aluno_id,
+      aluno_nome: alunoData?.nome || "Aluno não encontrado",
+
+      professor_id: occurrenceToDelete.professor_id,
+      professor_nome: occurrenceToDelete.professor_nome || "Não informado",
+
+      escola_id: occurrenceToDelete.escola_id,
+      turma_id: occurrenceToDelete.turma_id,
+
+      descricao: occurrenceToDelete.descricao,
+      categoria: occurrenceToDelete.categoria,
+      tipo: occurrenceToDelete.tipo,
+
+      data_ocorrido: occurrenceToDelete.data_ocorrido,
+      data_aplicacao: occurrenceToDelete.data_aplicacao,
+      data_inicio: occurrenceToDelete.data_inicio,
+      data_fim: occurrenceToDelete.data_fim,
+      criado_em: occurrenceToDelete.created_at,
+
+      excluido_por: user.id,
+      excluido_por_nome: user.nome,
+
+      motivo_exclusao: motivo.trim(),
+    };
+
+    const { error: historyError } = await supabase
+      .from("ocorrencias_excluidas")
+      .insert(payload);
+
+    if (historyError) {
+      console.error(historyError);
+      notify.error("Erro ao salvar histórico.");
+      return;
+    }
+
+    const { error: deleteError } = await supabase
+      .from("ocorrencias")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      console.error(deleteError);
+      notify.error("Erro ao excluir ocorrência.");
+      return;
+    }
+
+    setOccurrences((prev) => prev.filter((item) => item.id !== id));
+
+    setActivityLog((prev) => [
+      {
+        aluno: alunoData?.nome,
+        categoria: occurrenceToDelete.categoria,
+        tipo: occurrenceToDelete.tipo,
+        aplicadoPor: user.nome,
+        motivo,
+        timestamp: new Date(),
+      },
+      ...prev,
+    ]);
+
+    notify.success("Ocorrência removida.");
+  }
 
   useEffect(() => {
     const loadData = async () => {
-      if (!user) return
+      if (!user) return;
 
-      setLoading(true)
-      setError('')
+      setLoading(true);
+      setError("");
 
       try {
-        const turmaQuery = supabase
-          .from('turmas')
-          .select('id, nome')
+        const turmaQuery = supabase.from("turmas").select("id, nome");
 
         const alunoQuery = supabase
-          .from('alunos')
-          .select('id, nome, status, turma_id')
+          .from("alunos")
+          .select("id, nome, status, turma_id");
 
         const occurrenceQuery = supabase
-          .from('ocorrencias')
-          .select('*')
-          .order('data_ocorrido', { ascending: false })
+          .from("ocorrencias")
+          .select("*")
+          .order("data_ocorrido", {
+            ascending: false,
+          });
+
+        const historyQuery = supabase
+          .from("ocorrencias_excluidas")
+          .select("*")
+          .order("excluido_em", {
+            ascending: false,
+          });
 
         if (user.role_id !== 1 && user.escola_id) {
-          turmaQuery.eq('escola_id', user.escola_id)
-          alunoQuery.eq('escola_id', user.escola_id)
-          occurrenceQuery.eq('escola_id', user.escola_id)
+          turmaQuery.eq("escola_id", user.escola_id);
+          alunoQuery.eq("escola_id", user.escola_id);
+          occurrenceQuery.eq("escola_id", user.escola_id);
+          historyQuery.eq("escola_id", user.escola_id);
         }
 
-        const [turmaResult, alunoResult, occurrenceResult] =
+        const [turmaResult, alunoResult, occurrenceResult, historyResult] =
           await Promise.all([
             turmaQuery,
             alunoQuery,
             occurrenceQuery,
-          ])
+            historyQuery,
+          ]);
 
-        if (turmaResult.error) throw turmaResult.error
-        if (alunoResult.error) throw alunoResult.error
-        if (occurrenceResult.error) throw occurrenceResult.error
+        setTurmas(turmaResult.data || []);
+        setAlunos(alunoResult.data || []);
+        setOccurrences(occurrenceResult.data || []);
 
-        setTurmas(turmaResult.data || [])
-        setAlunos(alunoResult.data || [])
-        setOccurrences(occurrenceResult.data || [])
+        const formattedLog =
+          historyResult.data?.map((item) => ({
+            type: "removed",
+            aluno: item.aluno_nome,
+            categoria: item.categoria,
+            tipo: item.tipo,
+            aplicadoPor: item.excluido_por_nome,
+            motivo: item.motivo_exclusao,
+            timestamp: new Date(item.excluido_em),
+          })) || [];
+        setActivityLog(formattedLog);
       } catch (err) {
-        console.error(err)
-        setError(
-          'Não foi possível carregar as ocorrências.'
-        )
+        console.error(err);
+        setError("Não foi possível carregar dados.");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadData()
-  }, [user])
+    loadData();
+  }, [user]);
 
   return (
     <div className="flex flex-col gap-8 w-full">
@@ -197,13 +265,15 @@ export const Occurrences = () => {
           <div>
             <h1 className="text-3xl font-bold">Ocorrências</h1>
             <p className="text-sm text-slate-500">
-              Pesquise por aluno e filtre por turma. Veja o status e o total de ocorrências de cada aluno.
+              Pesquise por aluno e filtre por turma. Veja o status e o total de
+              ocorrências de cada aluno.
             </p>
           </div>
-
           <div className="grid w-full gap-3 sm:grid-cols-2 sm:w-auto">
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-slate-700">Buscar aluno</label>
+              <label className="text-sm font-semibold text-slate-700">
+                Buscar aluno
+              </label>
               <input
                 type="text"
                 value={search}
@@ -212,9 +282,10 @@ export const Occurrences = () => {
                 className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               />
             </div>
-
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-slate-700">Filtrar turma</label>
+              <label className="text-sm font-semibold text-slate-700">
+                Filtrar turma
+              </label>
               <select
                 value={selectedTurma}
                 onChange={(event) => setSelectedTurma(event.target.value)}
@@ -231,7 +302,6 @@ export const Occurrences = () => {
           </div>
         </div>
 
-        {/* Filtro de alunos com ocorrência */}
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -240,7 +310,10 @@ export const Occurrences = () => {
             onChange={(e) => setApenasComOcorrencia(e.target.checked)}
             className="h-4 w-4 rounded border-slate-300 accent-red-600 cursor-pointer"
           />
-          <label htmlFor="apenasComOcorrencia" className="text-sm text-slate-700 cursor-pointer">
+          <label
+            htmlFor="apenasComOcorrencia"
+            className="text-sm text-slate-700 cursor-pointer"
+          >
             Exibir somente alunos com ocorrência
           </label>
         </div>
@@ -248,7 +321,9 @@ export const Occurrences = () => {
         <div className="grid gap-2 sm:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-sm text-slate-500">Alunos exibidos</p>
-            <p className="text-2xl font-bold text-slate-900">{filteredAlunos.length}</p>
+            <p className="text-2xl font-bold text-slate-900">
+              {filteredAlunos.length}
+            </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-sm text-slate-500">Alunos com ocorrência</p>
@@ -281,53 +356,142 @@ export const Occurrences = () => {
               <th className="border-b border-slate-200 px-4 py-3">Data</th>
               <th className="border-b border-slate-200 px-4 py-3">Total</th>
               <th className="border-b border-slate-200 px-4 py-3">Descrição</th>
+              <th className="border-b border-slate-200 px-4 py-3">Ações</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
+                <td
+                  colSpan={9}
+                  className="px-4 py-6 text-center text-slate-500"
+                >
                   Carregando ocorrências...
                 </td>
               </tr>
-            ) : filteredAlunos.length === 0 ? (
+            ) : paginatedAlunos.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
+                <td
+                  colSpan={9}
+                  className="px-4 py-6 text-center text-slate-500"
+                >
                   Nenhum aluno encontrado.
                 </td>
               </tr>
             ) : (
-              filteredAlunos.map((aluno) => {
-                const turma = turmas.find((t) => t.id === aluno.turma_id)
-                const summary = alunoSummary[aluno.id] || { count: 0, latest: null }
-                const latest = summary.latest
-                const status = aluno.status?.toLowerCase() || 'normal'
+              paginatedAlunos.map((aluno) => {
+                const turma = turmas.find((t) => t.id === aluno.turma_id);
+                const summary = alunoSummary[aluno.id] || {
+                  count: 0,
+                  latest: null,
+                };
+                const latest = summary.latest;
+                const status = aluno.status?.toLowerCase() || "normal";
                 const rowClass =
-                  status === 'normal'
-                    ? ''
-                    : status.includes('suspenso')
-                    ? 'bg-amber-50'
-                    : status.includes('expulso')
-                    ? 'bg-red-50'
-                    : 'bg-slate-50'
+                  status === "normal"
+                    ? ""
+                    : status.includes("suspenso")
+                      ? "bg-amber-50"
+                      : status.includes("expulso")
+                        ? "bg-red-50"
+                        : "bg-slate-50";
 
                 return (
-                  <tr key={aluno.id} className={`${rowClass} border-b border-slate-200 last:border-none`}>
-                    <td className="px-4 py-4 font-medium text-slate-900">{aluno.nome}</td>
-                    <td className="px-4 py-4 text-slate-700 capitalize">{aluno.status || 'normal'}</td>
-                    <td className="px-4 py-4 text-slate-700">{turma?.nome || '—'}</td>
-                    <td className="px-4 py-4 text-slate-700">{latest?.categoria || '—'}</td>
-                    <td className="px-4 py-4 text-slate-700">{latest?.tipo || '—'}</td>
-                    <td className="px-4 py-4 text-slate-700">{latest?.data_ocorrido || '—'}</td>
-                    <td className="px-4 py-4 text-slate-700">{summary.count}</td>
-                    <td className="px-4 py-4 text-slate-700 max-w-[320px] truncate">{latest?.descricao || '—'}</td>
+                  <tr
+                    key={aluno.id}
+                    className={`${rowClass} border-b border-slate-200 last:border-none`}
+                  >
+                    <td className="px-4 py-4 font-medium text-slate-900">
+                      {aluno.nome}
+                    </td>
+                    <td className="px-4 py-4 text-slate-700 capitalize">
+                      {aluno.status || "normal"}
+                    </td>
+                    <td className="px-4 py-4 text-slate-700">
+                      {turma?.nome || "—"}
+                    </td>
+                    <td className="px-4 py-4 text-slate-700">
+                      {latest?.categoria || "—"}
+                    </td>
+                    <td className="px-4 py-4 text-slate-700">
+                      {latest?.tipo || "—"}
+                    </td>
+                    <td className="px-4 py-4 text-slate-700">
+                      {latest?.data_ocorrido || "—"}
+                    </td>
+                    <td className="px-4 py-4 text-slate-700">
+                      {summary.count}
+                    </td>
+                    <td className="px-4 py-4 text-slate-700 max-w-[320px] truncate">
+                      {latest?.descricao || "—"}
+                    </td>
+                    <td className="px-4 py-4">
+                      {latest && (
+                        <button
+                          onClick={() => deleteOccurence(latest.id)}
+                          className="text-xs text-red-600 hover:text-red-800 hover:underline transition"
+                        >
+                          Excluir
+                        </button>
+                      )}
+                    </td>
                   </tr>
-                )
+                );
               })
             )}
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-1 flex-wrap mt-0.5">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              className={`px-3 py-1 rounded-full border transition items-center flex ${
+                currentPage === page
+                  ? "bg-green-600 text-white border-green-600"
+                  : "bg-white text-slate-700 border-slate-300 hover:bg-green-50"
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold text-slate-800">
+          Histórico de atividades
+        </h2>
+
+        <div className="rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100">
+          {activityLog.length === 0 ? (
+            <div className="px-4 py-4 text-sm text-slate-500">
+              Nenhuma atividade registrada.
+            </div>
+          ) : (
+            activityLog.map((entry, index) => (
+              <div key={index} className="px-4 py-3">
+                <div className="text-sm text-slate-800">
+                  <strong>{entry.aplicadoPor}</strong> removeu a ocorrência de
+                  <strong> {entry.aluno} </strong>({entry.categoria} —{" "}
+                  {entry.tipo})
+                </div>
+
+                <div className="text-xs text-slate-500">
+                  Motivo: {entry.motivo}
+                </div>
+
+                <div className="text-xs text-slate-400">
+                  {entry.timestamp.toLocaleString("pt-BR")}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
-  )
-}
+  );
+};

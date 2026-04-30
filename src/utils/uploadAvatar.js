@@ -5,12 +5,12 @@ export async function uploadAvatar(file) {
 
   if (error || !data.user || !file) {
     console.error("Usuário não autenticado ou arquivo inválido");
-    return;
+    return null;
   }
 
   const user = data.user;
-  const ext = file.name.split(".").pop();
-  const filePath = `${user.id}/avatar.${ext}`;
+
+  const filePath = `${user.id}/avatar.png`;
 
   const { error: uploadError } = await supabase.storage
     .from("avatars")
@@ -21,18 +21,14 @@ export async function uploadAvatar(file) {
 
   if (uploadError) {
     console.error(uploadError);
-    return;
-  }
-  const { data: signedData, error: urlError } = await supabase.storage
-    .from("avatars")
-    .createSignedUrl(filePath, 60 * 60);
-
-  if (urlError || !signedData?.signedUrl) {
-    console.error("Erro ao gerar URL:", urlError);
     return null;
   }
 
-  const avatarUrl = signedData.signedUrl;
+  const { data: publicData } = supabase.storage
+    .from("avatars")
+    .getPublicUrl(filePath);
+
+  const avatarUrl = publicData.publicUrl + `?t=${Date.now()}`;
 
   await supabase.auth.updateUser({
     data: {
@@ -40,5 +36,6 @@ export async function uploadAvatar(file) {
     },
   });
 
+  refreshUser();
   return avatarUrl;
 }
