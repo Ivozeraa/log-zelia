@@ -11,6 +11,7 @@ import { EditProfile } from "./pages/EditProfile";
 import ProtectedRoute from "./routers/ProtectedRoute";
 import { Login } from "./pages/Login";
 import { Loading } from "./components/Loading";
+import { ToastProvider } from "./components/ToastProvide"
 
 function App() {
   const { loading } = useAuth();
@@ -18,6 +19,7 @@ function App() {
   if (loading) return <Loading />;
 
   return (
+    <>
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
@@ -37,6 +39,9 @@ function App() {
         </Route>
       </Routes>
     </Router>
+
+    <ToastProvider />
+    </>
   );
 }
 

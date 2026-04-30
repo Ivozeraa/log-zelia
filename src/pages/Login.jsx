@@ -5,6 +5,7 @@ import { FaEye, FaEyeSlash } from "react-icons/fa"
 
 import bgImg from "../assets/images/escola-frente.jpg"
 import logo from "../assets/images/logo-login.png"
+import { notify } from '../utils/notify'
 
 
 export const Login = () => {
@@ -24,10 +25,11 @@ export const Login = () => {
     })
 
     if (error) {
-      alert("Erro no login")
+      notify.error("Erro no login")
       return
     }
 
+    notify.success("Login realizado com sucesso!")
     navigate("/")
   }
 

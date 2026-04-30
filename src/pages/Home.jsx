@@ -4,6 +4,7 @@ import { supabase } from '../utils/supabase'
 import { useAuth } from "../hooks/useAuth"
 import { Card } from '../components/Card'
 import { Modal } from '../components/Modal'
+import { notify } from '../utils/notify'
 
 export const Home = () => {
   const { user } = useAuth()
@@ -57,11 +58,11 @@ export const Home = () => {
 
       let query = supabase.from('escolas').select('id, nome')
 
-      // ADMIN → vê todas as escolas
       if (Number(user.role_id) === 1) {
         const { data, error } = await query
 
         if (error) {
+          notify.error("Erro carregando as escolas")
           console.error('Erro carregando escolas:', error)
           setEscolas([])
           return
@@ -82,6 +83,7 @@ export const Home = () => {
           .single()
 
         if (error) {
+          notify.error("Erro carregando as escolas")
           console.error('Erro carregando escola:', error)
           setEscolas([])
           return
@@ -105,6 +107,7 @@ export const Home = () => {
     }
 
     if (!selectedEscola || !selectedTurma || !selectedAluno || !dataOcorrido || !dataInicio || !dataTermino || !tipoAdvertencia || !tipoSituacao || !descricao) {
+      notify.warning("Preencha todos os campos antes de registrar a ocorrência.")
       setFormMessage('Preencha todos os campos antes de registrar a ocorrência.')
       return
     }
@@ -134,6 +137,7 @@ export const Home = () => {
       console.error('Erro ao registrar ocorrência:', error)
       setSubmitting(false)
       setFormMessage('Ocorreu um erro ao registrar. Tente novamente.')
+      notify.error('Erro ao registrar ocorrência')
       return
     }
 
@@ -152,10 +156,12 @@ export const Home = () => {
     if (updateError) {
       console.error('Erro ao atualizar status do aluno:', updateError)
       setFormMessage('Ocorrência registrada, mas não foi possível atualizar o status do aluno.')
+      notify.error('Erro ao atualizar status do aluno') 
       return
     }
 
     setFormMessage('Ocorrência registrada com sucesso!')
+    notify.success("Ocorrência registrada com sucesso!")
     resetForm()
     setOpen(false)
   }

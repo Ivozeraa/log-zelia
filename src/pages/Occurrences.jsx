@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../utils/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { ToastContainer, toast } from 'react-toastify';
 
 export const Occurrences = () => {
   const { user } = useAuth()
@@ -33,6 +34,16 @@ export const Occurrences = () => {
       return acc
     }, {})
   }, [occurrences])
+
+  const deleteOccurence = async (id) => {
+    const confirmar = window.confirm(
+      'Deseja realmente excluir essa ocorrência'
+    )
+
+    if(!confirmar) return
+
+    
+  }
 
   const filteredAlunos = useMemo(() => {
     return alunos.filter((aluno) => {
