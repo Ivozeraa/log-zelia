@@ -4,11 +4,20 @@ import { Sidebar } from './components/Sidebar'
 
 function Layout() {
   return (
-    <div className='text-2xl font-inter '>
-      <Header username={"Usuário"} />
-      <div className='flex pt-25 -z-30'>
-        <Sidebar />
-        <div className="ml-85 pt-10 pr-10  w-full"><Outlet /></div>
+    <div className="font-inter">
+
+      <Header/>
+
+      <div className="pt-16 flex">
+
+        <aside className="fixed top-16 left-0 w-64 h-[calc(100vh-4rem)] z-40">
+          <Sidebar />
+        </aside>
+
+        <main className="ml-64 w-full p-6 z-10 relative">
+          <Outlet />
+        </main>
+
       </div>
     </div>
   )

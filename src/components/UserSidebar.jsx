@@ -16,11 +16,23 @@ export const UserSidebar = ({ open, setOpen }) => {
 
   return (
     <>
+      {/* OVERLAY */}
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/50 z-[9998]"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* SIDEBAR */}
       <div
-        className={`flex flex-col items-center gap-5 p-10 
-        fixed top-0 right-0 h-screen w-72 bg-white shadow-lg z-50
-        transform transition-all duration-250 ease-in-out
-        ${open ? "translate-x-0" : "translate-x-full"}`}
+        className={`
+          fixed top-0 right-0 h-screen w-72
+          bg-white shadow-lg z-[9999]
+          flex flex-col items-center gap-5 p-10
+          transform transition-transform duration-300 ease-in-out
+          ${open ? "translate-x-0" : "translate-x-full"}
+        `}
       >
         {user?.avatar_url ? (
           <img
@@ -38,7 +50,7 @@ export const UserSidebar = ({ open, setOpen }) => {
           <button
             type="button"
             onClick={handleEditProfile}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-linear-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition"
           >
             <FaUserEdit />
             Editar Perfil
@@ -47,7 +59,7 @@ export const UserSidebar = ({ open, setOpen }) => {
           <button
             type="button"
             onClick={logout}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-linear-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition"
           >
             <FaSignOutAlt />
             Deslogar

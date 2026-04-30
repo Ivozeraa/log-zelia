@@ -17,39 +17,32 @@ export function Header() {
 
   return (
     <>
-      <header className="flex justify-between items-center py-2 fixed w-full px-10 border-b-2 border-gray-300 bg-white left-0 top-0 z-20">
+      <header className="h-16 flex justify-between items-center fixed w-full px-6 border-b-2 border-gray-300 bg-white top-0 left-0 z-50">
 
-        <div className="flex items-center gap-2">
-          <img className="w-25" src={logo} alt="Logo Log Zélia" />
-          <p className="font-bold font-montserrat text-4xl text-green-700">
+        <div className="flex items-center gap-3">
+          <img className="w-12" src={logo} alt="Logo Log Zélia" />
+          <p className="font-bold font-montserrat text-2xl text-green-700 leading-none">
             LOG <span className="text-orange-500">ZÉLIA</span>
           </p>
         </div>
 
-        <div className="flex gap-10 items-center">
-          <FaBell size={25} />
+        <div className="flex gap-6 items-center">
+          <FaBell className="text-xl" />
 
           <div
             className="flex items-center gap-2 cursor-pointer"
             onClick={toggleSidebar}
           >
-            <p>{user?.nome || name || "Usuário"}</p>
+            <p className="text-base">
+              {user?.nome || name || "Usuário"}
+            </p>
             <CurrentUserAvatar />
           </div>
         </div>
 
-      </header >
+      </header>
 
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={toggleSidebar}
-        ></div>
-      )
-      }
-
-      <UserSidebar open={open} setOpen={setOpen}/>
+      <UserSidebar open={open} setOpen={setOpen} />
     </>
   )
 }
-
