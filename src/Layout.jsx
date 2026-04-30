@@ -10,11 +10,11 @@ function Layout() {
 
       <div className="pt-16 flex">
 
-        <aside className="fixed top-16 left-0 w-64 h-[calc(100vh-4rem)] z-40">
+        <aside className="hidden md:block fixed top-16 left-0 w-64 h-[calc(100vh-4rem)] z-40">
           <Sidebar />
         </aside>
 
-        <main className="ml-64 w-full p-6 z-10 relative">
+        <main className="w-full md:ml-64 p-6 z-10 relative">
           <Outlet />
         </main>
 

@@ -236,7 +236,7 @@ export const Home = () => {
       <div>
         <button
           onClick={() => setOpen(!open)}
-          className='flex w-1/3 gap-2 items-center justify-center bg-red-900 p-2 rounded-xl cursor-pointer'
+          className='flex  gap-2 items-center justify-center bg-red-900 p-2 rounded-xl cursor-pointer'
         >
           <FaExclamationTriangle size={20} className='text-white' />
           <p className='text-white'>Adicionar Advertência</p>
