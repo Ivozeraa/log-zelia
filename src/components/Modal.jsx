@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 
 export const Modal = ({ isOpen, onClose, children, title }) => {
   const [show, setShow] = useState(false)
@@ -9,12 +10,14 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
 
     if (isOpen) {
       setShow(true)
+      document.body.style.overflow = "hidden"
 
       timeout = setTimeout(() => {
         setAnimate(true)
       }, 10)
     } else {
       setAnimate(false)
+      document.body.style.overflow = ""
 
       timeout = setTimeout(() => {
         setShow(false)
@@ -26,22 +29,26 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
 
   if (!show) return null
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
-      
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 py-6">
+
       {/* Overlay */}
       <div
         onClick={onClose}
-        className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${
-          animate ? "opacity-100" : "opacity-0"
-        }`}
+        className={`
+          absolute inset-0 z-[9998]
+          bg-black/50 backdrop-blur-sm
+          transition-opacity duration-200
+          ${animate ? "opacity-100" : "opacity-0"}
+        `}
       />
 
       {/* Modal */}
       <div
         onClick={(e) => e.stopPropagation()}
         className={`
-          relative bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[92vh]
+          relative z-[9999]
+          bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[92vh]
           border border-slate-200/70
           transform transition-all duration-200
           ${
@@ -70,6 +77,8 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
           {children}
         </div>
       </div>
-    </div>
+
+    </div>,
+    document.body
   )
 }
