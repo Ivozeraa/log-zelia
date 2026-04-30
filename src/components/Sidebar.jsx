@@ -1,18 +1,34 @@
 import { SidebarOptions as So } from './SidebarOptions'
 import { FaHome, FaExclamationCircle, FaPaste, FaCog } from 'react-icons/fa'
 
-export const Sidebar = () => {
+export const Sidebar = ({ open, setOpen }) => {
   return (
-    <aside className="flex flex-col h-full w-64 bg-white border-r-2 border-gray-300 p-6 gap-5">
+    <>
+      <div
+        onClick={() => setOpen(false)}
+        className={`fixed inset-0 bg-black/50 z-40 md:hidden ${
+          open ? "block" : "hidden"
+        }`}
+      />
 
-      <So to="/" icon={FaHome} text="Início" />
-      <So to="/advertencias" icon={FaExclamationCircle} text="Advertências" />
-      <So to="/gestao" icon={FaPaste} text="Gestão" />
+      <aside
+        className={`
+          fixed top-0 left-0 h-full w-64 bg-white border-r-2 border-gray-300 p-6 gap-5 flex flex-col z-50
+          transform transition-transform duration-300
 
-      <div className="mt-auto">
-        <So to="/configuracoes" icon={FaCog} text="Configurações" />
-      </div>
+          ${open ? "translate-x-0" : "-translate-x-full"}
 
-    </aside>
+          md:translate-x-0 md:top-16 md:h-[calc(100vh-4rem)]
+        `}
+      >
+        <So to="/" icon={FaHome} text="Início" />
+        <So to="/advertencias" icon={FaExclamationCircle} text="Advertências" />
+        <So to="/gestao" icon={FaPaste} text="Gestão" />
+
+        <div className="mt-auto">
+          <So to="/configuracoes" icon={FaCog} text="Configurações" />
+        </div>
+      </aside>
+    </>
   )
 }
