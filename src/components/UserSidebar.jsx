@@ -1,13 +1,26 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../hooks/useAuth"
 import { FaRegUserCircle, FaUserEdit, FaSignOutAlt } from "react-icons/fa"
 import { Modal } from "./Modal"
+import { EditProfile } from "../pages/EditProfile"
 
 export const UserSidebar = ({ open, setOpen }) => {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  useEffect(() => {
+    if (open || isModalOpen) {
+      document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = "auto"
+    }
+
+    return () => {
+      document.body.style.overflow = "auto"
+    }
+  }, [open, isModalOpen])
 
   function handleEditProfile() {
     setIsModalOpen(true)
@@ -18,7 +31,7 @@ export const UserSidebar = ({ open, setOpen }) => {
     <>
       {open && (
         <div
-          className="fixed inset-0 bg-black/50 z-9998"
+          className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-sm transition-opacity duration-200"
           onClick={() => setOpen(false)}
         />
       )}
@@ -70,7 +83,7 @@ export const UserSidebar = ({ open, setOpen }) => {
         onClose={() => setIsModalOpen(false)}
         title="Editar Perfil"
       >
-        <p>Aqui vai o conteúdo do modal</p>
+        <EditProfile onClose={() => setIsModalOpen(false)} />
       </Modal>
     </>
   )

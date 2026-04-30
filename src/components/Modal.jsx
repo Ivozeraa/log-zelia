@@ -51,15 +51,14 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
           bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[92vh]
           border border-slate-200/70
           transform transition-all duration-200
-          ${
-            animate
-              ? "opacity-100 scale-100 translate-y-0"
-              : "opacity-0 scale-95 translate-y-4"
+          ${animate
+            ? "opacity-100 scale-100 translate-y-0"
+            : "opacity-0 scale-95 translate-y-4"
           }
         `}
       >
         {title && (
-          <div className="flex flex-col gap-3 px-6 py-4 border-b border-slate-200/80 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex  gap-3 px-6 py-4 border-b border-slate-200/80 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-2xl font-semibold text-slate-900">
               {title}
             </h2>
