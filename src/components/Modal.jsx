@@ -32,7 +32,6 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 py-6">
 
-      {/* Overlay */}
       <div
         onClick={onClose}
         className={`
@@ -43,7 +42,6 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
         `}
       />
 
-      {/* Modal */}
       <div
         onClick={(e) => e.stopPropagation()}
         className={`
@@ -58,7 +56,7 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
         `}
       >
         {title && (
-          <div className="flex  gap-3 px-6 py-4 border-b border-slate-200/80 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center justify-between w-full px-6 py-4 border-b border-slate-200/80">
             <h2 className="text-2xl font-semibold text-slate-900">
               {title}
             </h2>

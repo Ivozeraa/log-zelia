@@ -444,20 +444,46 @@ export const Occurrences = () => {
       </div>
 
       {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-1 flex-wrap mt-0.5">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <button
-              key={page}
-              onClick={() => setCurrentPage(page)}
-              className={`px-3 py-1 rounded-full border transition items-center flex ${
-                currentPage === page
-                  ? "bg-green-600 text-white border-green-600"
-                  : "bg-white text-slate-700 border-slate-300 hover:bg-green-50"
-              }`}
-            >
-              {page}
-            </button>
-          ))}
+        <div className="flex justify-center items-center gap-2 mt-1 flex-wrap">
+
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 rounded-full border bg-white text-slate-700 border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-50"
+          >
+            ←
+          </button>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(
+              (page) =>
+                page === currentPage ||
+                page === currentPage - 1 ||
+                page === currentPage + 1
+            )
+            .map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`px-3 py-1 rounded-full border ${currentPage === page
+                    ? "bg-green-600 text-white border-green-600"
+                    : "bg-white text-slate-700 border-slate-300 hover:bg-green-50"
+                  }`}
+              >
+                {page}
+              </button>
+            ))}
+
+          <button
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 rounded-full border bg-white text-slate-700 border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-50"
+          >
+            →
+          </button>
+
         </div>
       )}
 
