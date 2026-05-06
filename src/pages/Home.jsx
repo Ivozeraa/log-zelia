@@ -49,6 +49,63 @@ export const Home = () => {
     setDescricao('')
     setFormMessage('')
   }
+  const [stats, setStats] = useState({
+    total: 0,
+    mes: 0,
+    semana: 0
+  })
+
+  const [ultimasOcorrencias, setUltimasOcorrencias] = useState([])
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      if (!selectedEscola) return
+
+      const { data, error } = await supabase
+        .from('ocorrencias')
+        .select('*')
+        .eq('escola_id', selectedEscola)
+
+      if (error) {
+        console.error('Erro ao carregar dashboard:', error)
+        return
+      }
+
+      const total = data.length
+
+      const hoje = new Date()
+
+      const inicioMes = new Date(
+        hoje.getFullYear(),
+        hoje.getMonth(),
+        1
+      )
+
+      const inicioSemana = new Date(hoje)
+      inicioSemana.setDate(hoje.getDate() - hoje.getDay())
+
+      const mes = data.filter(o =>
+        new Date(o.data_ocorrido) >= inicioMes
+      ).length
+
+      const semana = data.filter(o =>
+        new Date(o.data_ocorrido) >= inicioSemana
+      ).length
+
+      setStats({ total, mes, semana })
+
+      const ultimas = [...data]
+        .sort(
+          (a, b) =>
+            new Date(b.data_ocorrido) - new Date(a.data_ocorrido)
+        )
+        .slice(0, 5)
+
+      setUltimasOcorrencias(ultimas)
+    }
+
+    loadDashboard()
+  }, [selectedEscola])
 
   useEffect(() => {
     const loadEscolas = async () => {
@@ -156,7 +213,7 @@ export const Home = () => {
     if (updateError) {
       console.error('Erro ao atualizar status do aluno:', updateError)
       setFormMessage('Ocorrência registrada, mas não foi possível atualizar o status do aluno.')
-      notify.error('Erro ao atualizar status do aluno') 
+      notify.error('Erro ao atualizar status do aluno')
       return
     }
 
@@ -231,7 +288,8 @@ export const Home = () => {
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, []
+  )
 
   return (
     <div className='flex flex-col gap-10 w-full'>
@@ -249,12 +307,41 @@ export const Home = () => {
         </button>
       </div>
 
+      {/* Dashboard */}
       <div className='flex flex-col gap-2'>
         <p className='font-bold'>Dashboard</p>
+
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full'>
-          <Card title="Ocorrências" content="180" subtitle="no ano" />
-          <Card title="Pendentes" content="45" subtitle="atualmente" />
-          <Card title="Resolvidas" content="135" subtitle="no ano" />
+          <Card
+            title="Ocorrências totais"
+            content={stats.total}
+            subtitle="geral"
+          />
+
+          <Card
+            title="Este mês"
+            content={stats.mes}
+            subtitle="ocorrências no mês atual"
+          />
+
+          <Card
+            title="Esta semana"
+            content={stats.semana}
+            subtitle="últimos dias"
+          />
+        </div>
+
+        {/* Insight automático */}
+        <div className='mt-2 text-sm'>
+          {stats.semana > stats.mes * 0.4 ? (
+            <span className='text-red-600 font-medium'>
+              ⚠️ Alta concentração de ocorrências nesta semana.
+            </span>
+          ) : (
+            <span className='text-green-600 font-medium'>
+              ✔️ Fluxo de ocorrências dentro do normal.
+            </span>
+          )}
         </div>
       </div>
 
@@ -395,7 +482,7 @@ export const Home = () => {
               <option value="suspensao">Suspensão</option>
             </select>
           </div>
-          
+
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700">Data da ocorrência</label>
             <input
@@ -426,7 +513,9 @@ export const Home = () => {
             />
           </div>
 
-          
+
+
+
 
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700">Tipo de situação</label>
