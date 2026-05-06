@@ -36,6 +36,5 @@ export async function uploadAvatar(file) {
     },
   });
 
-  refreshUser();
   return avatarUrl;
 }
