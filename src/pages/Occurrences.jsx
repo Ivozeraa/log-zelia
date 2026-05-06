@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { notify } from "../utils/notify";
+import { Modal } from "../components/Modal";
 
 export const Occurrences = () => {
   const { user } = useAuth();
@@ -21,6 +22,13 @@ export const Occurrences = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedOccurrence, setSelectedOccurrence] = useState(null);
+
+  const [senha, setSenha] = useState("");
+  const [motivo, setMotivo] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const alunoSummary = useMemo(() => {
     return occurrences.reduce((acc, occurrence) => {
@@ -94,30 +102,33 @@ export const Occurrences = () => {
     return true;
   }
 
-  async function deleteOccurence(id) {
-    const confirmar = window.confirm(
-      "Deseja realmente remover esta ocorrência?",
-    );
+  async function handleDelete() {
+    if (!selectedOccurrence) return;
 
-    if (!confirmar) return;
-
-    const senhaOk = await validatePassword();
-
-    if (!senhaOk) return;
-
-    const motivo = window.prompt("Informe o motivo da exclusão:");
+    if (!senha) {
+      notify.error("Digite sua senha.");
+      return;
+    }
 
     if (!motivo || motivo.trim().length < 3) {
       notify.error("Motivo inválido.");
       return;
     }
 
-    const occurrenceToDelete = occurrences.find((o) => o.id === id);
+    setDeleting(true);
 
-    if (!occurrenceToDelete) {
-      notify.error("Ocorrência não encontrada.");
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: senha,
+    });
+
+    if (authError) {
+      notify.error("Senha incorreta.");
+      setDeleting(false);
       return;
     }
+
+    const occurrenceToDelete = selectedOccurrence;
 
     const alunoData = alunos.find(
       (aluno) => aluno.id === occurrenceToDelete.aluno_id,
@@ -125,29 +136,22 @@ export const Occurrences = () => {
 
     const payload = {
       ocorrencia_id: occurrenceToDelete.id,
-
       aluno_id: occurrenceToDelete.aluno_id,
       aluno_nome: alunoData?.nome || "Aluno não encontrado",
-
       professor_id: occurrenceToDelete.professor_id,
       professor_nome: occurrenceToDelete.professor_nome || "Não informado",
-
       escola_id: occurrenceToDelete.escola_id,
       turma_id: occurrenceToDelete.turma_id,
-
       descricao: occurrenceToDelete.descricao,
       categoria: occurrenceToDelete.categoria,
       tipo: occurrenceToDelete.tipo,
-
       data_ocorrido: occurrenceToDelete.data_ocorrido,
       data_aplicacao: occurrenceToDelete.data_aplicacao,
       data_inicio: occurrenceToDelete.data_inicio,
       data_fim: occurrenceToDelete.data_fim,
       criado_em: occurrenceToDelete.created_at,
-
       excluido_por: user.id,
       excluido_por_nome: user.nome,
-
       motivo_exclusao: motivo.trim(),
     };
 
@@ -156,23 +160,25 @@ export const Occurrences = () => {
       .insert(payload);
 
     if (historyError) {
-      console.error(historyError);
       notify.error("Erro ao salvar histórico.");
+      setDeleting(false);
       return;
     }
 
     const { error: deleteError } = await supabase
       .from("ocorrencias")
       .delete()
-      .eq("id", id);
+      .eq("id", occurrenceToDelete.id);
 
     if (deleteError) {
-      console.error(deleteError);
       notify.error("Erro ao excluir ocorrência.");
+      setDeleting(false);
       return;
     }
 
-    setOccurrences((prev) => prev.filter((item) => item.id !== id));
+    setOccurrences((prev) =>
+      prev.filter((item) => item.id !== occurrenceToDelete.id),
+    );
 
     setActivityLog((prev) => [
       {
@@ -187,6 +193,12 @@ export const Occurrences = () => {
     ]);
 
     notify.success("Ocorrência removida.");
+    
+    setDeleteModalOpen(false);
+    setSelectedOccurrence(null);
+    setSenha("");
+    setMotivo("");
+    setDeleting(false);
   }
 
   useEffect(() => {
@@ -428,7 +440,10 @@ export const Occurrences = () => {
                     <td className="px-4 py-4">
                       {latest && (
                         <button
-                          onClick={() => deleteOccurence(latest.id)}
+                          onClick={() => {
+                            setSelectedOccurrence(latest);
+                            setDeleteModalOpen(true);
+                          }}
                           className="text-xs text-red-600 hover:text-red-800 hover:underline transition"
                         >
                           Excluir
@@ -445,7 +460,6 @@ export const Occurrences = () => {
 
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-2 mt-1 flex-wrap">
-
           <button
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
@@ -459,16 +473,17 @@ export const Occurrences = () => {
               (page) =>
                 page === currentPage ||
                 page === currentPage - 1 ||
-                page === currentPage + 1
+                page === currentPage + 1,
             )
             .map((page) => (
               <button
                 key={page}
                 onClick={() => setCurrentPage(page)}
-                className={`px-3 py-1 rounded-full border ${currentPage === page
+                className={`px-3 py-1 rounded-full border ${
+                  currentPage === page
                     ? "bg-green-600 text-white border-green-600"
                     : "bg-white text-slate-700 border-slate-300 hover:bg-green-50"
-                  }`}
+                }`}
               >
                 {page}
               </button>
@@ -483,7 +498,6 @@ export const Occurrences = () => {
           >
             →
           </button>
-
         </div>
       )}
 
@@ -518,6 +532,61 @@ export const Occurrences = () => {
           )}
         </div>
       </div>
+
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setSenha("");
+          setMotivo("");
+        }}
+        title="Excluir ocorrência"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-slate-600">
+            Tem certeza que deseja excluir essa ocorrência? Essa ação não pode
+            ser desfeita.
+          </p>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Senha</label>
+            <input
+              type="password"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              className="h-11 rounded-lg border px-3"
+              placeholder="Digite sua senha"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Motivo</label>
+            <textarea
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              className="rounded-lg border px-3 py-2"
+              placeholder="Informe o motivo da exclusão"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 mt-2">
+            <button
+              onClick={() => setDeleteModalOpen(false)}
+              className="px-4 py-2 rounded-lg border"
+            >
+              Cancelar
+            </button>
+
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-4 py-2 rounded-lg bg-red-600 text-white disabled:opacity-50"
+            >
+              {deleting ? "Excluindo..." : "Confirmar exclusão"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

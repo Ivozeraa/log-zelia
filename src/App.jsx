@@ -11,7 +11,7 @@ import { EditProfile } from "./pages/EditProfile";
 import ProtectedRoute from "./routers/ProtectedRoute";
 import { Login } from "./pages/Login";
 import { Loading } from "./components/Loading";
-import { ToastProvider } from "./components/ToastProvide"
+import { ToastProvider } from "./components/ToastProvide";
 
 function App() {
   const { loading } = useAuth();
@@ -20,27 +20,34 @@ function App() {
 
   return (
     <>
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Home username={"Usuário"} />} />
-          <Route path="advertencias" element={<Occurrences />} />
-          <Route path="gestao" element={<Management />} />
-          <Route path="configuracoes" element={<Settings />} />
-          <Route path="editar-perfil" element={<EditProfile />} />
-        </Route>
-      </Routes>
-    </Router>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Home username={"Usuário"} />} />
+            <Route path="advertencias" element={<Occurrences />} />
+            <Route
+              path="gestao"
+              element={
+                <ProtectedRoute allowedRoles={[1, 2, 3]}>
+                  <Management />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="configuracoes" element={<Settings />} />
+            <Route path="editar-perfil" element={<EditProfile />} />
+          </Route>
+        </Routes>
+      </Router>
 
-    <ToastProvider />
+      <ToastProvider />
     </>
   );
 }

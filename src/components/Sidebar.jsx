@@ -1,13 +1,17 @@
 import { SidebarOptions as So } from './SidebarOptions'
 import { FaHome, FaExclamationCircle, FaPaste, FaCog } from 'react-icons/fa'
+import { useAuth } from '../hooks/useAuth'
 
 export const Sidebar = ({ open, setOpen }) => {
+  const { user } = useAuth()
 
   const handleClick = () => {
     if (window.innerWidth < 768) {
       setOpen(false)
     }
   }
+
+  const canSeeManagement = [1, 2, 3].includes(user?.role_id)
 
   return (
     <>
@@ -34,7 +38,10 @@ export const Sidebar = ({ open, setOpen }) => {
 
         <So to="/" icon={FaHome} text="Início" onClick={handleClick} />
         <So to="/advertencias" icon={FaExclamationCircle} text="Advertências" onClick={handleClick} />
-        <So to="/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
+
+        {canSeeManagement && (
+          <So to="/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
+        )}
 
         <div className="mt-auto">
           <So to="/configuracoes" icon={FaCog} text="Configurações" onClick={handleClick} />

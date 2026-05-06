@@ -30,12 +30,12 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
   if (!show) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 py-6">
+    <div className="fixed inset-0 z-9999 flex items-center justify-center px-4 py-6">
 
       <div
         onClick={onClose}
         className={`
-          absolute inset-0 z-[9998]
+          absolute inset-0 z-9998
           bg-black/50 backdrop-blur-sm
           transition-opacity duration-200
           ${animate ? "opacity-100" : "opacity-0"}
@@ -45,7 +45,7 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
       <div
         onClick={(e) => e.stopPropagation()}
         className={`
-          relative z-[9999]
+          relative z-9999
           bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[92vh]
           border border-slate-200/70
           transform transition-all duration-200
