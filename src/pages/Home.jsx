@@ -293,18 +293,25 @@ export const Home = () => {
 
   return (
     <div className='flex flex-col gap-10 w-full'>
-      <p className='text-3xl'>
-        Bem vindo(a), <span className='text-green-700'>{user?.nome}</span>!
-      </p>
+      <div className='flex flex-col md:flex-row items-start md:items-center justify-between gap-5'>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Início</h1>
+          <p className="text-sm text-slate-500">
+            Bem-vindo(a),{" "}
+            <span className="text-green-700 font-semibold">{user?.nome}</span>!
+            Centralize informações, acompanhe ocorrências e acesse recursos rapidamente.
+          </p>
+        </div>
 
-      <div>
-        <button
-          onClick={() => setOpen(!open)}
-          className='flex  gap-2 items-center justify-center bg-red-900 p-2 rounded-xl cursor-pointer'
-        >
-          <FaExclamationTriangle size={20} className='text-white' />
-          <p className='text-white'>Adicionar Advertência</p>
-        </button>
+        <div>
+          <button
+            onClick={() => setOpen(!open)}
+            className='flex items-center gap-2 h-11 px-5 rounded-xl bg-green-700 text-white font-semibold text-sm hover:bg-green-700 transition shadow-sm'
+          >
+            <FaExclamationTriangle size={20} className='text-white' />
+            <p className='text-white'>Adicionar Advertência</p>
+          </button>
+        </div>
       </div>
 
       {/* Dashboard */}
@@ -315,19 +322,16 @@ export const Home = () => {
           <Card
             title="Ocorrências totais"
             content={stats.total}
-            subtitle="geral"
           />
 
           <Card
             title="Este mês"
             content={stats.mes}
-            subtitle="ocorrências no mês atual"
           />
 
           <Card
             title="Esta semana"
             content={stats.semana}
-            subtitle="últimos dias"
           />
         </div>
 
