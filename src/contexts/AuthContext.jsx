@@ -6,36 +6,23 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  async function loadUser() {
+  async function loadUser(session) {
     try {
-      setLoading(true);
-
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError) {
-        console.error("Erro auth.getSession:", sessionError);
-        setUser(null);
-        return;
-      }
-
-      if (!session) {
+      if (!session?.user) {
         setUser(null);
         return;
       }
 
       const authUser = session.user;
 
-      const { data: perfil, error: perfilError } = await supabase
+      const { data: perfil, error } = await supabase
         .from("usuarios")
-        .select("id, nome, role_id, escola_id, pdt")
+        .select("nome, role_id, escola_id, pdt")
         .eq("id", authUser.id)
-        .maybeSingle();
+        .single();
 
-      if (perfilError) {
-        console.error("Erro buscando perfil:", perfilError);
+      if (error) {
+        console.error("Erro perfil:", error);
       }
 
       setUser({
@@ -44,15 +31,17 @@ export function AuthProvider({ children }) {
           perfil?.nome ||
           authUser.user_metadata?.name ||
           "Usuário",
+
         role_id: perfil?.role_id ?? null,
         escola_id: perfil?.escola_id ?? null,
         pdt: perfil?.pdt ?? false,
+
         email: authUser.email,
         avatar_url:
           authUser.user_metadata?.avatar_url || null,
       });
     } catch (err) {
-      console.error("Erro em loadUser:", err);
+      console.error("Erro loadUser:", err);
       setUser(null);
     } finally {
       setLoading(false);
@@ -60,21 +49,42 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
-    loadUser();
+    let mounted = true;
+
+    async function init() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      await loadUser(session);
+    }
+
+    init();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
+    } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth event:", event);
 
-      loadUser();
-    });
+        if (event === "SIGNED_OUT") {
+          setUser(null);
+          return;
+        }
+
+        if (
+          event === "SIGNED_IN" ||
+          event === "TOKEN_REFRESHED"
+        ) {
+          await loadUser(session);
+        }
+      },
+    );
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -89,7 +99,13 @@ export function AuthProvider({ children }) {
       value={{
         user,
         loading,
-        refreshUser: loadUser,
+        refreshUser: async () => {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+
+          await loadUser(session);
+        },
         logout,
       }}
     >
