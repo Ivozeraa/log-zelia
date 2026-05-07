@@ -34,7 +34,7 @@ export const Management = () => {
     password: "",
     role_id: "",
     escola_id: "",
-    is_pdt: false,
+    pdt: false,
   });
   const [adding, setAdding] = useState(false);
 
@@ -63,7 +63,7 @@ export const Management = () => {
       try {
         const usersQuery = supabase
           .from("usuarios")
-          .select("id, nome, email, role_id, escola_id, is_pdt, created_at")
+          .select("id, nome, email, role_id, escola_id, pdt, created_at")
           .order("nome", { ascending: true });
 
         const schoolsQuery = supabase
@@ -116,7 +116,7 @@ export const Management = () => {
   }, [search, filterRole, filterSchool]);
 
   async function handleAddUser() {
-    const { nome, email, password, role_id, escola_id, is_pdt } = addForm;
+    const { nome, email, password, role_id, escola_id, pdt } = addForm;
 
     if (!nome || !email || !password || !role_id) {
       notify.error("Preencha todos os campos obrigatórios.");
@@ -130,7 +130,12 @@ export const Management = () => {
         data: { session },
       } = await supabase.auth.getSession();
 
-      const res = await fetch(
+      if (!session) {
+        notify.error("Usuário não autenticado.");
+        return;
+      }
+
+      const response = await fetch(
         "https://dwhpidekvgsxjqhiqetd.functions.supabase.co/create-user",
         {
           method: "POST",
@@ -142,27 +147,58 @@ export const Management = () => {
             nome,
             email,
             password,
-            role_id,
-            escola_id,
-            is_pdt,
+            role_id: Number(role_id),
+            escola_id: escola_id || null,
+            pdt,
           }),
         },
       );
 
-      const token = req.headers.get("Authorization")?.replace("Bearer ", "");
+      const data = await response.json();
 
-      const { data: userData } = await supabase.auth.getUser(token);
+      console.log("STATUS:", response.status);
+      console.log("DATA:", data);
 
-      if (!userData.user || ![1, 2, 3].includes(userData.user.role_id)) {
-        return new Response(JSON.stringify({ error: "Sem permissão" }), {
-          status: 403,
-        });
-      }
-
-      if (!res.ok) {
-        notify.error(data.error);
+      if (!response.ok) {
+        notify.error(data.error || "Erro ao criar usuário");
         return;
       }
+      notify.success("Usuário criado com sucesso!");
+
+      setAddModalOpen(false);
+
+      setAddForm({
+        nome: "",
+        email: "",
+        password: "",
+        role_id: "",
+        escola_id: "",
+        pdt: false,
+      });
+
+      setUsers((prev) => [
+        ...prev,
+        {
+          id: data.user.id,
+          nome,
+          email,
+          role_id: Number(role_id),
+          escola_id: escola_id || null,
+          pdt,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      setAddModalOpen(false);
+
+      setAddForm({
+        nome: "",
+        email: "",
+        password: "",
+        role_id: "",
+        escola_id: "",
+        pdt: false,
+      });
     } catch (err) {
       console.error(err);
       notify.error("Erro inesperado.");
@@ -173,15 +209,24 @@ export const Management = () => {
 
   async function handleEditUser() {
     if (!editForm) return;
-    const { id, nome, email, role_id, escola_id, is_pdt } = editForm;
 
-    if (!nome || !email || !role_id) {
-      notify.error("Preencha todos os campos obrigatórios.");
-      return;
-    }
+    const { id, nome, email, role_id, escola_id, pdt } = editForm;
 
     setEditing(true);
 
+    if (!canEditUser(editForm)) {
+      notify.error("Você não pode editar este usuário.");
+      setEditing(false);
+      return;
+    }
+
+    const allowedRoles = getAllowedRoles().map((r) => r.id);
+
+    if (!allowedRoles.includes(Number(role_id))) {
+      notify.error("Você não pode atribuir essa função.");
+      setEditing(false);
+      return;
+    }
     const { error } = await supabase
       .from("usuarios")
       .update({
@@ -189,7 +234,7 @@ export const Management = () => {
         email,
         role_id: Number(role_id),
         escola_id: escola_id || null,
-        is_pdt,
+        pdt,
       })
       .eq("id", id);
 
@@ -202,7 +247,14 @@ export const Management = () => {
     setUsers((prev) =>
       prev.map((u) =>
         u.id === id
-          ? { ...u, nome, email, role_id: Number(role_id), escola_id, is_pdt }
+          ? {
+              ...u,
+              nome,
+              email,
+              role_id: Number(role_id),
+              escola_id: escola_id || null,
+              pdt,
+            }
           : u,
       ),
     );
@@ -222,6 +274,12 @@ export const Management = () => {
 
     setDeleting(true);
 
+    if (!canDeleteUser(selectedUser)) {
+      notify.error("Você não pode excluir este usuário.");
+      setDeleting(false);
+      return;
+    }
+
     const { error: authError } = await supabase.auth.signInWithPassword({
       email: user.email,
       password: deleteConfirmSenha,
@@ -237,6 +295,8 @@ export const Management = () => {
       .from("usuarios")
       .delete()
       .eq("id", selectedUser.id);
+
+    console.log("Delete error:", error);
 
     if (error) {
       notify.error("Erro ao excluir usuário.");
@@ -269,6 +329,61 @@ export const Management = () => {
     );
   }
 
+  const canEditUser = (targetUser) => {
+    const targetRole = Number(targetUser.role_id);
+
+    if (user.role_id !== 1 && user.escola_id !== targetUser.escola_id) {
+      return false;
+    }
+
+    if (user.role_id === 1) {
+      return true;
+    }
+
+    if (user.role_id === 2 && (targetRole === 3 || targetRole === 4)) {
+      return true;
+    }
+
+    if (user.role_id === 3 && targetRole === 4) {
+      return true;
+    }
+    return false;
+  };
+  const getAllowedRoles = () => {
+    if (user.role_id === 1) {
+      return ROLES;
+    }
+
+    if (user.role_id === 2) {
+      return ROLES.filter((r) => r.id === 3 || r.id === 4);
+    }
+
+    if (user.role_id === 3) {
+      return ROLES.filter((r) => r.id === 4);
+    }
+
+    return [];
+  };
+
+  const canDeleteUser = (targetUser) => {
+    const targetRole = Number(targetUser.role_id);
+
+    if (user.role_id !== 1 && user.escola_id !== targetUser.escola_id) {
+      return false;
+    }
+    if (user.role_id === 1) {
+      return true;
+    }
+    if (user.role_id === 2 && (targetRole === 3 || targetRole === 4)) {
+      return true;
+    }
+    if (user.role_id === 3 && targetRole === 4) {
+      return true;
+    }
+
+    return false;
+  };
+
   return (
     <div className="flex flex-col gap-8 w-full">
       {/* Header */}
@@ -298,7 +413,7 @@ export const Management = () => {
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <p className="text-sm text-slate-500">Professores PDT</p>
           <p className="text-2xl font-bold text-slate-900">
-            {users.filter((u) => u.is_pdt).length}
+            {users.filter((u) => u.pdt).length}
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -421,7 +536,7 @@ export const Management = () => {
                     {getSchoolName(u.escola_id)}
                   </td>
                   <td className="px-4 py-3">
-                    {u.is_pdt ? (
+                    {u.pdt ? (
                       <span className="inline-block rounded-full bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5">
                         Sim
                       </span>
@@ -435,24 +550,35 @@ export const Management = () => {
                       : "—"}
                   </td>
                   <td className="px-4 py-3 flex gap-3">
-                    <button
-                      onClick={() => {
-                        setEditForm({ ...u, role_id: String(u.role_id) });
-                        setEditModalOpen(true);
-                      }}
-                      className="text-xs text-blue-600 hover:text-blue-800 hover:underline transition"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedUser(u);
-                        setDeleteModalOpen(true);
-                      }}
-                      className="text-xs text-red-600 hover:text-red-800 hover:underline transition"
-                    >
-                      Excluir
-                    </button>
+                    {canEditUser(u) && (
+                      <button
+                        onClick={() => {
+                          setEditForm({
+                            ...u,
+                            nome: u.nome || "",
+                            email: u.email || "",
+                            role_id: String(u.role_id || ""),
+                            escola_id: u.escola_id || "",
+                            pdt: !!u.pdt,
+                          });
+                          setEditModalOpen(true);
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline transition"
+                      >
+                        Editar
+                      </button>
+                    )}
+                    {canDeleteUser(u) && (
+                      <button
+                        onClick={() => {
+                          setSelectedUser(u);
+                          setDeleteModalOpen(true);
+                        }}
+                        className="text-xs text-red-600 hover:text-red-800 hover:underline transition"
+                      >
+                        Excluir
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))
@@ -514,7 +640,7 @@ export const Management = () => {
             password: "",
             role_id: "",
             escola_id: "",
-            is_pdt: false,
+            pdt: false,
           });
         }}
         title="Adicionar novo usuário"
@@ -596,15 +722,15 @@ export const Management = () => {
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
-              id="add_is_pdt"
-              checked={addForm.is_pdt}
+              id="add_pdt"
+              checked={addForm.pdt}
               onChange={(e) =>
-                setAddForm((f) => ({ ...f, is_pdt: e.target.checked }))
+                setAddForm((f) => ({ ...f, pdt: e.target.checked }))
               }
               className="h-4 w-4 rounded border-slate-300 accent-green-600 cursor-pointer"
             />
             <label
-              htmlFor="add_is_pdt"
+              htmlFor="add_pdt"
               className="text-sm text-slate-700 cursor-pointer"
             >
               Professor de Turma (PDT)
@@ -645,7 +771,7 @@ export const Management = () => {
                 <label className="text-sm font-medium">Nome *</label>
                 <input
                   type="text"
-                  value={editForm.nome}
+                  value={editForm.nome || ""}
                   onChange={(e) =>
                     setEditForm((f) => ({ ...f, nome: e.target.value }))
                   }
@@ -656,7 +782,7 @@ export const Management = () => {
                 <label className="text-sm font-medium">E-mail *</label>
                 <input
                   type="email"
-                  value={editForm.email}
+                  value={editForm.email || ""}
                   onChange={(e) =>
                     setEditForm((f) => ({ ...f, email: e.target.value }))
                   }
@@ -666,13 +792,13 @@ export const Management = () => {
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium">Função *</label>
                 <select
-                  value={editForm.role_id}
+                  value={editForm.role_id || ""}
                   onChange={(e) =>
                     setEditForm((f) => ({ ...f, role_id: e.target.value }))
                   }
                   className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 >
-                  {ROLES.map((r) => (
+                  {getAllowedRoles().map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.label}
                     </option>
@@ -701,15 +827,15 @@ export const Management = () => {
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
-                id="edit_is_pdt"
-                checked={editForm.is_pdt || false}
+                id="edit_pdt"
+                checked={editForm.pdt || false}
                 onChange={(e) =>
-                  setEditForm((f) => ({ ...f, is_pdt: e.target.checked }))
+                  setEditForm((f) => ({ ...f, pdt: e.target.checked }))
                 }
                 className="h-4 w-4 rounded border-slate-300 accent-green-600 cursor-pointer"
               />
               <label
-                htmlFor="edit_is_pdt"
+                htmlFor="edit_pdt"
                 className="text-sm text-slate-700 cursor-pointer"
               >
                 Professor de Turma (PDT)
