@@ -398,7 +398,7 @@ export const Management = () => {
         </div>
         <button
           onClick={() => setAddModalOpen(true)}
-          className="flex items-center gap-2 h-11 px-5 rounded-xl bg-green-600 text-white font-semibold text-sm hover:bg-green-700 transition shadow-sm"
+          className="flex items-center gap-2 h-11 px-5 rounded-xl bg-green-700 text-white font-semibold text-sm hover:bg-green-700 transition shadow-sm"
         >
           <span className="text-lg leading-none">+</span> Novo usuário
         </button>
