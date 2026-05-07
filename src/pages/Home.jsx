@@ -5,6 +5,15 @@ import { useAuth } from "../hooks/useAuth"
 import { Card } from '../components/Card'
 import { Modal } from '../components/Modal'
 import { notify } from '../utils/notify'
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
+  Tooltip,
+  XAxis,
+  YAxis
+} from 'recharts'
 
 export const Home = () => {
   const { user } = useAuth()
@@ -33,6 +42,8 @@ export const Home = () => {
   const alunosFiltrados = alunos.filter((aluno) =>
     aluno.nome.toLowerCase().includes(alunoSearch.toLowerCase())
   )
+
+  const [graficoData, setGraficoData] = useState([])
 
   const selectedTurmaObj = turmas.find((turma) => turma.id === selectedTurma)
   const selectedAlunoObj = alunos.find((aluno) => aluno.id === selectedAluno)
@@ -93,6 +104,36 @@ export const Home = () => {
       ).length
 
       setStats({ total, mes, semana })
+
+      const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+      const dadosSemana = [
+        { name: 'Dom', ocorrencias: 0 },
+        { name: 'Seg', ocorrencias: 0 },
+        { name: 'Ter', ocorrencias: 0 },
+        { name: 'Qua', ocorrencias: 0 },
+        { name: 'Qui', ocorrencias: 0 },
+        { name: 'Sex', ocorrencias: 0 },
+        { name: 'Sáb', ocorrencias: 0 },
+      ]
+
+      data.forEach((ocorrencia) => {
+        const dataOcorrencia = new Date(ocorrencia.data_ocorrido)
+
+        if (dataOcorrencia >= inicioSemana) {
+          const dia = diasSemana[dataOcorrencia.getDay()]
+
+          const diaEncontrado = dadosSemana.find(
+            item => item.name === dia
+          )
+
+          if (diaEncontrado) {
+            diaEncontrado.ocorrencias += 1
+          }
+        }
+      })
+
+      setGraficoData(dadosSemana)
 
       const ultimas = [...data]
         .sort(
@@ -289,6 +330,8 @@ export const Home = () => {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, []
+
+
   )
 
   return (
@@ -315,8 +358,8 @@ export const Home = () => {
       </div>
 
       {/* Dashboard */}
-      <div className='flex flex-col gap-2'>
-        <p className='font-bold'>Dashboard</p>
+      <div className='flex flex-col gap-5'>
+        <p className='font-bold text-lg'>Dashboard</p>
 
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full'>
           <Card
@@ -333,10 +376,11 @@ export const Home = () => {
             title="Esta semana"
             content={stats.semana}
           />
+
+
         </div>
 
-        {/* Insight automático */}
-        <div className='mt-2 text-sm'>
+        <div className='mt-1 text-sm'>
           {stats.semana > stats.mes * 0.4 ? (
             <span className='text-red-600 font-medium'>
               ⚠️ Alta concentração de ocorrências nesta semana.
@@ -347,6 +391,76 @@ export const Home = () => {
             </span>
           )}
         </div>
+
+        <div className='w-full bg-white rounded-2xl border border-slate-200 shadow-sm p-5'>
+          <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6'>
+            <div>
+              <h2 className='text-lg font-bold text-slate-800'>
+                Fluxo de Ocorrências
+              </h2>
+
+              <p className='text-sm text-slate-500'>
+                Monitoramento semanal de registros
+              </p>
+            </div>
+
+            <div className='bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-full w-fit'>
+              Últimos 7 dias
+            </div>
+
+
+          </div>
+
+
+
+          <div className='w-full h-80'>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={graficoData}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#e2e8f0"
+                />
+
+                <XAxis
+                  dataKey="name"
+                  tick={{ fill: '#64748b' }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+
+                <YAxis
+                  tick={{ fill: '#64748b' }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: '14px',
+                    border: 'none',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                  }}
+                />
+
+                <Line
+                  type="monotone"
+                  dataKey="ocorrencias"
+                  stroke="#16a34a"
+                  strokeWidth={4}
+                  dot={{
+                    r: 5,
+                    fill: '#16a34a',
+                  }}
+                  activeDot={{
+                    r: 8,
+                  }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+
       </div>
 
       <Modal isOpen={open} onClose={() => setOpen(!open)} title="Adicionar Advertência">
