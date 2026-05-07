@@ -11,20 +11,22 @@ export function AuthProvider({ children }) {
       setLoading(true);
 
       const {
-        data: { user: authUser },
-        error: authError,
-      } = await supabase.auth.getUser();
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
 
-      if (authError) {
-        console.error("Erro auth.getUser:", authError);
+      if (sessionError) {
+        console.error("Erro auth.getSession:", sessionError);
         setUser(null);
         return;
       }
 
-      if (!authUser) {
+      if (!session) {
         setUser(null);
         return;
       }
+
+      const authUser = session.user;
 
       const { data: perfil, error: perfilError } = await supabase
         .from("usuarios")
@@ -62,7 +64,13 @@ export function AuthProvider({ children }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
       loadUser();
     });
 
