@@ -68,31 +68,25 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
-    loadUser();
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log("Auth event:", event);
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        console.log("Auth event:", _event);
+    if (!session?.user) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
 
-        if (!session?.user) {
-          setUser(null);
-          setLoading(false);
-          return;
-        }
+    if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+      loadingRef.current = false; // garante que não está bloqueado
+      await loadUser();
+    }
+  });
 
-        // evita reload duplicado no INITIAL_SESSION
-        if (_event === "SIGNED_IN") {
-          await loadUser();
-        }
-      },
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+  return () => subscription.unsubscribe();
+}, []);
 
   async function logout() {
     await supabase.auth.signOut();
