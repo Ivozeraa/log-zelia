@@ -1,8 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth";
-
 import Layout from "./Layout";
-
 import { Home } from "./pages/Home";
 import { Occurrences } from "./pages/Occurrences";
 import { Management } from "./pages/Management";
@@ -31,7 +29,7 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Home username={"Usuário"} />} />
+            <Route index element={<Home />} />
             <Route path="advertencias" element={<Occurrences />} />
             <Route
               path="gestao"
@@ -46,7 +44,6 @@ function App() {
           </Route>
         </Routes>
       </Router>
-
       <ToastProvider />
     </>
   );
