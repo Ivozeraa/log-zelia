@@ -36,28 +36,32 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
-    // Verifica sessão existente imediatamente, sem esperar o listener
+    let resolved = false;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (!session?.user) {
+          setUser(null);
+          setLoading(false);
+          resolved = true;
+          return;
+        }
+
+        if (resolved && event === "SIGNED_IN") return;
+
+        resolved = true;
+        setTimeout(() => {
+          loadUser(session.user);
+        }, 0);
+      }
+    );
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user) {
         setUser(null);
         setLoading(false);
       }
-      // Se tem sessão, o onAuthStateChange vai carregar o perfil
     });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth event:", event);
-
-        if (!session?.user) {
-          setUser(null);
-          setLoading(false);
-          return;
-        }
-
-        await loadUser(session.user);
-      }
-    );
 
     return () => subscription.unsubscribe();
   }, []);
