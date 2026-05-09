@@ -36,6 +36,15 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
+    // Verifica sessão existente imediatamente, sem esperar o listener
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) {
+        setUser(null);
+        setLoading(false);
+      }
+      // Se tem sessão, o onAuthStateChange vai carregar o perfil
+    });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Auth event:", event);
