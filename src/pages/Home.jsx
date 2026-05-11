@@ -94,6 +94,7 @@ export const Home = () => {
 
       const inicioSemana = new Date(hoje)
       inicioSemana.setDate(hoje.getDate() - hoje.getDay())
+      inicioSemana.setHours(0, 0, 0, 0)
 
       const mes = data.filter(o =>
         new Date(o.data_ocorrido) >= inicioMes
@@ -118,13 +119,24 @@ export const Home = () => {
       ]
 
       data.forEach((ocorrencia) => {
-        const dataOcorrencia = new Date(ocorrencia.data_ocorrido)
+        const [ano, mes, dia] = ocorrencia.data_ocorrido
+          .split('-')
+          .map(Number)
+
+        const dataOcorrencia = new Date(
+          ano,
+          mes - 1,
+          dia
+        )
+
+        dataOcorrencia.setHours(0, 0, 0, 0)
 
         if (dataOcorrencia >= inicioSemana) {
-          const dia = diasSemana[dataOcorrencia.getDay()]
+          const diaSemana =
+            diasSemana[dataOcorrencia.getDay()]
 
           const diaEncontrado = dadosSemana.find(
-            item => item.name === dia
+            item => item.name === diaSemana
           )
 
           if (diaEncontrado) {
