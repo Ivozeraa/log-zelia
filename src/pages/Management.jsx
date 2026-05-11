@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { FaFilePdf } from "react-icons/fa";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { notify } from "../utils/notify";
 import { Modal } from "../components/Modal";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const ROLES = [
   { id: 1, label: "Super Admin" },
@@ -46,6 +49,17 @@ export const Management = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [deleteConfirmSenha, setDeleteConfirmSenha] = useState("");
   const [deleting, setDeleting] = useState(false);
+
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportFilters, setExportFilters] = useState({
+    escola_id: "",
+    turma_id: "",
+    periodo: "todos",
+    categoria: "",
+    tipo: "",
+  });
+  const [exporting, setExporting] = useState(false);
+  const [turmas, setTurmas] = useState([]);
 
   useEffect(() => {
     if (user) {
@@ -96,7 +110,7 @@ export const Management = () => {
     return users.filter((u) => {
       const matchesName = search
         ? u.nome?.toLowerCase().includes(search.toLowerCase()) ||
-          u.email?.toLowerCase().includes(search.toLowerCase())
+        u.email?.toLowerCase().includes(search.toLowerCase())
         : true;
       const matchesRole = filterRole ? u.role_id === Number(filterRole) : true;
       const matchesSchool = filterSchool ? u.escola_id === filterSchool : true;
@@ -248,13 +262,13 @@ export const Management = () => {
       prev.map((u) =>
         u.id === id
           ? {
-              ...u,
-              nome,
-              email,
-              role_id: Number(role_id),
-              escola_id: escola_id || null,
-              pdt,
-            }
+            ...u,
+            nome,
+            email,
+            role_id: Number(role_id),
+            escola_id: escola_id || null,
+            pdt,
+          }
           : u,
       ),
     );
@@ -311,6 +325,229 @@ export const Management = () => {
     setDeleteConfirmSenha("");
     setDeleting(false);
   }
+
+  const handleExportOccurrences = async () => {
+    setExporting(true);
+
+    try {
+      // Calcular datas baseado no período selecionado
+      const hoje = new Date();
+      let dataInicio = null;
+      let dataFim = null;
+
+      switch (exportFilters.periodo) {
+        case "dia":
+          dataInicio = new Date(hoje);
+          dataInicio.setHours(0, 0, 0, 0);
+          dataFim = new Date(hoje);
+          dataFim.setHours(23, 59, 59, 999);
+          break;
+        case "semana":
+          dataInicio = new Date(hoje);
+          dataInicio.setDate(hoje.getDate() - hoje.getDay());
+          dataInicio.setHours(0, 0, 0, 0);
+          dataFim = new Date(hoje);
+          dataFim.setHours(23, 59, 59, 999);
+          break;
+        case "mes":
+          dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+          dataFim = new Date(hoje);
+          dataFim.setHours(23, 59, 59, 999);
+          break;
+        case "todos":
+        default:
+          // Não aplicar filtro de data
+          break;
+      }
+
+      // Buscar ocorrências com filtros aplicados
+      let query = supabase
+        .from("ocorrencias")
+        .select(`
+          *,
+          alunos!inner(nome),
+          turmas!inner(nome),
+          usuarios!inner(nome)
+        `)
+        .order("data_ocorrido", { ascending: false });
+
+      // Aplicar filtros
+      if (exportFilters.escola_id) {
+        query = query.eq("escola_id", exportFilters.escola_id);
+      }
+
+      if (exportFilters.turma_id) {
+        query = query.eq("turma_id", exportFilters.turma_id);
+      }
+
+      if (dataInicio && dataFim) {
+        query = query.gte("data_ocorrido", dataInicio.toISOString().split('T')[0]);
+        query = query.lte("data_ocorrido", dataFim.toISOString().split('T')[0]);
+      }
+
+      if (exportFilters.categoria) {
+        query = query.eq("categoria", exportFilters.categoria);
+      }
+
+      if (exportFilters.tipo) {
+        query = query.eq("tipo", exportFilters.tipo);
+      }
+
+      // Aplicar restrições de permissão
+      if (user.role_id !== 1 && user.escola_id) {
+        query = query.eq("escola_id", user.escola_id);
+      }
+
+      const { data: occurrences, error } = await query;
+
+      if (error) {
+        console.error("Erro ao buscar ocorrências:", error);
+        notify.error("Erro ao buscar ocorrências para exportação");
+        setExporting(false);
+        return;
+      }
+
+      if (!occurrences || occurrences.length === 0) {
+        notify.warning("Nenhuma ocorrência encontrada com os filtros aplicados");
+        setExporting(false);
+        return;
+      }
+
+      // Criar PDF
+      const doc = new jsPDF();
+      const title = `Relatório de Ocorrências - ${new Date().toLocaleDateString('pt-BR')}`;
+
+      // Título
+      doc.setFontSize(16);
+      doc.text(title, 14, 15);
+
+      // Filtros aplicados
+      doc.setFontSize(10);
+      let yPos = 25;
+      const filtrosAplicados = [];
+
+      if (exportFilters.escola_id) {
+        const escola = schools.find(s => s.id === exportFilters.escola_id);
+        filtrosAplicados.push(`Escola: ${escola?.nome || 'N/A'}`);
+      }
+
+      if (exportFilters.turma_id) {
+        const turma = turmas.find(t => t.id === exportFilters.turma_id);
+        filtrosAplicados.push(`Turma: ${turma?.nome || 'N/A'}`);
+      }
+
+      // Adicionar período ao filtro
+      const periodoLabels = {
+        dia: "Hoje",
+        semana: "Esta semana",
+        mes: "Este mês",
+        todos: "Todo o período"
+      };
+      filtrosAplicados.push(`Período: ${periodoLabels[exportFilters.periodo] || 'Todos'}`);
+
+      if (exportFilters.categoria) {
+        filtrosAplicados.push(`Categoria: ${exportFilters.categoria}`);
+      }
+
+      if (exportFilters.tipo) {
+        filtrosAplicados.push(`Tipo: ${exportFilters.tipo}`);
+      }
+
+      if (filtrosAplicados.length > 0) {
+        doc.text(`Filtros: ${filtrosAplicados.join(' | ')}`, 14, yPos);
+        yPos += 10;
+      }
+
+      // Preparar dados para a tabela
+      const tableData = occurrences.map(ocorrencia => [
+        new Date(ocorrencia.data_ocorrido).toLocaleDateString('pt-BR'),
+        ocorrencia.alunos?.nome || 'N/A',
+        ocorrencia.turmas?.nome || 'N/A',
+        ocorrencia.categoria || 'N/A',
+        ocorrencia.tipo || 'N/A',
+        ocorrencia.descricao?.substring(0, 25) + (ocorrencia.descricao?.length > 25 ? '...' : '') || 'N/A',
+        ocorrencia.usuarios?.nome || 'N/A'
+      ]);
+
+      // Gerar tabela
+      autoTable(doc, {
+        head: [['Data', 'Aluno', 'Turma', 'Categoria', 'Tipo', 'Descrição', 'Professor']],
+        body: tableData,
+        startY: yPos + 5,
+        theme: 'grid',
+        styles: {
+          fontSize: 7,
+          cellPadding: 3,
+        },
+        headStyles: {
+          fillColor: [22, 163, 74],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+        alternateRowStyles: {
+          fillColor: [240, 240, 240],
+        },
+        columnStyles: {
+          0: { cellWidth: 18 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 20 },
+          3: { cellWidth: 18 },
+          4: { cellWidth: 15 },
+          5: { cellWidth: 'auto' },
+          6: { cellWidth: 20 },
+        },
+        margin: { top: yPos + 5, right: 10, bottom: 10, left: 10 },
+      });
+
+      // Rodapé com total de ocorrências
+      const finalY = (doc.lastAutoTable?.finalY) || (yPos + 5);
+      doc.text(`Total de ocorrências: ${occurrences.length}`, 14, finalY + 10);
+
+      // Salvar PDF
+      doc.save(`relatorio-ocorrencias-${new Date().toISOString().split('T')[0]}.pdf`);
+      notify.success('PDF exportado com sucesso!');
+
+      setExportModalOpen(false);
+      setExportFilters({
+        escola_id: "",
+        turma_id: "",
+        periodo: "todos",
+        categoria: "",
+        tipo: "",
+      });
+
+    } catch (err) {
+      console.error("Erro na exportação:", err);
+      notify.error("Erro inesperado durante a exportação");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const loadTurmas = async (escolaId) => {
+    if (!escolaId) {
+      setTurmas([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("turmas")
+        .select("id, nome")
+        .eq("escola_id", escolaId)
+        .order("nome", { ascending: true });
+
+      if (error) {
+        console.error("Erro ao carregar turmas:", error);
+        setTurmas([]);
+      } else {
+        setTurmas(data || []);
+      }
+    } catch (err) {
+      console.error("Erro inesperado ao carregar turmas:", err);
+      setTurmas([]);
+    }
+  };
 
   const getRoleLabel = (role_id) =>
     ROLES.find((r) => r.id === role_id)?.label || "—";
@@ -396,12 +633,21 @@ export const Management = () => {
             Gerencie usuários, funções e vínculos escolares.
           </p>
         </div>
-        <button
-          onClick={() => setAddModalOpen(true)}
-          className="flex items-center gap-2 h-11 px-5 rounded-xl bg-green-700 text-white font-semibold text-sm hover:bg-green-700 transition shadow-sm"
-        >
-          <span className="text-lg leading-none">+</span> Novo usuário
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setExportModalOpen(true)}
+            className="flex items-center gap-2 h-11 px-5 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition shadow-sm"
+          >
+            <FaFilePdf size={18} className="text-white" />
+            <p className="text-white">Exportar Ocorrências</p>
+          </button>
+          <button
+            onClick={() => setAddModalOpen(true)}
+            className="flex items-center gap-2 h-11 px-5 rounded-xl bg-green-700 text-white font-semibold text-sm hover:bg-green-700 transition shadow-sm"
+          >
+            <span className="text-lg leading-none">+</span> Novo usuário
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -608,11 +854,10 @@ export const Management = () => {
               <button
                 key={page}
                 onClick={() => setCurrentPage(page)}
-                className={`px-3 py-1 rounded-full border ${
-                  currentPage === page
+                className={`px-3 py-1 rounded-full border ${currentPage === page
                     ? "bg-green-600 text-white border-green-600"
                     : "bg-white text-slate-700 border-slate-300 hover:bg-green-50"
-                }`}
+                  }`}
               >
                 {page}
               </button>
@@ -862,6 +1107,148 @@ export const Management = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Export Occurrences Modal */}
+      <Modal
+        isOpen={exportModalOpen}
+        onClose={() => {
+          setExportModalOpen(false);
+          setExportFilters({
+            escola_id: "",
+            turma_id: "",
+            periodo: "todos",
+            categoria: "",
+            tipo: "",
+          });
+          setTurmas([]);
+        }}
+        title="Exportar Relatório de Ocorrências"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-slate-600">
+            Configure os filtros para gerar o relatório de ocorrências em PDF.
+          </p>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium">Escola</label>
+              <select
+                value={exportFilters.escola_id}
+                onChange={(e) => {
+                  setExportFilters((f) => ({
+                    ...f,
+                    escola_id: e.target.value,
+                    turma_id: "", // Resetar turma quando escola muda
+                  }));
+                  loadTurmas(e.target.value);
+                }}
+                className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="">Todas as escolas</option>
+                {schools.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium">Turma</label>
+              <select
+                value={exportFilters.turma_id}
+                onChange={(e) =>
+                  setExportFilters((f) => ({ ...f, turma_id: e.target.value }))
+                }
+                disabled={!exportFilters.escola_id}
+                className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:bg-slate-100 disabled:cursor-not-allowed"
+              >
+                <option value="">Todas as turmas</option>
+                {turmas.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium">Período</label>
+              <select
+                value={exportFilters.periodo}
+                onChange={(e) =>
+                  setExportFilters((f) => ({ ...f, periodo: e.target.value }))
+                }
+                className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="todos">Todo o período</option>
+                <option value="dia">Hoje</option>
+                <option value="semana">Esta semana</option>
+                <option value="mes">Este mês</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium">Categoria</label>
+              <select
+                value={exportFilters.categoria}
+                onChange={(e) =>
+                  setExportFilters((f) => ({ ...f, categoria: e.target.value }))
+                }
+                className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="">Todas as categorias</option>
+                <option value="ocorrencia">Ocorrência</option>
+                <option value="suspensao">Suspensão</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium">Tipo</label>
+              <select
+                value={exportFilters.tipo}
+                onChange={(e) =>
+                  setExportFilters((f) => ({ ...f, tipo: e.target.value }))
+                }
+                className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="">Todos os tipos</option>
+                <option value="indisciplina">Indisciplina</option>
+                <option value="infrequencia">Infrequência</option>
+                <option value="atraso">Atraso</option>
+                <option value="desrespeito">Desrespeito</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-2">
+            <button
+              onClick={() => {
+                setExportModalOpen(false);
+                setExportFilters({
+                  escola_id: "",
+                  turma_id: "",
+                  periodo: "todos",
+                  categoria: "",
+                  tipo: "",
+                });
+                setTurmas([]);
+              }}
+              className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleExportOccurrences}
+              disabled={exporting}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 transition"
+            >
+              {exporting ? "Exportando..." : "Exportar PDF"}
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {/* Delete User Modal */}

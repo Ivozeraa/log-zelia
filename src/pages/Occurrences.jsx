@@ -84,24 +84,6 @@ export const Occurrences = () => {
     setCurrentPage(1);
   }, [search, selectedTurma, apenasComOcorrencia]);
 
-  async function validatePassword() {
-    const senha = window.prompt("Digite sua senha para confirmar a exclusão:");
-
-    if (!senha) return false;
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: senha,
-    });
-
-    if (error) {
-      notify.error("Senha incorreta.");
-      return false;
-    }
-
-    return true;
-  }
-
   async function handleDelete() {
     if (!selectedOccurrence) return;
 
@@ -193,7 +175,7 @@ export const Occurrences = () => {
     ]);
 
     notify.success("Ocorrência removida.");
-    
+
     setDeleteModalOpen(false);
     setSelectedOccurrence(null);
     setSenha("");
@@ -274,13 +256,6 @@ export const Occurrences = () => {
     <div className="flex flex-col gap-8 w-full">
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Ocorrências</h1>
-            <p className="text-sm text-slate-500">
-              Pesquise por aluno e filtre por turma. Veja o status e o total de
-              ocorrências de cada aluno.
-            </p>
-          </div>
           <div className="grid w-full gap-3 sm:grid-cols-2 sm:w-auto">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-semibold text-slate-700">
@@ -479,11 +454,10 @@ export const Occurrences = () => {
               <button
                 key={page}
                 onClick={() => setCurrentPage(page)}
-                className={`px-3 py-1 rounded-full border ${
-                  currentPage === page
+                className={`px-3 py-1 rounded-full border ${currentPage === page
                     ? "bg-green-600 text-white border-green-600"
                     : "bg-white text-slate-700 border-slate-300 hover:bg-green-50"
-                }`}
+                  }`}
               >
                 {page}
               </button>
