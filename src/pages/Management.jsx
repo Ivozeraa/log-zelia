@@ -8,6 +8,8 @@ import { Modal } from "../components/ui/Modal";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
+import { PageTitle } from "../components/ui/PageTitle";
+
 const ROLES = [
   { id: 1, label: "Super Admin" },
   { id: 2, label: "Diretor" },
@@ -626,14 +628,9 @@ export const Management = () => {
     <div className="flex flex-col gap-8 w-full">
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Gerenciamento</h1>
-          <p className="text-sm text-slate-500">
-            Bem-vindo(a),{" "}
-            <span className="text-green-700 font-semibold">{user?.nome}</span>!
-            Gerencie usuários, funções e vínculos escolares.
-          </p>
-        </div>
+        <PageTitle title="Gerenciamento" subtitle="Gerencie usuários, funções e vínculos escolares." />
+
+
         <div className="flex gap-3">
           <Button
             onClick={() => setExportModalOpen(true)}
@@ -859,8 +856,8 @@ export const Management = () => {
                 key={page}
                 onClick={() => setCurrentPage(page)}
                 className={`px-3 py-1 rounded-full border ${currentPage === page
-                    ? "bg-green-600 text-white border-green-600"
-                    : "bg-white text-slate-700 border-slate-300 hover:bg-green-50"
+                  ? "bg-green-600 text-white border-green-600"
+                  : "bg-white text-slate-700 border-slate-300 hover:bg-green-50"
                   }`}
               >
                 {page}

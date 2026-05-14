@@ -23,7 +23,7 @@ export const Sidebar = ({ open, setOpen }) => {
 
       <aside
         className={`
-          fixed top-0 left-0 h-full w-64 bg-white border-r-2 border-gray-300 p-6 gap-5 flex flex-col z-1000
+          fixed top-0 left-0 h-full w-64 bg-white dark:bg-slate-950 border-r-2 border-gray-300 dark:border-slate-700 p-6 gap-5 flex flex-col z-1000
           transform transition-transform duration-300
 
           ${open ? "translate-x-0" : "-translate-x-full"}

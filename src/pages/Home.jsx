@@ -16,6 +16,8 @@ import {
   YAxis
 } from 'recharts'
 
+import { PageTitle } from '../components/ui/PageTitle'
+
 export const Home = () => {
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
@@ -372,15 +374,18 @@ export const Home = () => {
   return (
     <div className='flex flex-col gap-10 w-full'>
       <div className='flex flex-col md:flex-row items-start md:items-center justify-between gap-5'>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Início</h1>
-          <p className="text-sm text-slate-500">
-            Bem-vindo(a),{" "}
-            <span className="text-green-700 font-semibold">{user?.nome}</span>!
-            Centralize informações, acompanhe ocorrências e acesse recursos rapidamente.
-          </p>
-        </div>
-
+        <PageTitle
+          title="Dashboard"
+          subtitle={
+            <>
+              Bem-vindo(a),{" "}
+              <span className="text-green-700 font-semibold">
+                {user?.nome}
+              </span>
+              !, monitore as ocorrências registradas e adicione novas advertências.
+            </>
+          }
+        />
         <div>
           <Button
             onClick={() => setOpen(!open)}
@@ -392,7 +397,6 @@ export const Home = () => {
         </div>
       </div>
 
-      {/* Dashboard */}
       <div className='flex flex-col gap-5'>
         <p className='font-bold text-lg'>Dashboard</p>
 
@@ -427,14 +431,14 @@ export const Home = () => {
           )}
         </div>
 
-        <div className='w-full bg-white rounded-2xl border border-slate-200 shadow-sm p-5'>
+        <div className='w-full bg-white dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-600 shadow-sm p-5'>
           <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6'>
             <div>
-              <h2 className='text-lg font-bold text-slate-800'>
+              <h2 className='text-lg font-bold text-slate-800 dark:text-white'>
                 Fluxo de Ocorrências
               </h2>
 
-              <p className='text-sm text-slate-500'>
+              <p className='text-sm text-slate-500 dark:text-slate-400'>
                 Monitoramento semanal de registros
               </p>
             </div>
@@ -662,8 +666,8 @@ export const Home = () => {
             >
               <span>
                 {tipoAdvertencia === 'ocorrencia' ? 'Ocorrência' :
-                 tipoAdvertencia === 'suspensao' ? 'Suspensão' :
-                 'Selecionar tipo'}
+                  tipoAdvertencia === 'suspensao' ? 'Suspensão' :
+                    'Selecionar tipo'}
               </span>
               <span className="text-slate-500">▾</span>
             </button>
@@ -749,11 +753,11 @@ export const Home = () => {
             >
               <span>
                 {tipoSituacao === 'indisciplina' ? 'Indisciplina' :
-                 tipoSituacao === 'infrequencia' ? 'Infrequência' :
-                 tipoSituacao === 'atraso' ? 'Atraso' :
-                 tipoSituacao === 'desrespeito' ? 'Desrespeito' :
-                 tipoSituacao === 'outro' ? 'Outro' :
-                 'Selecionar situação'}
+                  tipoSituacao === 'infrequencia' ? 'Infrequência' :
+                    tipoSituacao === 'atraso' ? 'Atraso' :
+                      tipoSituacao === 'desrespeito' ? 'Desrespeito' :
+                        tipoSituacao === 'outro' ? 'Outro' :
+                          'Selecionar situação'}
               </span>
               <span className="text-slate-500">▾</span>
             </button>

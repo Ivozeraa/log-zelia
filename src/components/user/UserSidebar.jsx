@@ -40,8 +40,8 @@ export const UserSidebar = ({ open, setOpen }) => {
       <div
         className={`
           fixed top-0 right-0 h-screen w-72
-          bg-white shadow-lg z-9999
-          border-l-2 border-gray-300 
+          bg-white dark:bg-slate-950 shadow-lg z-9999
+          border-l-2 border-gray-300 dark:border-slate-700
           flex flex-col items-center gap-5 p-10
           transform transition-transform duration-300 ease-in-out
           ${open ? "translate-x-0" : "translate-x-full"}
@@ -57,7 +57,9 @@ export const UserSidebar = ({ open, setOpen }) => {
           <FaRegUserCircle size={50} />
         )}
 
-        <p className="text-xl font-bold">{user?.nome || "Usuário"}</p>
+        <p className="text-xl font-bold text-slate-900 dark:text-white">
+          {user?.nome || "Usuário"}
+        </p>
 
         <div className="flex flex-col gap-3 w-full">
           <Button
