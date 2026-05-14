@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 
+import { FaMixcloud } from "react-icons/fa"
+
 export const Modal = ({ isOpen, onClose, children, title }) => {
   const [show, setShow] = useState(false)
   const [animate, setAnimate] = useState(false)
@@ -65,7 +67,7 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
               onClick={onClose}
               className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
             >
-              ×
+              <FaMixcloud />
             </button>
           </div>
         )}
