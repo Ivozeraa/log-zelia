@@ -1,6 +1,6 @@
-import { SidebarOptions as So } from './SidebarOptions'
+import { SidebarOptions as So } from '../ui/SidebarOptions'
 import { FaHome, FaExclamationCircle, FaPaste, FaCog } from 'react-icons/fa'
-import { useAuth } from '../hooks/useAuth'
+import { useAuth } from '../../hooks/useAuth'
 
 export const Sidebar = ({ open, setOpen }) => {
   const { user } = useAuth()
@@ -17,9 +17,8 @@ export const Sidebar = ({ open, setOpen }) => {
     <>
       <div
         onClick={() => setOpen(false)}
-        className={`fixed inset-0 bg-black/50 z-990 md:hidden ${
-          open ? "block" : "hidden"
-        }`}
+        className={`fixed inset-0 bg-black/50 z-990 md:hidden ${open ? "block" : "hidden"
+          }`}
       />
 
       <aside

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { useAuth } from "../hooks/useAuth"
+import { useAuth } from "../../hooks/useAuth"
 import { FaRegUserCircle, FaUserEdit, FaSignOutAlt } from "react-icons/fa"
-import { Modal } from "./Modal"
-import { EditProfile } from "../pages/EditProfile"
+import { Modal } from "../ui/Modal"
+import { EditProfile } from "./EditProfile"
 
 export const UserSidebar = ({ open, setOpen }) => {
   const { user, logout } = useAuth()

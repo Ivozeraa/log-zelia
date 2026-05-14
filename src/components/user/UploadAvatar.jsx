@@ -1,5 +1,5 @@
-import { uploadAvatar } from "../utils/uploadAvatar"
-import { useAuth } from "../hooks/useAuth"
+import { uploadAvatar } from "../../utils/uploadAvatar"
+import { useAuth } from "../../hooks/useAuth"
 
 export function UploadAvatar(){
   const { refreshUser } = useAuth()

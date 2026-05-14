@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
-import { useAuth } from "../hooks/useAuth"
-import { uploadAvatar } from "../utils/uploadAvatar"
-import { supabase } from "../utils/supabase"
+import { useAuth } from "../../hooks/useAuth"
+import { uploadAvatar } from "../../utils/uploadAvatar"
+import { supabase } from "../../utils/supabase"
 import { FaUser } from "react-icons/fa"
 
 export const EditProfile = () => {

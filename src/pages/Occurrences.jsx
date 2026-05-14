@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { notify } from "../utils/notify";
-import { Modal } from "../components/Modal";
+import { Modal } from "../components/ui/Modal";
 
 export const Occurrences = () => {
   const { user } = useAuth();
