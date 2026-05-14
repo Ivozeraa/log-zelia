@@ -24,7 +24,7 @@ export function Header() {
 
   return (
     <>
-      <header className="h-16 flex justify-between items-center fixed w-full px-6 border-b-2 border-gray-300 bg-white top-0 left-0 z-50">
+      <header className="h-16 flex justify-between items-center fixed w-full px-6 border-b-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-950 z-50">
 
         <div className="flex items-center gap-3">
 
@@ -38,7 +38,7 @@ export function Header() {
           <img className="w-12" src={logo} alt="Logo Log Zélia" />
 
           <p className="font-bold font-montserrat text-2xl text-green-700 leading-none">
-            LOG <span className="text-orange-500">ZÉLIA</span>
+            LOG <span className="text-orange-500 dark:text-orange-600">ZÉLIA</span>
           </p>
         </div>
 
