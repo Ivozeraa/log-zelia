@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { useAuth } from "../../hooks/useAuth"
 import { uploadAvatar } from "../../utils/uploadAvatar"
 import { supabase } from "../../utils/supabase"
+import { Button } from "../ui/button"
 import { FaUser } from "react-icons/fa"
 
 export const EditProfile = () => {
@@ -162,13 +163,13 @@ export const EditProfile = () => {
           />
         </div>
 
-        <button
+        <Button
           onClick={handleSaveNome}
           disabled={loadingNome}
-          className="w-full bg-blue-500 text-white py-2 rounded-md font-medium hover:bg-blue-600 disabled:opacity-50"
+          className="w-full"
         >
           {loadingNome ? "Salvando..." : "Salvar alterações"}
-        </button>
+        </Button>
 
         {errorNome && <p className="text-red-500 text-sm">{errorNome}</p>}
         {successNome && <p className="text-green-500 text-sm">{successNome}</p>}
@@ -195,13 +196,13 @@ export const EditProfile = () => {
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
         />
 
-        <button
+        <Button
           onClick={handleSaveSenha}
           disabled={loadingSenha}
-          className="w-full bg-gray-900 text-white py-2 rounded-md font-medium hover:bg-black disabled:opacity-50"
+          className="w-full"
         >
           {loadingSenha ? "Alterando..." : "Alterar senha"}
-        </button>
+        </Button>
 
         {errorSenha && <p className="text-red-500 text-sm">{errorSenha}</p>}
         {successSenha && <p className="text-green-500 text-sm">{successSenha}</p>}

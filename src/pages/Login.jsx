@@ -2,6 +2,7 @@ import { useState } from "react"
 import { supabase } from "../utils/supabase"
 import { useNavigate } from "react-router-dom"
 import { FaEye, FaEyeSlash } from "react-icons/fa"
+import { Button } from '../components/ui/button'
 
 import bgImg from "../assets/images/escola-frente.jpg"
 import logo from "../assets/images/logo-login.png"
@@ -30,7 +31,7 @@ export const Login = () => {
     }
 
     notify.success("Login realizado com sucesso!")
-    navigate("/")
+    navigate("/", { replace: true })
   }
 
   return (
@@ -83,11 +84,9 @@ export const Login = () => {
             </button>
           </div>
 
-          <button
-            className="w-full bg-green-700 shadow-md text-white p-3 rounded-lg hover:bg-green-800 transition"
-          >
+          <Button className="w-full" type="submit">
             Entrar
-          </button>
+          </Button>
 
         </form>
       </div>

@@ -9,6 +9,8 @@ export const ToastProvider = () => {
       theme="light"
       newestOnTop
       pauseOnHover
+      style={{ zIndex: 20000 }}
+      toastStyle={{ zIndex: 20000 }}
     />
   )
 }

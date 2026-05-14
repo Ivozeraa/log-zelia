@@ -47,17 +47,14 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        if (resolved && event === "SIGNED_IN") return;
-
         resolved = true;
-        setTimeout(() => {
-          loadUser(session.user);
-        }, 0);
+        setLoading(true);
+        loadUser(session.user);
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user) {
+      if (!session?.user && !resolved) {
         setUser(null);
         setLoading(false);
       }

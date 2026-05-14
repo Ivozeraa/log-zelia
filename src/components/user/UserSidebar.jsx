@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from "../../hooks/useAuth"
 import { FaRegUserCircle, FaUserEdit, FaSignOutAlt } from "react-icons/fa"
 import { Modal } from "../ui/Modal"
+import { Button } from "../ui/button"
 import { EditProfile } from "./EditProfile"
 
 export const UserSidebar = ({ open, setOpen }) => {
@@ -59,23 +60,24 @@ export const UserSidebar = ({ open, setOpen }) => {
         <p className="text-xl font-bold">{user?.nome || "Usuário"}</p>
 
         <div className="flex flex-col gap-3 w-full">
-          <button
+          <Button
             type="button"
+            className="flex items-center justify-center gap-2"
             onClick={handleEditProfile}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-linear-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition"
           >
             <FaUserEdit />
             Editar Perfil
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="button"
+            variant="destructive"
+            className="flex items-center justify-center gap-2"
             onClick={logout}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-linear-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition"
           >
             <FaSignOutAlt />
             Deslogar
-          </button>
+          </Button>
         </div>
       </div>
 

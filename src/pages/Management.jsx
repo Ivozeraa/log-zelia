@@ -3,6 +3,7 @@ import { FaFilePdf } from "react-icons/fa";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { notify } from "../utils/notify";
+import { Button } from "../components/ui/button";
 import { Modal } from "../components/ui/Modal";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -634,19 +635,19 @@ export const Management = () => {
           </p>
         </div>
         <div className="flex gap-3">
-          <button
+          <Button
             onClick={() => setExportModalOpen(true)}
-            className="flex items-center gap-2 h-11 px-5 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition shadow-sm"
+            className="flex items-center gap-2"
           >
             <FaFilePdf size={18} className="text-white" />
-            <p className="text-white">Exportar Ocorrências</p>
-          </button>
-          <button
+            <span>Exportar Ocorrências</span>
+          </Button>
+          <Button
             onClick={() => setAddModalOpen(true)}
-            className="flex items-center gap-2 h-11 px-5 rounded-xl bg-green-700 text-white font-semibold text-sm hover:bg-green-700 transition shadow-sm"
+            className="flex items-center gap-2"
           >
             <span className="text-lg leading-none">+</span> Novo usuário
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -797,7 +798,9 @@ export const Management = () => {
                   </td>
                   <td className="px-4 py-3 flex gap-3">
                     {canEditUser(u) && (
-                      <button
+                      <Button
+                        size="xs"
+                        variant="outline"
                         onClick={() => {
                           setEditForm({
                             ...u,
@@ -809,21 +812,22 @@ export const Management = () => {
                           });
                           setEditModalOpen(true);
                         }}
-                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline transition"
+                        className="text-blue-600 hover:text-blue-800 border-blue-200"
                       >
                         Editar
-                      </button>
+                      </Button>
                     )}
                     {canDeleteUser(u) && (
-                      <button
+                      <Button
+                        size="xs"
+                        variant="destructive"
                         onClick={() => {
                           setSelectedUser(u);
                           setDeleteModalOpen(true);
                         }}
-                        className="text-xs text-red-600 hover:text-red-800 hover:underline transition"
                       >
                         Excluir
-                      </button>
+                      </Button>
                     )}
                   </td>
                 </tr>
@@ -983,19 +987,20 @@ export const Management = () => {
           </div>
 
           <div className="flex justify-end gap-2 mt-2">
-            <button
+            <Button
+              variant="outline"
               onClick={() => setAddModalOpen(false)}
-              className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition"
+              className="px-4 py-2"
             >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleAddUser}
               disabled={adding}
-              className="px-4 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 disabled:opacity-50 transition"
+              className="px-4 py-2"
             >
               {adding ? "Criando..." : "Criar usuário"}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>
@@ -1088,22 +1093,23 @@ export const Management = () => {
             </div>
 
             <div className="flex justify-end gap-2 mt-2">
-              <button
+              <Button
+                variant="outline"
                 onClick={() => {
                   setEditModalOpen(false);
                   setEditForm(null);
                 }}
-                className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition"
+                className="px-4 py-2"
               >
                 Cancelar
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleEditUser}
                 disabled={editing}
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 transition"
+                className="px-4 py-2"
               >
                 {editing ? "Salvando..." : "Salvar alterações"}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -1224,7 +1230,8 @@ export const Management = () => {
           </div>
 
           <div className="flex justify-end gap-2 mt-2">
-            <button
+            <Button
+              variant="outline"
               onClick={() => {
                 setExportModalOpen(false);
                 setExportFilters({
@@ -1236,17 +1243,17 @@ export const Management = () => {
                 });
                 setTurmas([]);
               }}
-              className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition"
+              className="px-4 py-2"
             >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleExportOccurrences}
               disabled={exporting}
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 transition"
+              className="px-4 py-2"
             >
               {exporting ? "Exportando..." : "Exportar PDF"}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>
@@ -1280,23 +1287,25 @@ export const Management = () => {
             />
           </div>
           <div className="flex justify-end gap-2 mt-2">
-            <button
+            <Button
+              variant="outline"
               onClick={() => {
                 setDeleteModalOpen(false);
                 setSelectedUser(null);
                 setDeleteConfirmSenha("");
               }}
-              className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition"
+              className="px-4 py-2"
             >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="destructive"
               onClick={handleDeleteUser}
               disabled={deleting}
-              className="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-50 transition"
+              className="px-4 py-2"
             >
               {deleting ? "Excluindo..." : "Confirmar exclusão"}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>

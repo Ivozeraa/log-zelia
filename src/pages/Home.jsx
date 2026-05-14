@@ -3,6 +3,7 @@ import { FaExclamationTriangle } from 'react-icons/fa'
 import { supabase } from '../utils/supabase'
 import { useAuth } from "../hooks/useAuth"
 import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/button'
 import { Modal } from '../components/ui/Modal'
 import { notify } from '../utils/notify'
 import {
@@ -231,6 +232,7 @@ export const Home = () => {
       escola_id: selectedEscola,
       aluno_id: selectedAluno,
       professor_id: user.id,
+      professor_nome: user.nome,
       turma_id: selectedTurma,
       data_ocorrido: dataOcorrido,
       tipo: tipoSituacao,
@@ -241,6 +243,22 @@ export const Home = () => {
     if (tipoAdvertencia === 'suspensao') {
       payload.data_inicio = dataInicio
       payload.data_fim = dataTermino
+    }
+
+    let willSuspend = tipoAdvertencia === 'suspensao'
+
+    if (tipoAdvertencia === 'ocorrencia') {
+      const { count, error: countError } = await supabase
+        .from('ocorrencias')
+        .select('id', { count: 'exact', head: true })
+        .eq('aluno_id', selectedAluno)
+        .eq('categoria', 'ocorrencia')
+
+      if (countError) {
+        console.error('Erro ao contar ocorrências do aluno:', countError)
+      } else {
+        willSuspend = (count || 0) + 1 >= 3
+      }
     }
 
     console.log('user', user)
@@ -256,14 +274,11 @@ export const Home = () => {
       return
     }
 
-    const statusMap = {
-      ocorrencia: 'normal',
-      suspensao: 'suspenso',
-    }
+    const statusToUpdate = willSuspend ? 'suspenso' : 'normal'
 
     const { error: updateError } = await supabase
       .from('alunos')
-      .update({ status: statusMap[tipoAdvertencia] ?? 'normal' })
+      .update({ status: statusToUpdate })
       .eq('id', selectedAluno)
 
     setSubmitting(false)
@@ -367,13 +382,13 @@ export const Home = () => {
         </div>
 
         <div>
-          <button
+          <Button
             onClick={() => setOpen(!open)}
-            className='flex items-center gap-2 h-11 px-5 rounded-xl bg-green-700 text-white font-semibold text-sm hover:bg-green-700 transition shadow-sm'
+            className="gap-2"
           >
             <FaExclamationTriangle size={20} className='text-white' />
-            <p className='text-white'>Adicionar Advertência</p>
-          </button>
+            <span>Adicionar Advertência</span>
+          </Button>
         </div>
       </div>
 
@@ -811,24 +826,25 @@ export const Home = () => {
           </div>
 
           <div className="sm:col-span-2 flex flex-col gap-3 sm:flex-row sm:justify-end sm:items-center">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => {
                 setOpen(false)
                 resetForm()
               }}
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 sm:w-auto"
             >
               Cancelar
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="submit"
+              className="w-full sm:w-auto"
               disabled={submitting}
-              className="w-full rounded-xl bg-red-600 px-4 py-3 text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-400 sm:w-auto"
             >
               {submitting ? 'Registrando...' : 'Registrar'}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

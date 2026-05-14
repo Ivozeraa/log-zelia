@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { notify } from "../utils/notify";
+import { Button } from "../components/ui/button";
 import { Modal } from "../components/ui/Modal";
 
 export const Occurrences = () => {
@@ -25,6 +26,15 @@ export const Occurrences = () => {
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedOccurrence, setSelectedOccurrence] = useState(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingOccurrence, setEditingOccurrence] = useState(null);
+  const [editCategoria, setEditCategoria] = useState("");
+  const [editTipo, setEditTipo] = useState("");
+  const [editDescricao, setEditDescricao] = useState("");
+  const [editDataOcorrido, setEditDataOcorrido] = useState("");
+  const [editDataInicio, setEditDataInicio] = useState("");
+  const [editDataFim, setEditDataFim] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const [senha, setSenha] = useState("");
   const [motivo, setMotivo] = useState("");
@@ -192,6 +202,81 @@ export const Occurrences = () => {
     setDeleting(false);
   }
 
+  function openEditOccurrence(occurrence) {
+    setEditingOccurrence(occurrence);
+    setEditCategoria(occurrence.categoria || "");
+    setEditTipo(occurrence.tipo || "");
+    setEditDescricao(occurrence.descricao || "");
+    setEditDataOcorrido(occurrence.data_ocorrido || "");
+    setEditDataInicio(occurrence.data_inicio || "");
+    setEditDataFim(occurrence.data_fim || "");
+    setEditModalOpen(true);
+  }
+
+  async function handleSaveEdit(event) {
+    event.preventDefault();
+    if (!editingOccurrence) return;
+
+    if (!editCategoria || !editTipo || !editDataOcorrido) {
+      notify.warning("Preencha a categoria, tipo e data da ocorrência.");
+      return;
+    }
+
+    if (editCategoria === "suspensao" && (!editDataInicio || !editDataFim)) {
+      notify.warning("Preencha as datas de início e término para suspensão.");
+      return;
+    }
+
+    setSavingEdit(true);
+
+    const payload = {
+      categoria: editCategoria,
+      tipo: editTipo,
+      descricao: editDescricao,
+      data_ocorrido: editDataOcorrido,
+      professor_nome: editingOccurrence.professor_nome || user?.nome,
+    };
+
+    if (editCategoria === "suspensao") {
+      payload.data_inicio = editDataInicio;
+      payload.data_fim = editDataFim;
+    } else {
+      payload.data_inicio = null;
+      payload.data_fim = null;
+    }
+
+    const { data: updatedData, error: updateError } = await supabase
+      .from("ocorrencias")
+      .update(payload)
+      .eq("id", editingOccurrence.id)
+      .select();
+
+    if (updateError || !updatedData || updatedData.length === 0) {
+      notify.error("Erro ao atualizar ocorrência no banco.");
+      setSavingEdit(false);
+      return;
+    }
+
+    const updatedOccurrence = updatedData[0];
+
+    setOccurrences((prev) =>
+      prev.map((item) =>
+        item.id === editingOccurrence.id ? { ...item, ...updatedOccurrence } : item,
+      ),
+    );
+
+    setSelectedAlunoOccurrences((prev) =>
+      prev.map((item) =>
+        item.id === editingOccurrence.id ? { ...item, ...updatedOccurrence } : item,
+      ),
+    );
+
+    setSavingEdit(false);
+    setEditModalOpen(false);
+    setEditingOccurrence(null);
+    notify.success("Ocorrência atualizada com sucesso.");
+  }
+
   useEffect(() => {
     const loadData = async () => {
       if (!user) return;
@@ -237,7 +322,35 @@ export const Occurrences = () => {
 
         setTurmas(turmaResult.data || []);
         setAlunos(alunoResult.data || []);
-        setOccurrences(occurrenceResult.data || []);
+
+        const occurrencesData = occurrenceResult.data || [];
+        const professorIds = [
+          ...new Set(
+            occurrencesData
+              .filter((item) => !item.professor_nome && item.professor_id)
+              .map((item) => item.professor_id),
+          ),
+        ];
+
+        let enrichedOccurrences = occurrencesData;
+
+        if (professorIds.length > 0) {
+          const { data: users, error: usersError } = await supabase
+            .from("usuarios")
+            .select("id, nome")
+            .in("id", professorIds);
+
+          if (!usersError) {
+            const names = Object.fromEntries(users.map((user) => [user.id, user.nome]));
+            enrichedOccurrences = occurrencesData.map((item) => ({
+              ...item,
+              professor_nome:
+                item.professor_nome || names[item.professor_id] || item.professor_nome,
+            }));
+          }
+        }
+
+        setOccurrences(enrichedOccurrences);
 
         const formattedLog =
           historyResult.data?.map((item) => ({
@@ -379,25 +492,19 @@ export const Occurrences = () => {
         <div className="flex flex-col gap-6">
           {/* Summary Cards */}
           <div className="grid gap-3 sm:grid-cols-4">
-            <div className="rounded-3xl border border-slate-200 bg-linear-to-br from-blue-50 to-blue-100 p-4">
+            <div className="rounded-3xl border border-slate-200 bg-white p-4">
               <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold">Ocorrências Totais</p>
-              <p className="mt-3 text-3xl font-bold text-blue-700">
+              <p className="mt-3 text-3xl font-bold text-slate-900">
                 {selectedAlunoOccurrencesSorted.length}
               </p>
             </div>
-            <div className="rounded-3xl border border-slate-200 bg-linear-to-br from-slate-50 to-slate-100 p-4">
+            <div className="rounded-3xl border border-slate-200 bg-white p-4">
               <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold">Turma</p>
               <p className="mt-3 text-lg font-semibold text-slate-900">
                 {turmas.find((t) => t.id === selectedAluno.turma_id)?.nome || "—"}
               </p>
             </div>
-            <div className={`rounded-3xl border border-slate-200 p-4 ${
-              selectedAluno.status?.toLowerCase() === "normal"
-                ? "bg-linear-to-br from-green-50 to-green-100"
-                : selectedAluno.status?.toLowerCase().includes("suspenso")
-                  ? "bg-linear-to-br from-amber-50 to-amber-100"
-                  : "bg-linear-to-br from-red-50 to-red-100"
-            }`}>
+            <div className="rounded-3xl border border-slate-200 bg-white p-4">
               <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold">Status</p>
               <p className={`mt-3 text-lg font-semibold capitalize ${
                 selectedAluno.status?.toLowerCase() === "normal"
@@ -409,9 +516,9 @@ export const Occurrences = () => {
                 {selectedAluno.status || "Normal"}
               </p>
             </div>
-            <div className="rounded-3xl border border-slate-200 bg-linear-to-br from-purple-50 to-purple-100 p-4">
+            <div className="rounded-3xl border border-slate-200 bg-white p-4">
               <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold">Última</p>
-              <p className="mt-3 text-sm font-semibold text-purple-700">
+              <p className="mt-3 text-sm font-semibold text-slate-900">
                 {selectedAlunoOccurrencesSorted[0]?.data_ocorrido || "—"}
               </p>
             </div>
@@ -488,16 +595,25 @@ export const Occurrences = () => {
                       </div>
 
                       {/* Ações */}
-                      <div className="flex justify-end pt-2">
-                        <button
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          onClick={() => openEditOccurrence(occ)}
+                          className="text-blue-600 border-blue-200 hover:text-blue-800 hover:border-blue-300"
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant="destructive"
                           onClick={() => {
                             setSelectedOccurrence(occ);
                             setDeleteModalOpen(true);
                           }}
-                          className="text-xs px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg border border-red-200 hover:border-red-300 transition"
                         >
                           Excluir
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -508,12 +624,13 @@ export const Occurrences = () => {
 
           {/* Botão Voltar */}
           <div className="flex justify-center">
-            <button
+            <Button
+              variant="outline"
+              className="px-6 py-3"
               onClick={() => setStudentDetailsOpen(false)}
-              className="px-6 py-3 rounded-xl border border-slate-300 bg-white text-slate-700 font-medium transition hover:bg-slate-50 hover:border-slate-400"
             >
               ← Voltar para lista
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
@@ -606,15 +723,26 @@ export const Occurrences = () => {
                         </td>
                         <td className="px-4 py-4">
                           {latest && (
-                            <button
-                              onClick={() => {
-                                setSelectedOccurrence(latest);
-                                setDeleteModalOpen(true);
-                              }}
-                              className="text-xs text-red-600 hover:text-red-800 hover:underline transition"
-                            >
-                              Excluir
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="xs"
+                                variant="outline"
+                                onClick={() => openEditOccurrence(latest)}
+                                className="text-blue-600 hover:text-blue-800 border-blue-200"
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                size="xs"
+                                variant="destructive"
+                                onClick={() => {
+                                  setSelectedOccurrence(latest);
+                                  setDeleteModalOpen(true);
+                                }}
+                              >
+                                Excluir
+                              </Button>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -735,22 +863,132 @@ export const Occurrences = () => {
           </div>
 
           <div className="flex justify-end gap-2 mt-2">
-            <button
+            <Button
+              variant="outline"
               onClick={() => setDeleteModalOpen(false)}
-              className="px-4 py-2 rounded-lg border"
+              className="px-4 py-2"
             >
               Cancelar
-            </button>
+            </Button>
 
-            <button
+            <Button
+              variant="destructive"
               onClick={handleDelete}
               disabled={deleting}
-              className="px-4 py-2 rounded-lg bg-red-600 text-white disabled:opacity-50"
+              className="px-4 py-2"
             >
               {deleting ? "Excluindo..." : "Confirmar exclusão"}
-            </button>
+            </Button>
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setEditingOccurrence(null);
+        }}
+        title="Editar ocorrência"
+      >
+        <form onSubmit={handleSaveEdit} className="grid gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-slate-700">Tipo de advertência</label>
+              <select
+                value={editCategoria}
+                onChange={(e) => setEditCategoria(e.target.value)}
+                className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="">Selecionar tipo</option>
+                <option value="ocorrencia">Ocorrência</option>
+                <option value="suspensao">Suspensão</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-slate-700">Tipo de situação</label>
+              <select
+                value={editTipo}
+                onChange={(e) => setEditTipo(e.target.value)}
+                className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="">Selecionar situação</option>
+                <option value="indisciplina">Indisciplina</option>
+                <option value="infrequencia">Infrequência</option>
+                <option value="atraso">Atraso</option>
+                <option value="desrespeito">Desrespeito</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-slate-700">Data da ocorrência</label>
+              <input
+                type="date"
+                value={editDataOcorrido}
+                onChange={(e) => setEditDataOcorrido(e.target.value)}
+                className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              />
+            </div>
+
+            {editCategoria === "suspensao" && (
+              <>
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-slate-700">Data de início</label>
+                  <input
+                    type="date"
+                    value={editDataInicio}
+                    onChange={(e) => setEditDataInicio(e.target.value)}
+                    className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-slate-700">Data de término</label>
+                  <input
+                    type="date"
+                    value={editDataFim}
+                    onChange={(e) => setEditDataFim(e.target.value)}
+                    className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-slate-700">Descrição</label>
+            <textarea
+              value={editDescricao}
+              onChange={(e) => setEditDescricao(e.target.value)}
+              className="h-32 rounded-xl border border-slate-300 bg-white px-3 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-none"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setEditModalOpen(false);
+                setEditingOccurrence(null);
+              }}
+              className="px-4 py-3"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={savingEdit}
+              className="px-4 py-3"
+            >
+              {savingEdit ? "Salvando..." : "Salvar alterações"}
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );
