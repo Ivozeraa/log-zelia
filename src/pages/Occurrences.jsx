@@ -29,6 +29,9 @@ export const Occurrences = () => {
   const [senha, setSenha] = useState("");
   const [motivo, setMotivo] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [studentDetailsOpen, setStudentDetailsOpen] = useState(false);
+  const [selectedAluno, setSelectedAluno] = useState(null);
+  const [selectedAlunoOccurrences, setSelectedAlunoOccurrences] = useState([]);
 
   const alunoSummary = useMemo(() => {
     return occurrences.reduce((acc, occurrence) => {
@@ -79,6 +82,12 @@ export const Occurrences = () => {
     const end = start + itemsPerPage;
     return filteredAlunos.slice(start, end);
   }, [filteredAlunos, currentPage]);
+
+  const selectedAlunoOccurrencesSorted = useMemo(() => {
+    return [...selectedAlunoOccurrences].sort((a, b) =>
+      (b.data_ocorrido || "").localeCompare(a.data_ocorrido || ""),
+    );
+  }, [selectedAlunoOccurrences]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -254,76 +263,111 @@ export const Occurrences = () => {
 
   return (
     <div className="flex flex-col gap-8 w-full">
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div className="grid w-full gap-3 sm:grid-cols-2 sm:w-auto">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-slate-700">
-                Buscar aluno
-              </label>
-              <input
-                type="text"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Nome do aluno"
-                className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-slate-700">
-                Filtrar turma
-              </label>
-              <select
-                value={selectedTurma}
-                onChange={(event) => setSelectedTurma(event.target.value)}
-                className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              >
-                <option value="">Todas as turmas</option>
-                {turmas.map((turma) => (
-                  <option key={turma.id} value={turma.id}>
-                    {turma.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="apenasComOcorrencia"
-            checked={apenasComOcorrencia}
-            onChange={(e) => setApenasComOcorrencia(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 accent-red-600 cursor-pointer"
-          />
-          <label
-            htmlFor="apenasComOcorrencia"
-            className="text-sm text-slate-700 cursor-pointer"
-          >
-            Exibir somente alunos com ocorrência
-          </label>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-sm text-slate-500">Alunos exibidos</p>
-            <p className="text-2xl font-bold text-slate-900">
-              {filteredAlunos.length}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-sm text-slate-500">Alunos com ocorrência</p>
-            <p className="text-2xl font-bold text-slate-900">
-              {Object.keys(alunoSummary).length}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-sm text-slate-500">Turmas</p>
-            <p className="text-2xl font-bold text-slate-900">{turmas.length}</p>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            {studentDetailsOpen && selectedAluno ? (
+              <>
+                <div className="flex items-center gap-2 text-sm text-slate-600 mb-3">
+                  <button
+                    onClick={() => setStudentDetailsOpen(false)}
+                    className="text-slate-600 hover:text-slate-900 transition"
+                  >
+                    Ocorrências
+                  </button>
+                  <span className="text-slate-400 mx-1">›</span>
+                  <span className="font-semibold text-slate-900">{selectedAluno.nome}</span>
+                </div>
+                <h1 className="text-3xl font-bold text-slate-900">{selectedAluno.nome}</h1>
+                <p className="mt-2 text-sm text-slate-500">
+                  Detalhes completos das ocorrências registradas para este aluno.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-3xl font-bold text-slate-900">Ocorrências</h1>
+                <p className="mt-2 text-sm text-slate-500">
+                  Bem-vindo(a), <span className="text-green-700 font-semibold">{user?.nome}</span>!
+                  Centralize informações, acompanhe ocorrências e acesse recursos rapidamente.
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>
+
+      {!studentDetailsOpen && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div className="grid w-full gap-3 sm:grid-cols-2 sm:w-auto">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-slate-700">
+                  Buscar aluno
+                </label>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Nome do aluno"
+                  className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-slate-700">
+                  Filtrar turma
+                </label>
+                <select
+                  value={selectedTurma}
+                  onChange={(event) => setSelectedTurma(event.target.value)}
+                  className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                >
+                  <option value="">Todas as turmas</option>
+                  {turmas.map((turma) => (
+                    <option key={turma.id} value={turma.id}>
+                      {turma.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="apenasComOcorrencia"
+              checked={apenasComOcorrencia}
+              onChange={(e) => setApenasComOcorrencia(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 accent-red-600 cursor-pointer"
+            />
+            <label
+              htmlFor="apenasComOcorrencia"
+              className="text-sm text-slate-700 cursor-pointer"
+            >
+              Exibir somente alunos com ocorrência
+            </label>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-sm text-slate-500">Alunos exibidos</p>
+              <p className="text-2xl font-bold text-slate-900">
+                {filteredAlunos.length}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-sm text-slate-500">Alunos com ocorrência</p>
+              <p className="text-2xl font-bold text-slate-900">
+                {Object.keys(alunoSummary).length}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-sm text-slate-500">Turmas</p>
+              <p className="text-2xl font-bold text-slate-900">{turmas.length}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -331,148 +375,297 @@ export const Occurrences = () => {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
-          <thead className="bg-slate-100 text-slate-700">
-            <tr>
-              <th className="border-b border-slate-200 px-4 py-3">Aluno</th>
-              <th className="border-b border-slate-200 px-4 py-3">Status</th>
-              <th className="border-b border-slate-200 px-4 py-3">Turma</th>
-              <th className="border-b border-slate-200 px-4 py-3">Categoria</th>
-              <th className="border-b border-slate-200 px-4 py-3">Tipo</th>
-              <th className="border-b border-slate-200 px-4 py-3">Data</th>
-              <th className="border-b border-slate-200 px-4 py-3">Total</th>
-              <th className="border-b border-slate-200 px-4 py-3">Descrição</th>
-              <th className="border-b border-slate-200 px-4 py-3">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td
-                  colSpan={9}
-                  className="px-4 py-6 text-center text-slate-500"
-                >
-                  Carregando ocorrências...
-                </td>
-              </tr>
-            ) : paginatedAlunos.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={9}
-                  className="px-4 py-6 text-center text-slate-500"
-                >
-                  Nenhum aluno encontrado.
-                </td>
-              </tr>
-            ) : (
-              paginatedAlunos.map((aluno) => {
-                const turma = turmas.find((t) => t.id === aluno.turma_id);
-                const summary = alunoSummary[aluno.id] || {
-                  count: 0,
-                  latest: null,
-                };
-                const latest = summary.latest;
-                const status = aluno.status?.toLowerCase() || "normal";
-                const rowClass =
-                  status === "normal"
-                    ? ""
-                    : status.includes("suspenso")
-                      ? "bg-amber-50"
-                      : status.includes("expulso")
-                        ? "bg-red-50"
-                        : "bg-slate-50";
+      {studentDetailsOpen && selectedAluno ? (
+        <div className="flex flex-col gap-6">
+          {/* Summary Cards */}
+          <div className="grid gap-3 sm:grid-cols-4">
+            <div className="rounded-3xl border border-slate-200 bg-linear-to-br from-blue-50 to-blue-100 p-4">
+              <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold">Ocorrências Totais</p>
+              <p className="mt-3 text-3xl font-bold text-blue-700">
+                {selectedAlunoOccurrencesSorted.length}
+              </p>
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-linear-to-br from-slate-50 to-slate-100 p-4">
+              <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold">Turma</p>
+              <p className="mt-3 text-lg font-semibold text-slate-900">
+                {turmas.find((t) => t.id === selectedAluno.turma_id)?.nome || "—"}
+              </p>
+            </div>
+            <div className={`rounded-3xl border border-slate-200 p-4 ${
+              selectedAluno.status?.toLowerCase() === "normal"
+                ? "bg-linear-to-br from-green-50 to-green-100"
+                : selectedAluno.status?.toLowerCase().includes("suspenso")
+                  ? "bg-linear-to-br from-amber-50 to-amber-100"
+                  : "bg-linear-to-br from-red-50 to-red-100"
+            }`}>
+              <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold">Status</p>
+              <p className={`mt-3 text-lg font-semibold capitalize ${
+                selectedAluno.status?.toLowerCase() === "normal"
+                  ? "text-green-700"
+                  : selectedAluno.status?.toLowerCase().includes("suspenso")
+                    ? "text-amber-700"
+                    : "text-red-700"
+              }`}>
+                {selectedAluno.status || "Normal"}
+              </p>
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-linear-to-br from-purple-50 to-purple-100 p-4">
+              <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold">Última</p>
+              <p className="mt-3 text-sm font-semibold text-purple-700">
+                {selectedAlunoOccurrencesSorted[0]?.data_ocorrido || "—"}
+              </p>
+            </div>
+          </div>
 
-                return (
-                  <tr
-                    key={aluno.id}
-                    className={`${rowClass} border-b border-slate-200 last:border-none`}
-                  >
-                    <td className="px-4 py-4 font-medium text-slate-900">
-                      {aluno.nome}
-                    </td>
-                    <td className="px-4 py-4 text-slate-700 capitalize">
-                      {aluno.status || "normal"}
-                    </td>
-                    <td className="px-4 py-4 text-slate-700">
-                      {turma?.nome || "—"}
-                    </td>
-                    <td className="px-4 py-4 text-slate-700">
-                      {latest?.categoria || "—"}
-                    </td>
-                    <td className="px-4 py-4 text-slate-700">
-                      {latest?.tipo || "—"}
-                    </td>
-                    <td className="px-4 py-4 text-slate-700">
-                      {latest?.data_ocorrido || "—"}
-                    </td>
-                    <td className="px-4 py-4 text-slate-700">
-                      {summary.count}
-                    </td>
-                    <td className="px-4 py-4 text-slate-700 max-w-[320px] truncate">
-                      {latest?.descricao || "—"}
-                    </td>
-                    <td className="px-4 py-4">
-                      {latest && (
+          {/* Occurrences List */}
+          <div className="rounded-3xl border border-slate-200 bg-white overflow-hidden">
+            <div className="bg-linear-to-r from-slate-100 to-slate-50 px-6 py-4">
+              <h3 className="text-lg font-semibold text-slate-900">
+                Histórico de Ocorrências
+              </h3>
+              <p className="text-sm text-slate-600 mt-1">
+                {selectedAlunoOccurrencesSorted.length}{" "}
+                {selectedAlunoOccurrencesSorted.length === 1 ? "ocorrência" : "ocorrências"} registradas
+              </p>
+            </div>
+
+            {selectedAlunoOccurrencesSorted.length === 0 ? (
+              <div className="px-6 py-12 text-center text-slate-500">
+                <p>Nenhuma ocorrência encontrada para este aluno.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-200">
+                {selectedAlunoOccurrencesSorted.map((occ, idx) => (
+                  <div key={occ.id} className="p-6 hover:bg-slate-50 transition">
+                    <div className="flex flex-col gap-4">
+                      {/* Header da ocorrência */}
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-slate-100 text-slate-600 font-semibold text-sm">
+                              #{idx + 1}
+                            </span>
+                            <span className="text-sm font-bold text-slate-900">
+                              {occ.data_ocorrido || "Data não informada"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                            {occ.categoria || "—"}
+                          </span>
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                            {occ.tipo || "—"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Descrição */}
+                      {occ.descricao && (
+                        <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                          <p className="text-sm text-slate-700">{occ.descricao}</p>
+                        </div>
+                      )}
+
+                      {/* Grid de informações */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                          <p className="text-xs text-slate-600 font-semibold uppercase tracking-wider">Professor</p>
+                          <p className="mt-1 text-sm text-slate-900">{occ.professor_nome || "—"}</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                          <p className="text-xs text-slate-600 font-semibold uppercase tracking-wider">Aplicação</p>
+                          <p className="mt-1 text-sm text-slate-900">{occ.data_aplicacao || "—"}</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                          <p className="text-xs text-slate-600 font-semibold uppercase tracking-wider">Início</p>
+                          <p className="mt-1 text-sm text-slate-900">{occ.data_inicio || "—"}</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                          <p className="text-xs text-slate-600 font-semibold uppercase tracking-wider">Fim</p>
+                          <p className="mt-1 text-sm text-slate-900">{occ.data_fim || "—"}</p>
+                        </div>
+                      </div>
+
+                      {/* Ações */}
+                      <div className="flex justify-end pt-2">
                         <button
                           onClick={() => {
-                            setSelectedOccurrence(latest);
+                            setSelectedOccurrence(occ);
                             setDeleteModalOpen(true);
                           }}
-                          className="text-xs text-red-600 hover:text-red-800 hover:underline transition"
+                          className="text-xs px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg border border-red-200 hover:border-red-300 transition"
                         >
                           Excluir
                         </button>
-                      )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Botão Voltar */}
+          <div className="flex justify-center">
+            <button
+              onClick={() => setStudentDetailsOpen(false)}
+              className="px-6 py-3 rounded-xl border border-slate-300 bg-white text-slate-700 font-medium transition hover:bg-slate-50 hover:border-slate-400"
+            >
+              ← Voltar para lista
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+              <thead className="bg-slate-100 text-slate-700">
+                <tr>
+                  <th className="border-b border-slate-200 px-4 py-3">Aluno</th>
+                  <th className="border-b border-slate-200 px-4 py-3">Status</th>
+                  <th className="border-b border-slate-200 px-4 py-3">Turma</th>
+                  <th className="border-b border-slate-200 px-4 py-3">Categoria</th>
+                  <th className="border-b border-slate-200 px-4 py-3">Tipo</th>
+                  <th className="border-b border-slate-200 px-4 py-3">Data</th>
+                  <th className="border-b border-slate-200 px-4 py-3">Total</th>
+                  <th className="border-b border-slate-200 px-4 py-3">Descrição</th>
+                  <th className="border-b border-slate-200 px-4 py-3">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={9} className="px-4 py-6 text-center text-slate-500">
+                      Carregando ocorrências...
                     </td>
                   </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                ) : paginatedAlunos.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-4 py-6 text-center text-slate-500">
+                      Nenhum aluno encontrado.
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedAlunos.map((aluno) => {
+                    const turma = turmas.find((t) => t.id === aluno.turma_id);
+                    const summary = alunoSummary[aluno.id] || {
+                      count: 0,
+                      latest: null,
+                    };
+                    const latest = summary.latest;
+                    const status = aluno.status?.toLowerCase() || "normal";
+                    const rowClass =
+                      status === "normal"
+                        ? ""
+                        : status.includes("suspenso")
+                          ? "bg-amber-50"
+                          : status.includes("expulso")
+                            ? "bg-red-50"
+                            : "bg-slate-50";
 
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 mt-1 flex-wrap">
-          <button
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-1 rounded-full border bg-white text-slate-700 border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-50"
-          >
-            ←
-          </button>
+                    return (
+                      <tr
+                        key={aluno.id}
+                        className={`${rowClass} border-b border-slate-200 last:border-none`}
+                      >
+                        <td className="px-4 py-4 font-medium text-slate-900">
+                          <button
+                            onClick={() => {
+                              setSelectedAluno(aluno);
+                              setSelectedAlunoOccurrences(
+                                occurrences.filter((item) => item.aluno_id === aluno.id),
+                              );
+                              setStudentDetailsOpen(true);
+                            }}
+                            className="text-left text-slate-900 transition hover:text-blue-600 hover:underline"
+                          >
+                            {aluno.nome}
+                          </button>
+                        </td>
+                        <td className="px-4 py-4 text-slate-700 capitalize">
+                          {aluno.status || "normal"}
+                        </td>
+                        <td className="px-4 py-4 text-slate-700">
+                          {turma?.nome || "—"}
+                        </td>
+                        <td className="px-4 py-4 text-slate-700">
+                          {latest?.categoria || "—"}
+                        </td>
+                        <td className="px-4 py-4 text-slate-700">
+                          {latest?.tipo || "—"}
+                        </td>
+                        <td className="px-4 py-4 text-slate-700">
+                          {latest?.data_ocorrido || "—"}
+                        </td>
+                        <td className="px-4 py-4 text-slate-700">
+                          {summary.count}
+                        </td>
+                        <td className="px-4 py-4 text-slate-700 max-w-[320px] truncate">
+                          {latest?.descricao || "—"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {latest && (
+                            <button
+                              onClick={() => {
+                                setSelectedOccurrence(latest);
+                                setDeleteModalOpen(true);
+                              }}
+                              className="text-xs text-red-600 hover:text-red-800 hover:underline transition"
+                            >
+                              Excluir
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
 
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter(
-              (page) =>
-                page === currentPage ||
-                page === currentPage - 1 ||
-                page === currentPage + 1,
-            )
-            .map((page) => (
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-1 flex-wrap">
               <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`px-3 py-1 rounded-full border ${currentPage === page
-                    ? "bg-green-600 text-white border-green-600"
-                    : "bg-white text-slate-700 border-slate-300 hover:bg-green-50"
-                  }`}
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 rounded-full border bg-white text-slate-700 border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-50"
               >
-                {page}
+                ←
               </button>
-            ))}
 
-          <button
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-            }
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 rounded-full border bg-white text-slate-700 border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-50"
-          >
-            →
-          </button>
-        </div>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(
+                  (page) =>
+                    page === currentPage ||
+                    page === currentPage - 1 ||
+                    page === currentPage + 1,
+                )
+                .map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1 rounded-full border ${
+                      currentPage === page
+                        ? "bg-green-600 text-white border-green-600"
+                        : "bg-white text-slate-700 border-slate-300 hover:bg-green-50"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 rounded-full border bg-white text-slate-700 border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-50"
+              >
+                →
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       <div className="flex flex-col gap-3">
@@ -493,11 +686,9 @@ export const Occurrences = () => {
                   <strong> {entry.aluno} </strong>({entry.categoria} —{" "}
                   {entry.tipo})
                 </div>
-
                 <div className="text-xs text-slate-500">
                   Motivo: {entry.motivo}
                 </div>
-
                 <div className="text-xs text-slate-400">
                   {entry.timestamp.toLocaleString("pt-BR")}
                 </div>
