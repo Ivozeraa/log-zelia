@@ -5,11 +5,11 @@ import { Home } from "./pages/Home";
 import { Occurrences } from "./pages/Occurrences";
 import { Management } from "./pages/Management";
 import { Settings } from "./pages/Settings";
-import { EditProfile } from "./pages/EditProfile";
+import { EditProfile } from "./components/user/EditProfile";
 import ProtectedRoute from "./routers/ProtectedRoute";
 import { Login } from "./pages/Login";
-import { Loading } from "./components/Loading";
-import { ToastProvider } from "./components/ToastProvide";
+import { Loading } from "./components/ui/Loading";
+import { ToastProvider } from "./components/ui/ToastProvide";
 
 function App() {
   const { loading } = useAuth();

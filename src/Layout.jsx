@@ -1,12 +1,12 @@
 import { Outlet } from 'react-router-dom'
-import { Header } from './components/Header'
-import { Sidebar } from './components/Sidebar'
+import { Header } from './components/layout/Header'
+import { Sidebar } from './components/layout/Sidebar'
 
 function Layout() {
   return (
     <div className="font-inter">
 
-      <Header/>
+      <Header />
 
       <div className="pt-16 flex">
 

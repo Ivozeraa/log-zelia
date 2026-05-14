@@ -3,7 +3,7 @@ import { FaFilePdf } from "react-icons/fa";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { notify } from "../utils/notify";
-import { Modal } from "../components/Modal";
+import { Modal } from "../components/ui/Modal";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 

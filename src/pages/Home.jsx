@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { FaExclamationTriangle } from 'react-icons/fa'
 import { supabase } from '../utils/supabase'
 import { useAuth } from "../hooks/useAuth"
-import { Card } from '../components/Card'
-import { Modal } from '../components/Modal'
+import { Card } from '../components/ui/Card'
+import { Modal } from '../components/ui/Modal'
 import { notify } from '../utils/notify'
 import {
   ResponsiveContainer,
