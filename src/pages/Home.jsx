@@ -189,7 +189,6 @@ export const Home = () => {
           setSelectedEscola(data[0].id)
         }
       }
-      // USUÁRIO NORMAL → só a escola dele
       else if (user.escola_id) {
         const { data, error } = await query
           .eq('id', user.escola_id)
@@ -234,11 +233,14 @@ export const Home = () => {
       professor_id: user.id,
       turma_id: selectedTurma,
       data_ocorrido: dataOcorrido,
-      data_inicio: dataInicio,
-      data_fim: dataTermino,
       tipo: tipoSituacao,
       categoria: tipoAdvertencia,
       descricao: descricao,
+    }
+
+    if (tipoAdvertencia === 'suspensao') {
+      payload.data_inicio = dataInicio
+      payload.data_fim = dataTermino
     }
 
     console.log('user', user)
