@@ -29,6 +29,9 @@ export const Home = () => {
   const [loadingAlunos, setLoadingAlunos] = useState(false)
   const [turmaOpen, setTurmaOpen] = useState(false)
   const [alunoOpen, setAlunoOpen] = useState(false)
+  const [escolaOpen, setEscolaOpen] = useState(false)
+  const [tipoAdvertenciaOpen, setTipoAdvertenciaOpen] = useState(false)
+  const [tipoSituacaoOpen, setTipoSituacaoOpen] = useState(false)
   const [alunoSearch, setAlunoSearch] = useState('')
   const [dataOcorrido, setDataOcorrido] = useState('')
   const [dataInicio, setDataInicio] = useState('')
@@ -216,7 +219,7 @@ export const Home = () => {
       return
     }
 
-    if (!selectedEscola || !selectedTurma || !selectedAluno || !dataOcorrido || !dataInicio || !dataTermino || !tipoAdvertencia || !tipoSituacao || !descricao) {
+    if (!selectedEscola || !selectedTurma || !selectedAluno || !dataOcorrido || (tipoAdvertencia === 'suspensao' && (!dataInicio || !dataTermino)) || !tipoAdvertencia || !tipoSituacao || !descricao) {
       notify.warning("Preencha todos os campos antes de registrar a ocorrência.")
       setFormMessage('Preencha todos os campos antes de registrar a ocorrência.')
       return
@@ -336,6 +339,9 @@ export const Home = () => {
       if (modalRef.current && !modalRef.current.contains(event.target)) {
         setTurmaOpen(false)
         setAlunoOpen(false)
+        setEscolaOpen(false)
+        setTipoAdvertenciaOpen(false)
+        setTipoSituacaoOpen(false)
       }
     }
 
@@ -482,24 +488,42 @@ export const Home = () => {
               {formMessage}
             </div>
           )}
-          <div className="flex flex-col gap-2">
+          <div className="relative flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700">Escola</label>
-            <select
-              value={selectedEscola}
-              onChange={(event) => {
-                setSelectedEscola(event.target.value)
-                setSelectedTurma('')
-                setSelectedAluno('')
+            <button
+              type="button"
+              onClick={() => {
+                setEscolaOpen((prev) => !prev)
+                setTurmaOpen(false)
+                setAlunoOpen(false)
+                setTipoAdvertenciaOpen(false)
+                setTipoSituacaoOpen(false)
               }}
-              className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
             >
-              <option value="">Selecionar escola</option>
-              {escolas.map((escola) => (
-                <option key={escola.id} value={escola.id}>
-                  {escola.nome}
-                </option>
-              ))}
-            </select>
+              <span>{escolas.find(e => e.id === selectedEscola)?.nome || 'Selecionar escola'}</span>
+              <span className="text-slate-500">▾</span>
+            </button>
+
+            {escolaOpen && (
+              <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
+                {escolas.map((escola) => (
+                  <button
+                    key={escola.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedEscola(escola.id)
+                      setSelectedTurma('')
+                      setSelectedAluno('')
+                      setEscolaOpen(false)
+                    }}
+                    className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                  >
+                    {escola.nome}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="relative flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700">Turma</label>
@@ -508,6 +532,9 @@ export const Home = () => {
               onClick={() => {
                 setTurmaOpen((prev) => !prev)
                 setAlunoOpen(false)
+                setEscolaOpen(false)
+                setTipoAdvertenciaOpen(false)
+                setTipoSituacaoOpen(false)
               }}
               disabled={!selectedEscola || loadingTurmas}
               className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-slate-100"
@@ -551,6 +578,9 @@ export const Home = () => {
                 if (!selectedTurma) return
                 setAlunoOpen((prev) => !prev)
                 setTurmaOpen(false)
+                setEscolaOpen(false)
+                setTipoAdvertenciaOpen(false)
+                setTipoSituacaoOpen(false)
               }}
               disabled={!selectedTurma || loadingAlunos}
               className="flex w-full h-12 items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-slate-100"
@@ -600,17 +630,53 @@ export const Home = () => {
             )}
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="relative flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700">Tipo de advertência</label>
-            <select
-              value={tipoAdvertencia}
-              onChange={(event) => setTipoAdvertencia(event.target.value)}
-              className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            <button
+              type="button"
+              onClick={() => {
+                setTipoAdvertenciaOpen((prev) => !prev)
+                setTurmaOpen(false)
+                setAlunoOpen(false)
+                setEscolaOpen(false)
+                setTipoSituacaoOpen(false)
+              }}
+              className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
             >
-              <option value="">Selecionar tipo</option>
-              <option value="ocorrencia">Ocorrência</option>
-              <option value="suspensao">Suspensão</option>
-            </select>
+              <span>
+                {tipoAdvertencia === 'ocorrencia' ? 'Ocorrência' :
+                 tipoAdvertencia === 'suspensao' ? 'Suspensão' :
+                 'Selecionar tipo'}
+              </span>
+              <span className="text-slate-500">▾</span>
+            </button>
+
+            {tipoAdvertenciaOpen && (
+              <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTipoAdvertencia('ocorrencia')
+                    setDataInicio('')
+                    setDataTermino('')
+                    setTipoAdvertenciaOpen(false)
+                  }}
+                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                >
+                  Ocorrência
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTipoAdvertencia('suspensao')
+                    setTipoAdvertenciaOpen(false)
+                  }}
+                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                >
+                  Suspensão
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -623,44 +689,112 @@ export const Home = () => {
             />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-slate-700">Data de início</label>
-            <input
-              type="date"
-              value={dataInicio}
-              onChange={(event) => setDataInicio(event.target.value)}
-              className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-            />
-          </div>
+          {tipoAdvertencia === 'suspensao' && (
+            <>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-slate-700">Data de início</label>
+                <input
+                  type="date"
+                  value={dataInicio}
+                  onChange={(event) => setDataInicio(event.target.value)}
+                  className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-slate-700">Data de término</label>
-            <input
-              type="date"
-              value={dataTermino}
-              onChange={(event) => setDataTermino(event.target.value)}
-              className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-            />
-          </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-slate-700">Data de término</label>
+                <input
+                  type="date"
+                  value={dataTermino}
+                  onChange={(event) => setDataTermino(event.target.value)}
+                  className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+            </>
+          )}
 
 
 
 
 
-          <div className="flex flex-col gap-2">
+          <div className="relative flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700">Tipo de situação</label>
-            <select
-              value={tipoSituacao}
-              onChange={(event) => setTipoSituacao(event.target.value)}
-              className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            <button
+              type="button"
+              onClick={() => {
+                setTipoSituacaoOpen((prev) => !prev)
+                setTurmaOpen(false)
+                setAlunoOpen(false)
+                setEscolaOpen(false)
+                setTipoAdvertenciaOpen(false)
+              }}
+              className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
             >
-              <option value="">Selecionar situação</option>
-              <option value="indisciplina">Indisciplina</option>
-              <option value="infrequencia">Infrequência</option>
-              <option value="atraso">Atraso</option>
-              <option value="desrespeito">Desrespeito</option>
-              <option value="outro">Outro</option>
-            </select>
+              <span>
+                {tipoSituacao === 'indisciplina' ? 'Indisciplina' :
+                 tipoSituacao === 'infrequencia' ? 'Infrequência' :
+                 tipoSituacao === 'atraso' ? 'Atraso' :
+                 tipoSituacao === 'desrespeito' ? 'Desrespeito' :
+                 tipoSituacao === 'outro' ? 'Outro' :
+                 'Selecionar situação'}
+              </span>
+              <span className="text-slate-500">▾</span>
+            </button>
+
+            {tipoSituacaoOpen && (
+              <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTipoSituacao('indisciplina')
+                    setTipoSituacaoOpen(false)
+                  }}
+                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                >
+                  Indisciplina
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTipoSituacao('infrequencia')
+                    setTipoSituacaoOpen(false)
+                  }}
+                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                >
+                  Infrequência
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTipoSituacao('atraso')
+                    setTipoSituacaoOpen(false)
+                  }}
+                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                >
+                  Atraso
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTipoSituacao('desrespeito')
+                    setTipoSituacaoOpen(false)
+                  }}
+                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                >
+                  Desrespeito
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTipoSituacao('outro')
+                    setTipoSituacaoOpen(false)
+                  }}
+                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                >
+                  Outro
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="sm:col-span-2 flex flex-col gap-2">
