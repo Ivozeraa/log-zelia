@@ -8,6 +8,7 @@ import { PageTitle } from "../components/ui/PageTitle"
 import { Card } from "../components/ui/Card";
 import { FormInput } from "../components/ui/FormInput";
 import { FormSelect } from "../components/ui/FormSelect";
+import { Button } from "../components/ui/button";
 
 export const Occurrences = () => {
   const { user } = useAuth();
@@ -417,21 +418,19 @@ export const Occurrences = () => {
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Nome do aluno"
               />
-              <div className="flex flex-col gap-2">
-                <FormSelect
-                  label="Filtrar por Turma"
-                  value={selectedTurma}
-                  onChange={(event) => setSelectedTurma(event.target.value)}
-                >
-                  <option value="">Todas as turmas</option>
+              <FormSelect
+                label="Filtrar por Turma"
+                value={selectedTurma}
+                onChange={(event) => setSelectedTurma(event.target.value)}
+              >
+                <option value="">Todas as turmas</option>
 
-                  {turmas.map((turma) => (
-                    <option key={turma.id} value={turma.id}>
-                      {turma.nome}
-                    </option>
-                  ))}
-                </FormSelect>
-              </div>
+                {turmas.map((turma) => (
+                  <option key={turma.id} value={turma.id}>
+                    {turma.nome}
+                  </option>
+                ))}
+              </FormSelect>
             </div>
           </div>
 
@@ -492,13 +491,12 @@ export const Occurrences = () => {
                 {turmas.find((t) => t.id === selectedAluno.turma_id)?.nome || "—"}
               </p>
             </div>
-            <div className={`rounded-3xl border border-slate-200 p-4 ${
-              selectedAluno.status?.toLowerCase() === "normal"
-                ? "bg-linear-to-br from-green-50 to-green-100"
-                : selectedAluno.status?.toLowerCase().includes("suspenso")
-                  ? "bg-linear-to-br from-amber-50 to-amber-100"
-                  : "bg-linear-to-br from-red-50 to-red-100"
-            }`}>
+            <div className={`rounded-3xl border border-slate-200 p-4 ${selectedAluno.status?.toLowerCase() === "normal"
+              ? "bg-linear-to-br from-green-50 to-green-100"
+              : selectedAluno.status?.toLowerCase().includes("suspenso")
+                ? "bg-linear-to-br from-amber-50 to-amber-100"
+                : "bg-linear-to-br from-red-50 to-red-100"
+              }`}>
               <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold">Status</p>
               <p className={`mt-3 text-lg font-semibold capitalize ${selectedAluno.status?.toLowerCase() === "normal"
                 ? "text-green-700"
