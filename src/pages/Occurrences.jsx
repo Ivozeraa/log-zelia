@@ -2,8 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { notify } from "../utils/notify";
-import { Button } from "../components/ui/button";
+
 import { Modal } from "../components/ui/Modal";
+import { PageTitle } from "../components/ui/PageTitle"
+import { Card } from "../components/ui/Card";
+import { FormInput } from "../components/ui/FormInput";
+import { FormSelect } from "../components/ui/FormSelect";
 
 export const Occurrences = () => {
   const { user } = useAuth();
@@ -386,7 +390,7 @@ export const Occurrences = () => {
                     onClick={() => setStudentDetailsOpen(false)}
                     className="text-slate-600 hover:text-slate-900 transition"
                   >
-                    Ocorrências
+                    Advertências
                   </button>
                   <span className="text-slate-400 mx-1">›</span>
                   <span className="font-semibold text-slate-900">{selectedAluno.nome}</span>
@@ -397,13 +401,7 @@ export const Occurrences = () => {
                 </p>
               </>
             ) : (
-              <>
-                <h1 className="text-3xl font-bold text-slate-900">Ocorrências</h1>
-                <p className="mt-2 text-sm text-slate-500">
-                  Bem-vindo(a), <span className="text-green-700 font-semibold">{user?.nome}</span>!
-                  Centralize informações, acompanhe ocorrências e acesse recursos rapidamente.
-                </p>
-              </>
+              <PageTitle title="Advertências" subtitle="Centralize informações, acompanhe ocorrências e acesse recursos rapidamente." />
             )}
           </div>
         </div>
@@ -413,34 +411,26 @@ export const Occurrences = () => {
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div className="grid w-full gap-3 sm:grid-cols-2 sm:w-auto">
+              <FormInput
+                label="Buscar Aluno"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Nome do aluno"
+              />
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-700">
-                  Buscar aluno
-                </label>
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Nome do aluno"
-                  className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-700">
-                  Filtrar turma
-                </label>
-                <select
+                <FormSelect
+                  label="Filtrar por Turma"
                   value={selectedTurma}
                   onChange={(event) => setSelectedTurma(event.target.value)}
-                  className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 >
                   <option value="">Todas as turmas</option>
+
                   {turmas.map((turma) => (
                     <option key={turma.id} value={turma.id}>
                       {turma.nome}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </div>
             </div>
           </div>
@@ -451,33 +441,31 @@ export const Occurrences = () => {
               id="apenasComOcorrencia"
               checked={apenasComOcorrencia}
               onChange={(e) => setApenasComOcorrencia(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 accent-red-600 cursor-pointer"
+              className="h-4 w-4 rounded border-slate-300 accent-green-700 cursor-pointer"
             />
             <label
               htmlFor="apenasComOcorrencia"
-              className="text-sm text-slate-700 cursor-pointer"
+              className="text-sm text-slate-700 dark:text-slate-400 cursor-pointer"
             >
               Exibir somente alunos com ocorrência
             </label>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-sm text-slate-500">Alunos exibidos</p>
-              <p className="text-2xl font-bold text-slate-900">
-                {filteredAlunos.length}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-sm text-slate-500">Alunos com ocorrência</p>
-              <p className="text-2xl font-bold text-slate-900">
-                {Object.keys(alunoSummary).length}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-sm text-slate-500">Turmas</p>
-              <p className="text-2xl font-bold text-slate-900">{turmas.length}</p>
-            </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Card
+              title="Alunos exibidos"
+              content={filteredAlunos.length}
+            />
+
+            <Card
+              title="Alunos com ocorrência"
+              content={Object.keys(alunoSummary).length}
+            />
+
+            <Card
+              title="Turmas"
+              content={turmas.length}
+            />
           </div>
         </div>
       )}
@@ -504,15 +492,20 @@ export const Occurrences = () => {
                 {turmas.find((t) => t.id === selectedAluno.turma_id)?.nome || "—"}
               </p>
             </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-4">
+            <div className={`rounded-3xl border border-slate-200 p-4 ${
+              selectedAluno.status?.toLowerCase() === "normal"
+                ? "bg-linear-to-br from-green-50 to-green-100"
+                : selectedAluno.status?.toLowerCase().includes("suspenso")
+                  ? "bg-linear-to-br from-amber-50 to-amber-100"
+                  : "bg-linear-to-br from-red-50 to-red-100"
+            }`}>
               <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold">Status</p>
-              <p className={`mt-3 text-lg font-semibold capitalize ${
-                selectedAluno.status?.toLowerCase() === "normal"
-                  ? "text-green-700"
-                  : selectedAluno.status?.toLowerCase().includes("suspenso")
-                    ? "text-amber-700"
-                    : "text-red-700"
-              }`}>
+              <p className={`mt-3 text-lg font-semibold capitalize ${selectedAluno.status?.toLowerCase() === "normal"
+                ? "text-green-700"
+                : selectedAluno.status?.toLowerCase().includes("suspenso")
+                  ? "text-amber-700"
+                  : "text-red-700"
+                }`}>
                 {selectedAluno.status || "Normal"}
               </p>
             </div>
@@ -774,11 +767,10 @@ export const Occurrences = () => {
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 rounded-full border ${
-                      currentPage === page
-                        ? "bg-green-600 text-white border-green-600"
-                        : "bg-white text-slate-700 border-slate-300 hover:bg-green-50"
-                    }`}
+                    className={`px-3 py-1 rounded-full border ${currentPage === page
+                      ? "bg-green-600 text-white border-green-600"
+                      : "bg-white text-slate-700 border-slate-300 hover:bg-green-50"
+                      }`}
                   >
                     {page}
                   </button>

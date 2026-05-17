@@ -24,7 +24,7 @@ export function Header() {
 
   return (
     <>
-      <header className="h-16 flex justify-between items-center fixed w-full px-6 border-b-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-950 z-50">
+      <header className="h-16 flex justify-between items-center fixed w-full px-6 border-b-2 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 z-50">
 
         <div className="flex items-center gap-3">
 
@@ -43,13 +43,13 @@ export function Header() {
         </div>
 
         <div className="flex gap-6 items-center">
-          <FaBell className="text-xl" />
+          <FaBell className="text-xl dark:text-white" />
 
           <div
             className="flex items-center gap-2 cursor-pointer"
             onClick={toggleUserSidebar}
           >
-            <p className="hidden sm:block text-base">
+            <p className="hidden sm:block text-base dark:text-white">
               {user?.nome || name || "Usuário"}
             </p>
             <CurrentUserAvatar />
