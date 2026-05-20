@@ -686,6 +686,7 @@ export const Occurrences = () => {
                               );
                               setStudentDetailsOpen(true);
                             }}
+                            data-cy="student-name-button"
                             className="text-left text-slate-900 transition hover:text-blue-600 hover:underline"
                           >
                             {aluno.nome}
