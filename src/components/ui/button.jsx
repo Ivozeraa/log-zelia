@@ -34,4 +34,6 @@ function Button({ className, variant = "default", size = "default", ...props }) 
   )
 }
 
+// teste
+
 export { Button }
