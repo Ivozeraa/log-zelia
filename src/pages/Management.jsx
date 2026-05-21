@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { FaFilePdf } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import { FaFilePdf, FaUsers } from "react-icons/fa";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { notify } from "../utils/notify";
@@ -19,6 +20,7 @@ const ROLES = [
 
 export const Management = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [isDiretor, setIsDiretor] = useState(false);
 
@@ -333,7 +335,6 @@ export const Management = () => {
     setExporting(true);
 
     try {
-      // Calcular datas baseado no período selecionado
       const hoje = new Date();
       let dataInicio = null;
       let dataFim = null;
@@ -630,8 +631,15 @@ export const Management = () => {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <PageTitle title="Gerenciamento" subtitle="Gerencie usuários, funções e vínculos escolares." />
 
-
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
+          <Button
+            onClick={() => navigate("/gestao/alunos")}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <FaUsers size={18} className="text-green-500" />
+            <span>Gerenciar Alunos</span>
+          </Button>
           <Button
             onClick={() => setExportModalOpen(true)}
             className="flex items-center gap-2"

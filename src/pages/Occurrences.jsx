@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { notify } from "../utils/notify";
@@ -40,6 +40,9 @@ export const Occurrences = () => {
   const [editDataInicio, setEditDataInicio] = useState("");
   const [editDataFim, setEditDataFim] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editCategoriaOpen, setEditCategoriaOpen] = useState(false);
+  const [editTipoOpen, setEditTipoOpen] = useState(false);
+  const modalRef = useRef(null);
 
   const [senha, setSenha] = useState("");
   const [motivo, setMotivo] = useState("");
@@ -378,6 +381,18 @@ export const Occurrences = () => {
 
     loadData();
   }, [user]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        setEditCategoriaOpen(false);
+        setEditTipoOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div className="flex flex-col gap-8 w-full">
@@ -882,35 +897,129 @@ export const Occurrences = () => {
         }}
         title="Editar ocorrência"
       >
-        <form onSubmit={handleSaveEdit} className="grid gap-4">
+        <form onSubmit={handleSaveEdit} className="grid gap-4" ref={modalRef}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
+            <div className="relative flex flex-col gap-2">
               <label className="text-sm font-semibold text-slate-700">Tipo de advertência</label>
-              <select
-                value={editCategoria}
-                onChange={(e) => setEditCategoria(e.target.value)}
-                className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              <button
+                type="button"
+                onClick={() => {
+                  setEditCategoriaOpen((prev) => !prev);
+                  setEditTipoOpen(false);
+                }}
+                className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               >
-                <option value="">Selecionar tipo</option>
-                <option value="ocorrencia">Ocorrência</option>
-                <option value="suspensao">Suspensão</option>
-              </select>
+                <span>
+                  {editCategoria === 'ocorrencia' ? 'Ocorrência' :
+                    editCategoria === 'suspensao' ? 'Suspensão' :
+                      'Selecionar tipo'}
+                </span>
+                <span className="text-slate-500">▾</span>
+              </button>
+
+              {editCategoriaOpen && (
+                <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditCategoria('ocorrencia');
+                      setEditDataInicio('');
+                      setEditDataFim('');
+                      setEditCategoriaOpen(false);
+                    }}
+                    className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                  >
+                    Ocorrência
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditCategoria('suspensao');
+                      setEditCategoriaOpen(false);
+                    }}
+                    className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                  >
+                    Suspensão
+                  </button>
+                </div>
+              )}
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="relative flex flex-col gap-2">
               <label className="text-sm font-semibold text-slate-700">Tipo de situação</label>
-              <select
-                value={editTipo}
-                onChange={(e) => setEditTipo(e.target.value)}
-                className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              <button
+                type="button"
+                onClick={() => {
+                  setEditTipoOpen((prev) => !prev);
+                  setEditCategoriaOpen(false);
+                }}
+                className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               >
-                <option value="">Selecionar situação</option>
-                <option value="indisciplina">Indisciplina</option>
-                <option value="infrequencia">Infrequência</option>
-                <option value="atraso">Atraso</option>
-                <option value="desrespeito">Desrespeito</option>
-                <option value="outro">Outro</option>
-              </select>
+                <span>
+                  {editTipo === 'indisciplina' ? 'Indisciplina' :
+                    editTipo === 'infrequencia' ? 'Infrequência' :
+                      editTipo === 'atraso' ? 'Atraso' :
+                        editTipo === 'desrespeito' ? 'Desrespeito' :
+                          editTipo === 'outro' ? 'Outro' :
+                            'Selecionar situação'}
+                </span>
+                <span className="text-slate-500">▾</span>
+              </button>
+
+              {editTipoOpen && (
+                <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditTipo('indisciplina');
+                      setEditTipoOpen(false);
+                    }}
+                    className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                  >
+                    Indisciplina
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditTipo('infrequencia');
+                      setEditTipoOpen(false);
+                    }}
+                    className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                  >
+                    Infrequência
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditTipo('atraso');
+                      setEditTipoOpen(false);
+                    }}
+                    className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                  >
+                    Atraso
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditTipo('desrespeito');
+                      setEditTipoOpen(false);
+                    }}
+                    className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                  >
+                    Desrespeito
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditTipo('outro');
+                      setEditTipoOpen(false);
+                    }}
+                    className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                  >
+                    Outro
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

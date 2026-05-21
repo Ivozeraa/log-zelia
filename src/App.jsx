@@ -4,6 +4,7 @@ import Layout from "./Layout";
 import { Home } from "./pages/Home";
 import { Occurrences } from "./pages/Occurrences";
 import { Management } from "./pages/Management";
+import { StudentManagement } from "./pages/StudentManagement";
 import { Settings } from "./pages/Settings";
 import { EditProfile } from "./components/user/EditProfile";
 import ProtectedRoute from "./routers/ProtectedRoute";
@@ -36,6 +37,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={[1, 2, 3]}>
                   <Management />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="gestao/alunos"
+              element={
+                <ProtectedRoute allowedRoles={[1, 2, 3]}>
+                  <StudentManagement />
                 </ProtectedRoute>
               }
             />

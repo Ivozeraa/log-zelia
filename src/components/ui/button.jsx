@@ -4,7 +4,7 @@ import { cn } from "../../lib/utils"
 
 const variantClasses = {
   default: "bg-green-700 text-white hover:bg-green-800 border-transparent",
-  outline: "bg-white text-blue-700 border-blue-300 hover:bg-blue-50",
+  outline: "bg-slate-600 text-white border-slate-300 hover:bg-slate-500",
   secondary: "bg-slate-50 text-slate-900 border-slate-200 hover:bg-slate-100",
   ghost: "bg-transparent text-slate-700 hover:bg-slate-100",
   destructive: "bg-red-600 text-white hover:bg-red-700 border-transparent",
