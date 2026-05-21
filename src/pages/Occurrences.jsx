@@ -9,6 +9,10 @@ import { Card } from "../components/ui/Card";
 import { FormInput } from "../components/ui/FormInput";
 import { FormSelect } from "../components/ui/FormSelect";
 import { Button } from "../components/ui/Button";
+import { Table } from "../components/ui/Table";
+import { Pagination } from "../components/ui/Pagination";
+import { SectionTitle } from "../components/ui/SectionTitle";
+
 
 export const Occurrences = () => {
   const { user } = useAuth();
@@ -494,139 +498,171 @@ export const Occurrences = () => {
         <div className="flex flex-col gap-6">
           {/* Summary Cards */}
           <div className="grid gap-3 sm:grid-cols-4">
-            <div className="rounded-3xl border border-slate-200 bg-white p-4">
-              <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold">Ocorrências Totais</p>
-              <p className="mt-3 text-3xl font-bold text-slate-900">
-                {selectedAlunoOccurrencesSorted.length}
-              </p>
-            </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-4">
-              <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold">Turma</p>
-              <p className="mt-3 text-lg font-semibold text-slate-900">
-                {turmas.find((t) => t.id === selectedAluno.turma_id)?.nome || "—"}
-              </p>
-            </div>
-            <div className={`rounded-3xl border border-slate-200 p-4 ${selectedAluno.status?.toLowerCase() === "normal"
-              ? "bg-linear-to-br from-green-50 to-green-100"
-              : selectedAluno.status?.toLowerCase().includes("suspenso")
-                ? "bg-linear-to-br from-amber-50 to-amber-100"
-                : "bg-linear-to-br from-red-50 to-red-100"
-              }`}>
-              <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold">Status</p>
-              <p className={`mt-3 text-lg font-semibold capitalize ${selectedAluno.status?.toLowerCase() === "normal"
-                ? "text-green-700"
-                : selectedAluno.status?.toLowerCase().includes("suspenso")
-                  ? "text-amber-700"
-                  : "text-red-700"
-                }`}>
-                {selectedAluno.status || "Normal"}
-              </p>
-            </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-4">
-              <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold">Última</p>
-              <p className="mt-3 text-sm font-semibold text-slate-900">
-                {selectedAlunoOccurrencesSorted[0]?.data_ocorrido || "—"}
-              </p>
-            </div>
+            <Card
+              title="Ocorrências Totais"
+              content={selectedAlunoOccurrencesSorted.length}
+            />
+
+            <Card
+              title="Turma"
+              content={
+                <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  {turmas.find((t) => t.id === selectedAluno.turma_id)?.nome || "—"}
+                </span>
+              }
+            />
+
+            <Card
+              title="Status"
+              content={
+                <span
+                  className={`text-lg font-semibold capitalize ${selectedAluno.status?.toLowerCase() === "normal"
+                      ? "text-green-700"
+                      : selectedAluno.status?.toLowerCase().includes("suspenso")
+                        ? "text-amber-700"
+                        : "text-red-700"
+                    }`}
+                >
+                  {selectedAluno.status || "Normal"}
+                </span>
+              }
+            />
+
+            <Card
+              title="Última"
+              content={
+                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  {selectedAlunoOccurrencesSorted[0]?.data_ocorrido || "—"}
+                </span>
+              }
+            />
           </div>
 
           {/* Occurrences List */}
-          <div className="rounded-3xl border border-slate-200 bg-white overflow-hidden">
-            <div className="bg-linear-to-r from-slate-100 to-slate-50 px-6 py-4">
-              <h3 className="text-lg font-semibold text-slate-900">
-                Histórico de Ocorrências
-              </h3>
-              <p className="text-sm text-slate-600 mt-1">
-                {selectedAlunoOccurrencesSorted.length}{" "}
-                {selectedAlunoOccurrencesSorted.length === 1 ? "ocorrência" : "ocorrências"} registradas
-              </p>
-            </div>
+          <Card
+            title="Histórico de Ocorrências"
+            content={
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  {selectedAlunoOccurrencesSorted.length}{" "}
+                  {selectedAlunoOccurrencesSorted.length === 1
+                    ? "ocorrência"
+                    : "ocorrências"}{" "}
+                  registradas
+                </p>
 
-            {selectedAlunoOccurrencesSorted.length === 0 ? (
-              <div className="px-6 py-12 text-center text-slate-500">
-                <p>Nenhuma ocorrência encontrada para este aluno.</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-200">
-                {selectedAlunoOccurrencesSorted.map((occ, idx) => (
-                  <div key={occ.id} className="p-6 hover:bg-slate-50 transition">
-                    <div className="flex flex-col gap-4">
-                      {/* Header da ocorrência */}
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-slate-100 text-slate-600 font-semibold text-sm">
-                              #{idx + 1}
-                            </span>
-                            <span className="text-sm font-bold text-slate-900">
-                              {occ.data_ocorrido || "Data não informada"}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
-                            {occ.categoria || "—"}
-                          </span>
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
-                            {occ.tipo || "—"}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Descrição */}
-                      {occ.descricao && (
-                        <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-                          <p className="text-sm text-slate-700">{occ.descricao}</p>
-                        </div>
-                      )}
-
-                      {/* Grid de informações */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-                          <p className="text-xs text-slate-600 font-semibold uppercase tracking-wider">Professor</p>
-                          <p className="mt-1 text-sm text-slate-900">{occ.professor_nome || "—"}</p>
-                        </div>
-                        <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-                          <p className="text-xs text-slate-600 font-semibold uppercase tracking-wider">Aplicação</p>
-                          <p className="mt-1 text-sm text-slate-900">{occ.data_aplicacao || "—"}</p>
-                        </div>
-                        <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-                          <p className="text-xs text-slate-600 font-semibold uppercase tracking-wider">Início</p>
-                          <p className="mt-1 text-sm text-slate-900">{occ.data_inicio || "—"}</p>
-                        </div>
-                        <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-                          <p className="text-xs text-slate-600 font-semibold uppercase tracking-wider">Fim</p>
-                          <p className="mt-1 text-sm text-slate-900">{occ.data_fim || "—"}</p>
-                        </div>
-                      </div>
-
-                      {/* Ações */}
-                      <div className="flex justify-end gap-2 pt-2">
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          onClick={() => openEditOccurrence(occ)}
-                          className="text-blue-600 border-blue-200 hover:text-blue-800 hover:border-blue-300"
-                        >
-                          Editar
-                        </Button>
-                        <Button
-                          size="xs"
-                          variant="destructive"
-                          onClick={() => {
-                            setSelectedOccurrence(occ);
-                            setDeleteModalOpen(true);
-                          }}
-                        >
-                          Excluir
-                        </Button>
-                      </div>
-                    </div>
+                {selectedAlunoOccurrencesSorted.length === 0 ? (
+                  <div className="py-10 text-center text-slate-500 dark:text-slate-400">
+                    Nenhuma ocorrência encontrada para este aluno.
                   </div>
-                ))}
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {selectedAlunoOccurrencesSorted.map((occ, idx) => (
+                      <Card
+                        key={occ.id}
+                        title={
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                #{idx + 1}
+                              </span>
+
+                              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                                {occ.data_ocorrido || "Data não informada"}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                                {occ.categoria || "—"}
+                              </span>
+
+                              <span className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+                                {occ.tipo || "—"}
+                              </span>
+                            </div>
+                          </div>
+                        }
+                        content={
+                          <div className="flex flex-col gap-4">
+                            {occ.descricao && (
+                              <Card
+                                title="Descrição"
+                                content={
+                                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                                    {occ.descricao}
+                                  </p>
+                                }
+                              />
+                            )}
+
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                              <Card
+                                title="Professor"
+                                content={
+                                  <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                    {occ.professor_nome || "—"}
+                                  </span>
+                                }
+                              />
+
+                              <Card
+                                title="Aplicação"
+                                content={
+                                  <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                    {occ.data_aplicacao || "—"}
+                                  </span>
+                                }
+                              />
+
+                              <Card
+                                title="Início"
+                                content={
+                                  <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                    {occ.data_inicio || "—"}
+                                  </span>
+                                }
+                              />
+
+                              <Card
+                                title="Fim"
+                                content={
+                                  <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                    {occ.data_fim || "—"}
+                                  </span>
+                                }
+                              />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                              <Button
+                                size="xs"
+                                variant="outline"
+                                onClick={() => openEditOccurrence(occ)}
+                              >
+                                Editar
+                              </Button>
+
+                              <Button
+                                size="xs"
+                                variant="destructive"
+                                onClick={() => {
+                                  setSelectedOccurrence(occ);
+                                  setDeleteModalOpen(true);
+                                }}
+                              >
+                                Excluir
+                              </Button>
+                            </div>
+                          </div>
+                        }
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            }
+          />
 
           {/* Botão Voltar */}
           <div className="flex justify-center">
@@ -640,167 +676,167 @@ export const Occurrences = () => {
           </div>
         </div>
       ) : (
-        <>
-          <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
-              <thead className="bg-slate-100 text-slate-700">
-                <tr>
-                  <th className="border-b border-slate-200 px-4 py-3">Aluno</th>
-                  <th className="border-b border-slate-200 px-4 py-3">Status</th>
-                  <th className="border-b border-slate-200 px-4 py-3">Turma</th>
-                  <th className="border-b border-slate-200 px-4 py-3">Categoria</th>
-                  <th className="border-b border-slate-200 px-4 py-3">Tipo</th>
-                  <th className="border-b border-slate-200 px-4 py-3">Data</th>
-                  <th className="border-b border-slate-200 px-4 py-3">Total</th>
-                  <th className="border-b border-slate-200 px-4 py-3">Descrição</th>
-                  <th className="border-b border-slate-200 px-4 py-3">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={9} className="px-4 py-6 text-center text-slate-500">
-                      Carregando ocorrências...
-                    </td>
-                  </tr>
-                ) : paginatedAlunos.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="px-4 py-6 text-center text-slate-500">
-                      Nenhum aluno encontrado.
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedAlunos.map((aluno) => {
-                    const turma = turmas.find((t) => t.id === aluno.turma_id);
-                    const summary = alunoSummary[aluno.id] || {
-                      count: 0,
-                      latest: null,
-                    };
-                    const latest = summary.latest;
-                    const status = aluno.status?.toLowerCase() || "normal";
-                    const rowClass =
-                      status === "normal"
-                        ? ""
-                        : status.includes("suspenso")
-                          ? "bg-amber-50"
-                          : status.includes("expulso")
-                            ? "bg-red-50"
-                            : "bg-slate-50";
+          <>
+          <SectionTitle text = "Lista de alunos" />
+      <Table
+        loading={loading}
+        data={paginatedAlunos.map((aluno) => {
+          const turma = turmas.find((t) => t.id === aluno.turma_id);
 
-                    return (
-                      <tr
-                        key={aluno.id}
-                        className={`${rowClass} border-b border-slate-200 last:border-none`}
-                      >
-                        <td className="px-4 py-4 font-medium text-slate-900">
-                          <button
-                            onClick={() => {
-                              setSelectedAluno(aluno);
-                              setSelectedAlunoOccurrences(
-                                occurrences.filter((item) => item.aluno_id === aluno.id),
-                              );
-                              setStudentDetailsOpen(true);
-                            }}
-                            data-cy="student-name-button"
-                            className="text-left text-slate-900 transition hover:text-blue-600 hover:underline"
-                          >
-                            {aluno.nome}
-                          </button>
-                        </td>
-                        <td className="px-4 py-4 text-slate-700 capitalize">
-                          {aluno.status || "normal"}
-                        </td>
-                        <td className="px-4 py-4 text-slate-700">
-                          {turma?.nome || "—"}
-                        </td>
-                        <td className="px-4 py-4 text-slate-700">
-                          {latest?.categoria || "—"}
-                        </td>
-                        <td className="px-4 py-4 text-slate-700">
-                          {latest?.tipo || "—"}
-                        </td>
-                        <td className="px-4 py-4 text-slate-700">
-                          {latest?.data_ocorrido || "—"}
-                        </td>
-                        <td className="px-4 py-4 text-slate-700">
-                          {summary.count}
-                        </td>
-                        <td className="px-4 py-4 text-slate-700 max-w-[320px] truncate">
-                          {latest?.descricao || "—"}
-                        </td>
-                        <td className="px-4 py-4">
-                          {latest && (
-                            <div className="flex items-center gap-2">
-                              <Button
-                                size="xs"
-                                variant="outline"
-                                onClick={() => openEditOccurrence(latest)}
-                                className="text-blue-600 hover:text-blue-800 border-blue-200"
-                              >
-                                Editar
-                              </Button>
-                              <Button
-                                size="xs"
-                                variant="destructive"
-                                onClick={() => {
-                                  setSelectedOccurrence(latest);
-                                  setDeleteModalOpen(true);
-                                }}
-                              >
-                                Excluir
-                              </Button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+          const summary = alunoSummary[aluno.id] || {
+            count: 0,
+            latest: null,
+          };
 
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-1 flex-wrap">
-              <button
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 rounded-full border bg-white text-slate-700 border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-50"
+          const latest = summary.latest;
+
+          const status = aluno.status?.toLowerCase() || "normal";
+
+          return {
+            ...aluno,
+            turmaNome: turma?.nome || "—",
+            latest,
+            summary,
+            rowClass:
+              status === "normal"
+                ? ""
+                : status.includes("suspenso")
+                  ? "bg-amber-50"
+                  : status.includes("expulso")
+                    ? "bg-red-50"
+                    : "bg-slate-50",
+          };
+        })}
+        loadingMessage="Carregando ocorrências..."
+        emptyMessage="Nenhum aluno encontrado."
+        columns={[
+          {
+            key: "nome",
+            title: "Aluno",
+            render: (aluno) => (
+              <Button
+                variant="link"
+                onClick={() => {
+                  setSelectedAluno(aluno);
+
+                  setSelectedAlunoOccurrences(
+                    occurrences.filter(
+                      (item) => item.aluno_id === aluno.id
+                    )
+                  );
+
+                  setStudentDetailsOpen(true);
+                }}
+                data-cy="student-name-button"
+                className="
+    text-left font-medium
+    text-slate-900 dark:text-slate-100
+    transition
+    hover:text-blue-600 dark:hover:text-blue-400
+    hover:underline
+  "
               >
-                ←
-              </button>
+                {aluno.nome}
+              </Button>
+            ),
+          },
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter(
-                  (page) =>
-                    page === currentPage ||
-                    page === currentPage - 1 ||
-                    page === currentPage + 1,
-                )
-                .map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 rounded-full border ${currentPage === page
-                      ? "bg-green-600 text-white border-green-600"
-                      : "bg-white text-slate-700 border-slate-300 hover:bg-green-50"
-                      }`}
+          {
+            key: "status",
+            title: "Status",
+            render: (aluno) => (
+              <span className="capitalize">
+                {aluno.status || "normal"}
+              </span>
+            ),
+          },
+
+          {
+            key: "turmaNome",
+            title: "Turma",
+          },
+
+          {
+            key: "categoria",
+            title: "Categoria",
+            render: (aluno) =>
+              aluno.latest?.categoria || "—",
+          },
+
+          {
+            key: "tipo",
+            title: "Tipo",
+            render: (aluno) =>
+              aluno.latest?.tipo || "—",
+          },
+
+          {
+            key: "data",
+            title: "Data",
+            render: (aluno) =>
+              aluno.latest?.data_ocorrido || "—",
+          },
+
+          {
+            key: "total",
+            title: "Total",
+            render: (aluno) =>
+              aluno.summary.count,
+          },
+
+          {
+            key: "descricao",
+            title: "Descrição",
+            render: (aluno) => (
+              <div className="max-w-[320px] truncate">
+                {aluno.latest?.descricao || "—"}
+              </div>
+            ),
+          },
+
+          {
+            key: "acoes",
+            title: "Ações",
+            render: (aluno) =>
+              aluno.latest && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    onClick={() =>
+                      openEditOccurrence(aluno.latest)
+                    }
+                    className="text-blue-600 hover:text-blue-800 border-blue-200"
                   >
-                    {page}
-                  </button>
-                ))}
+                    Editar
+                  </Button>
 
-              <button
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 rounded-full border bg-white text-slate-700 border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-50"
-              >
-                →
-              </button>
-            </div>
-          )}
-        </>
+                  <Button
+                    size="xs"
+                    variant="destructive"
+                    onClick={() => {
+                      setSelectedOccurrence(aluno.latest);
+                      setDeleteModalOpen(true);
+                    }}
+                  >
+                    Excluir
+                  </Button>
+                </div>
+              ),
+          },
+        ]}
+      />
+
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       )}
+    </>
+  )
+}
 
       <div className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-slate-800">
@@ -1090,6 +1126,6 @@ export const Occurrences = () => {
           </div>
         </form>
       </Modal>
-    </div>
+    </div >
   );
 };
