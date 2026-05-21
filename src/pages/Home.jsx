@@ -17,6 +17,7 @@ import {
 } from 'recharts'
 
 import { PageTitle } from '../components/ui/PageTitle'
+import { SectionTitle } from '../components/ui/SectionTitle'
 
 export const Home = () => {
   const { user } = useAuth()
@@ -375,7 +376,7 @@ export const Home = () => {
     <div className='flex flex-col gap-10 w-full'>
       <div className='flex flex-col md:flex-row items-start md:items-center justify-between gap-5'>
         <PageTitle
-          title="Dashboard"
+          title="Início"
           subtitle={
             <>
               Bem-vindo(a),{" "}
@@ -398,7 +399,7 @@ export const Home = () => {
       </div>
 
       <div className='flex flex-col gap-5'>
-        <p className='font-bold text-lg'>Dashboard</p>
+        <SectionTitle text="Dashboard" />
 
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full'>
           <Card
