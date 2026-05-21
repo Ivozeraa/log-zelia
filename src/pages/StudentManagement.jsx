@@ -6,7 +6,7 @@ import { notify } from "../utils/notify";
 import { PageTitle } from "../components/ui/PageTitle";
 import { FormInput } from "../components/ui/FormInput";
 import { FormSelect } from "../components/ui/FormSelect";
-import { Button } from "../components/ui/button";
+import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";

@@ -3,7 +3,7 @@ import { FaExclamationTriangle } from 'react-icons/fa'
 import { supabase } from '../utils/supabase'
 import { useAuth } from "../hooks/useAuth"
 import { Card } from '../components/ui/Card'
-import { Button } from '../components/ui/button'
+import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { notify } from '../utils/notify'
 import {

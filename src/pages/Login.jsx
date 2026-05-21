@@ -2,7 +2,7 @@ import { useState } from "react"
 import { supabase } from "../utils/supabase"
 import { useNavigate } from "react-router-dom"
 import { FaEye, FaEyeSlash } from "react-icons/fa"
-import { Button } from '../components/ui/button'
+import { Button } from '../components/ui/Button'
 
 import bgImg from "../assets/images/escola-frente.jpg"
 import logo from "../assets/images/logo-login.png"

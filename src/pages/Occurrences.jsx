@@ -8,7 +8,7 @@ import { PageTitle } from "../components/ui/PageTitle"
 import { Card } from "../components/ui/Card";
 import { FormInput } from "../components/ui/FormInput";
 import { FormSelect } from "../components/ui/FormSelect";
-import { Button } from "../components/ui/button";
+import { Button } from "../components/ui/Button";
 
 export const Occurrences = () => {
   const { user } = useAuth();

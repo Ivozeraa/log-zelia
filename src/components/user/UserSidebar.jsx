@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from "../../hooks/useAuth"
 import { FaRegUserCircle, FaUserEdit, FaSignOutAlt } from "react-icons/fa"
 import { Modal } from "../ui/Modal"
-import { Button } from "../ui/button"
+import { Button } from "../ui/Button"
 import { EditProfile } from "./EditProfile"
 
 export const UserSidebar = ({ open, setOpen }) => {
