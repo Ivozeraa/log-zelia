@@ -30,7 +30,7 @@ export function Header() {
 
           <button
             onClick={toggleMenu}
-            className="md:hidden text-xl cursor-pointer"
+            className="md:hidden text-xl cursor-pointer dark:text-white"
           >
             <FaBars />
           </button>

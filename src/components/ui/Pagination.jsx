@@ -23,21 +23,22 @@ export const Pagination = ({
       <Button
         size="xs"
         variant="outline"
-        onClick={() =>
-          onPageChange(Math.max(currentPage - 1, 1))
-        }
+        onClick={() => onPageChange(1)}
         disabled={currentPage === 1}
         className="
           rounded-full
+          border
+          border-slate-300
           bg-white
           text-slate-700
           hover:bg-green-50
+          dark:border-slate-700
           dark:bg-slate-900
           dark:text-slate-200
           dark:hover:bg-slate-800
         "
       >
-        ←
+        «
       </Button>
 
       {visiblePages.map((page) => (
@@ -55,9 +56,12 @@ export const Pagination = ({
               `
               : `
                 rounded-full
+                border
+                border-slate-300
                 bg-white
                 text-slate-700
                 hover:bg-green-50
+                dark:border-slate-700
                 dark:bg-slate-900
                 dark:text-slate-200
                 dark:hover:bg-slate-800
@@ -71,23 +75,22 @@ export const Pagination = ({
       <Button
         size="xs"
         variant="outline"
-        onClick={() =>
-          onPageChange(
-            Math.min(currentPage + 1, totalPages)
-          )
-        }
+        onClick={() => onPageChange(totalPages)}
         disabled={currentPage === totalPages}
         className="
           rounded-full
+          border
+          border-slate-300
           bg-white
           text-slate-700
           hover:bg-green-50
+          dark:border-slate-700
           dark:bg-slate-900
           dark:text-slate-200
           dark:hover:bg-slate-800
         "
       >
-        →
+        »
       </Button>
     </div>
   );

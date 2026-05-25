@@ -517,10 +517,10 @@ export const Occurrences = () => {
               content={
                 <span
                   className={`text-lg font-semibold capitalize ${selectedAluno.status?.toLowerCase() === "normal"
-                      ? "text-green-700"
-                      : selectedAluno.status?.toLowerCase().includes("suspenso")
-                        ? "text-amber-700"
-                        : "text-red-700"
+                    ? "text-green-700"
+                    : selectedAluno.status?.toLowerCase().includes("suspenso")
+                      ? "text-amber-700"
+                      : "text-red-700"
                     }`}
                 >
                   {selectedAluno.status || "Normal"}
@@ -676,167 +676,167 @@ export const Occurrences = () => {
           </div>
         </div>
       ) : (
-          <>
-          <SectionTitle text = "Lista de alunos" />
-      <Table
-        loading={loading}
-        data={paginatedAlunos.map((aluno) => {
-          const turma = turmas.find((t) => t.id === aluno.turma_id);
+        <>
+          <SectionTitle text="Lista de alunos" />
+          <Table
+            loading={loading}
+            data={paginatedAlunos.map((aluno) => {
+              const turma = turmas.find((t) => t.id === aluno.turma_id);
 
-          const summary = alunoSummary[aluno.id] || {
-            count: 0,
-            latest: null,
-          };
+              const summary = alunoSummary[aluno.id] || {
+                count: 0,
+                latest: null,
+              };
 
-          const latest = summary.latest;
+              const latest = summary.latest;
 
-          const status = aluno.status?.toLowerCase() || "normal";
+              const status = aluno.status?.toLowerCase() || "normal";
 
-          return {
-            ...aluno,
-            turmaNome: turma?.nome || "—",
-            latest,
-            summary,
-            rowClass:
-              status === "normal"
-                ? ""
-                : status.includes("suspenso")
-                  ? "bg-amber-50"
-                  : status.includes("expulso")
-                    ? "bg-red-50"
-                    : "bg-slate-50",
-          };
-        })}
-        loadingMessage="Carregando ocorrências..."
-        emptyMessage="Nenhum aluno encontrado."
-        columns={[
-          {
-            key: "nome",
-            title: "Aluno",
-            render: (aluno) => (
-              <Button
-                variant="link"
-                onClick={() => {
-                  setSelectedAluno(aluno);
+              return {
+                ...aluno,
+                turmaNome: turma?.nome || "—",
+                latest,
+                summary,
+                rowClass:
+                  status === "normal"
+                    ? ""
+                    : status.includes("suspenso")
+                      ? "bg-amber-50"
+                      : status.includes("expulso")
+                        ? "bg-red-50"
+                        : "bg-slate-50",
+              };
+            })}
+            loadingMessage="Carregando ocorrências..."
+            emptyMessage="Nenhum aluno encontrado."
+            columns={[
+              {
+                key: "nome",
+                title: "Aluno",
+                render: (aluno) => (
+                  <Button
+                    variant="link"
+                    onClick={() => {
+                      setSelectedAluno(aluno);
 
-                  setSelectedAlunoOccurrences(
-                    occurrences.filter(
-                      (item) => item.aluno_id === aluno.id
-                    )
-                  );
+                      setSelectedAlunoOccurrences(
+                        occurrences.filter(
+                          (item) => item.aluno_id === aluno.id
+                        )
+                      );
 
-                  setStudentDetailsOpen(true);
-                }}
-                data-cy="student-name-button"
-                className="
+                      setStudentDetailsOpen(true);
+                    }}
+                    data-cy="student-name-button"
+                    className="
     text-left font-medium
     text-slate-900 dark:text-slate-100
     transition
     hover:text-blue-600 dark:hover:text-blue-400
     hover:underline
   "
-              >
-                {aluno.nome}
-              </Button>
-            ),
-          },
-
-          {
-            key: "status",
-            title: "Status",
-            render: (aluno) => (
-              <span className="capitalize">
-                {aluno.status || "normal"}
-              </span>
-            ),
-          },
-
-          {
-            key: "turmaNome",
-            title: "Turma",
-          },
-
-          {
-            key: "categoria",
-            title: "Categoria",
-            render: (aluno) =>
-              aluno.latest?.categoria || "—",
-          },
-
-          {
-            key: "tipo",
-            title: "Tipo",
-            render: (aluno) =>
-              aluno.latest?.tipo || "—",
-          },
-
-          {
-            key: "data",
-            title: "Data",
-            render: (aluno) =>
-              aluno.latest?.data_ocorrido || "—",
-          },
-
-          {
-            key: "total",
-            title: "Total",
-            render: (aluno) =>
-              aluno.summary.count,
-          },
-
-          {
-            key: "descricao",
-            title: "Descrição",
-            render: (aluno) => (
-              <div className="max-w-[320px] truncate">
-                {aluno.latest?.descricao || "—"}
-              </div>
-            ),
-          },
-
-          {
-            key: "acoes",
-            title: "Ações",
-            render: (aluno) =>
-              aluno.latest && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    onClick={() =>
-                      openEditOccurrence(aluno.latest)
-                    }
-                    className="text-blue-600 hover:text-blue-800 border-blue-200"
                   >
-                    Editar
+                    {aluno.nome}
                   </Button>
+                ),
+              },
 
-                  <Button
-                    size="xs"
-                    variant="destructive"
-                    onClick={() => {
-                      setSelectedOccurrence(aluno.latest);
-                      setDeleteModalOpen(true);
-                    }}
-                  >
-                    Excluir
-                  </Button>
-                </div>
-              ),
-          },
-        ]}
-      />
+              {
+                key: "status",
+                title: "Status",
+                render: (aluno) => (
+                  <span className="capitalize">
+                    {aluno.status || "normal"}
+                  </span>
+                ),
+              },
 
-      {totalPages > 1 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
-      )}
-    </>
-  )
-}
+              {
+                key: "turmaNome",
+                title: "Turma",
+              },
+
+              {
+                key: "categoria",
+                title: "Categoria",
+                render: (aluno) =>
+                  aluno.latest?.categoria || "—",
+              },
+
+              {
+                key: "tipo",
+                title: "Tipo",
+                render: (aluno) =>
+                  aluno.latest?.tipo || "—",
+              },
+
+              {
+                key: "data",
+                title: "Data",
+                render: (aluno) =>
+                  aluno.latest?.data_ocorrido || "—",
+              },
+
+              {
+                key: "total",
+                title: "Total",
+                render: (aluno) =>
+                  aluno.summary.count,
+              },
+
+              {
+                key: "descricao",
+                title: "Descrição",
+                render: (aluno) => (
+                  <div className="max-w-[320px] truncate">
+                    {aluno.latest?.descricao || "—"}
+                  </div>
+                ),
+              },
+
+              {
+                key: "acoes",
+                title: "Ações",
+                render: (aluno) =>
+                  aluno.latest && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        onClick={() =>
+                          openEditOccurrence(aluno.latest)
+                        }
+                        className="text-blue-600 hover:text-blue-800 border-blue-200"
+                      >
+                        Editar
+                      </Button>
+
+                      <Button
+                        size="xs"
+                        variant="destructive"
+                        onClick={() => {
+                          setSelectedOccurrence(aluno.latest);
+                          setDeleteModalOpen(true);
+                        }}
+                      >
+                        Excluir
+                      </Button>
+                    </div>
+                  ),
+              },
+            ]}
+          />
+
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          )}
+        </>
+      )
+      }
 
       <div className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-slate-800">
