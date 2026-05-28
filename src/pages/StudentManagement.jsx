@@ -5,7 +5,7 @@ import { useAuth } from "../hooks/useAuth";
 import { notify } from "../utils/notify";
 import { PageTitle } from "../components/ui/PageTitle";
 import { FormInput } from "../components/ui/FormInput";
-import { FormSelect } from "../components/ui/FormSelect";
+import { CustomSelect } from "../components/ui/CustomSelect";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { jsPDF } from "jspdf";
@@ -137,6 +137,36 @@ export const StudentManagement = () => {
 
   const getTurmaName = (id) => turmas.find((turma) => turma.id === id)?.nome || "—";
   const getEscolaName = (id) => escolas.find((escola) => escola.id === id)?.nome || "—";
+
+  const escolaOptions = [
+    { value: "", label: "Todas as escolas" },
+    ...escolas.map((escola) => ({ value: String(escola.id), label: escola.nome })),
+  ];
+
+  const turmaOptions = [
+    { value: "", label: "Todas as turmas" },
+    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })),
+  ];
+
+  const origemTurmaOptions = [
+    { value: "", label: "Selecione a turma de origem" },
+    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })),
+  ];
+
+  const destinoTurmaOptions = [
+    { value: "", label: "Selecione a turma de destino" },
+    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })),
+  ];
+
+  const deleteTurmaOptions = [
+    { value: "", label: "Selecione a turma" },
+    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })),
+  ];
+
+  const reportFormatOptions = [
+    { value: "pdf", label: "PDF" },
+    { value: "csv", label: "Planilha (.csv)" },
+  ];
 
   const prepareReportRows = (students, occurrences) => {
     const occurrenceMap = (occurrences || []).reduce((acc, item) => {
@@ -614,31 +644,21 @@ export const StudentManagement = () => {
       <div className="space-y-4">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm" >
           <div className="grid gap-3 sm:grid-cols-2">
-            <FormSelect
+            <CustomSelect
               label="Filtrar escola"
               value={selectedEscola}
-              onChange={(event) => setSelectedEscola(event.target.value)}
-            >
-              <option value="">Todas as escolas</option>
-              {escolas.map((escola) => (
-                <option key={escola.id} value={escola.id}>
-                  {escola.nome}
-                </option>
-              ))}
-            </FormSelect>
-            <FormSelect
+              onChange={setSelectedEscola}
+              options={escolaOptions}
+              placeholder="Todas as escolas"
+            />
+            <CustomSelect
               label="Filtrar turma"
               value={selectedTurma}
-              onChange={(event) => setSelectedTurma(event.target.value)}
+              onChange={setSelectedTurma}
+              options={turmaOptions}
+              placeholder="Todas as turmas"
               className="mb-2 col"
-            >
-              <option value="">Todas as turmas</option>
-              {turmas.map((turma) => (
-                <option key={turma.id} value={turma.id}>
-                  {turma.nome}
-                </option>
-              ))}
-            </FormSelect>
+            />
           </div>
 
           <FormInput
@@ -650,30 +670,20 @@ export const StudentManagement = () => {
           />
 
           <div className="grid gap-3 sm:grid-cols-2 mt-2">
-            <FormSelect
+            <CustomSelect
               label="Turma de origem"
               value={sourceTurma}
-              onChange={(event) => setSourceTurma(event.target.value)}
-            >
-              <option value="">Selecione a turma de origem</option>
-              {turmas.map((turma) => (
-                <option key={turma.id} value={turma.id}>
-                  {turma.nome}
-                </option>
-              ))}
-            </FormSelect>
-            <FormSelect
+              onChange={setSourceTurma}
+              options={origemTurmaOptions}
+              placeholder="Selecione a turma de origem"
+            />
+            <CustomSelect
               label="Turma de destino"
               value={targetTurma}
-              onChange={(event) => setTargetTurma(event.target.value)}
-            >
-              <option value="">Selecione a turma de destino</option>
-              {turmas.map((turma) => (
-                <option key={turma.id} value={turma.id}>
-                  {turma.nome}
-                </option>
-              ))}
-            </FormSelect>
+              onChange={setTargetTurma}
+              options={destinoTurmaOptions}
+              placeholder="Selecione a turma de destino"
+            />
           </div>
 
           <Button onClick={handleBulkMove} disabled={bulkLoading} className="mt-4">
@@ -686,14 +696,13 @@ export const StudentManagement = () => {
               Selecione alunos ou use o filtro para gerar relatório e excluir alunos da turma selecionada.
             </p>
             <div className="grid gap-3 sm:grid-cols-2 items-end">
-              <FormSelect
+              <CustomSelect
                 label="Formato do relatório"
                 value={reportFormat}
-                onChange={(event) => setReportFormat(event.target.value)}
-              >
-                <option value="pdf">PDF</option>
-                <option value="csv">Planilha (.csv)</option>
-              </FormSelect>
+                onChange={setReportFormat}
+                options={reportFormatOptions}
+                placeholder="Selecione o formato"
+              />
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
                   onClick={handleDownloadFinalReport}
@@ -828,18 +837,13 @@ export const StudentManagement = () => {
           <p>
             Esta ação excluirá todos os alunos da turma selecionada. Selecione a turma e digite <span className="font-semibold">EXCLUIR</span> para confirmar.
           </p>
-          <FormSelect
+          <CustomSelect
             label="Turma para exclusão"
             value={selectedTurma}
-            onChange={(event) => setSelectedTurma(event.target.value)}
-          >
-            <option value="">Selecione a turma</option>
-            {turmas.map((turma) => (
-              <option key={turma.id} value={turma.id}>
-                {turma.nome}
-              </option>
-            ))}
-          </FormSelect>
+            onChange={setSelectedTurma}
+            options={deleteTurmaOptions}
+            placeholder="Selecione a turma"
+          />
           <FormInput
             label="Digite EXCLUIR para confirmar"
             value={confirmDeleteText}

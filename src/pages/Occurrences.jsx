@@ -7,7 +7,7 @@ import { Modal } from "../components/ui/Modal";
 import { PageTitle } from "../components/ui/PageTitle"
 import { Card } from "../components/ui/Card";
 import { FormInput } from "../components/ui/FormInput";
-import { FormSelect } from "../components/ui/FormSelect";
+import { CustomSelect } from "../components/ui/CustomSelect";
 import { Button } from "../components/ui/Button";
 
 export const Occurrences = () => {
@@ -106,6 +106,11 @@ export const Occurrences = () => {
       (b.data_ocorrido || "").localeCompare(a.data_ocorrido || ""),
     );
   }, [selectedAlunoOccurrences]);
+
+  const turmaOptions = [
+    { value: "", label: "Todas as turmas" },
+    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })),
+  ];
 
   useEffect(() => {
     setCurrentPage(1);
@@ -433,19 +438,13 @@ export const Occurrences = () => {
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Nome do aluno"
               />
-              <FormSelect
+              <CustomSelect
                 label="Filtrar por Turma"
                 value={selectedTurma}
-                onChange={(event) => setSelectedTurma(event.target.value)}
-              >
-                <option value="">Todas as turmas</option>
-
-                {turmas.map((turma) => (
-                  <option key={turma.id} value={turma.id}>
-                    {turma.nome}
-                  </option>
-                ))}
-              </FormSelect>
+                onChange={setSelectedTurma}
+                options={turmaOptions}
+                placeholder="Todas as turmas"
+              />
             </div>
           </div>
 

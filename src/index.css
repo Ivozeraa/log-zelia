@@ -9,3 +9,50 @@
   --font-montserrat: "Montserrat", sans-serif;
   --font-inter: "Inter", sans-serif;
 }
+
+input,
+select,
+textarea {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #94a3b8 !important;
+  box-shadow: none !important;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #0f172a !important;
+  border-color: #374151 !important;
+  color: #f8fafc !important;
+}
+
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: none !important;
+}
+
+select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.dark select option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+select option:hover,
+select option:focus {
+  background-color: #f1f5f9 !important;
+}

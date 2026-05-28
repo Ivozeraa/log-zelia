@@ -16,7 +16,7 @@ export const FormSelect = ({
       <select
         value={value}
         onChange={onChange}
-        className={`h-12 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-slate-900 dark:text-white outline-none transition focus:border-green-800 focus:ring-2 focus:ring-green-200 ${className}`}
+        className={`h-12 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 text-slate-900 dark:text-white outline-none transition focus:border-slate-400 focus:ring-0 appearance-none ${className}`}
       >
         {children}
       </select>

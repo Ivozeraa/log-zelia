@@ -5,6 +5,7 @@ import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { notify } from "../utils/notify";
 import { Button } from "../components/ui/Button";
+import { CustomSelect } from "../components/ui/CustomSelect";
 import { Modal } from "../components/ui/Modal";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -691,43 +692,31 @@ export const Management = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Nome ou e-mail"
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-200"
+            className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
           />
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-semibold text-slate-700">
-            Filtrar função
-          </label>
-          <select
-            value={filterRole}
-            onChange={(e) => setFilterRole(e.target.value)}
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-200"
-          >
-            <option value="">Todas as funções</option>
-            {ROLES.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-semibold text-slate-700">
-            Filtrar escola
-          </label>
-          <select
-            value={filterSchool}
-            onChange={(e) => setFilterSchool(e.target.value)}
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-200"
-          >
-            <option value="">Todas as escolas</option>
-            {schools.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.nome}
-              </option>
-            ))}
-          </select>
-        </div>
+        <CustomSelect
+          label="Filtrar função"
+          value={filterRole}
+          onChange={setFilterRole}
+          placeholder="Todas as funções"
+          options={[
+            { value: "", label: "Todas as funções" },
+            ...ROLES.map((r) => ({ value: r.id, label: r.label })),
+          ]}
+          className="flex flex-col gap-1"
+        />
+        <CustomSelect
+          label="Filtrar escola"
+          value={filterSchool}
+          onChange={setFilterSchool}
+          placeholder="Todas as escolas"
+          options={[
+            { value: "", label: "Todas as escolas" },
+            ...schools.map((s) => ({ value: s.id, label: s.nome })),
+          ]}
+          className="flex flex-col gap-1"
+        />
       </div>
 
       {error && (
@@ -909,7 +898,7 @@ export const Management = () => {
                 onChange={(e) =>
                   setAddForm((f) => ({ ...f, nome: e.target.value }))
                 }
-                className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
                 placeholder="Nome completo"
               />
             </div>
@@ -921,7 +910,7 @@ export const Management = () => {
                 onChange={(e) =>
                   setAddForm((f) => ({ ...f, email: e.target.value }))
                 }
-                className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
                 placeholder="email@exemplo.com"
               />
             </div>
@@ -933,44 +922,36 @@ export const Management = () => {
                 onChange={(e) =>
                   setAddForm((f) => ({ ...f, password: e.target.value }))
                 }
-                className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
                 placeholder="Senha inicial"
               />
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Função *</label>
-              <select
-                value={addForm.role_id}
-                onChange={(e) =>
-                  setAddForm((f) => ({ ...f, role_id: e.target.value }))
-                }
-                className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200"
-              >
-                <option value="">Selecione...</option>
-                {ROLES.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1 sm:col-span-2">
-              <label className="text-sm font-medium">Escola</label>
-              <select
-                value={addForm.escola_id}
-                onChange={(e) =>
-                  setAddForm((f) => ({ ...f, escola_id: e.target.value }))
-                }
-                className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200"
-              >
-                <option value="">Nenhuma / Global</option>
-                {schools.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect
+              label="Função *"
+              value={addForm.role_id}
+              onChange={(value) =>
+                setAddForm((f) => ({ ...f, role_id: value }))
+              }
+              placeholder="Selecione..."
+              options={[
+                { value: "", label: "Selecione..." },
+                ...ROLES.map((r) => ({ value: r.id, label: r.label })),
+              ]}
+              className="flex flex-col gap-1"
+            />
+            <CustomSelect
+              label="Escola"
+              value={addForm.escola_id}
+              onChange={(value) =>
+                setAddForm((f) => ({ ...f, escola_id: value }))
+              }
+              placeholder="Nenhuma / Global"
+              options={[
+                { value: "", label: "Nenhuma / Global" },
+                ...schools.map((s) => ({ value: s.id, label: s.nome })),
+              ]}
+              className="flex flex-col gap-1 sm:col-span-2"
+            />
           </div>
 
           <div className="flex items-center gap-2">
@@ -1030,7 +1011,7 @@ export const Management = () => {
                   onChange={(e) =>
                     setEditForm((f) => ({ ...f, nome: e.target.value }))
                   }
-                  className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -1041,42 +1022,35 @@ export const Management = () => {
                   onChange={(e) =>
                     setEditForm((f) => ({ ...f, email: e.target.value }))
                   }
-                  className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
                 />
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium">Função *</label>
-                <select
-                  value={editForm.role_id || ""}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, role_id: e.target.value }))
-                  }
-                  className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                >
-                  {getAllowedRoles().map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium">Escola</label>
-                <select
-                  value={editForm.escola_id || ""}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, escola_id: e.target.value }))
-                  }
-                  className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                >
-                  <option value="">Nenhuma / Global</option>
-                  {schools.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CustomSelect
+                label="Função *"
+                value={editForm.role_id || ""}
+                onChange={(value) =>
+                  setEditForm((f) => ({ ...f, role_id: value }))
+                }
+                placeholder="Selecione..."
+                options={getAllowedRoles().map((r) => ({
+                  value: r.id,
+                  label: r.label,
+                }))}
+                className="flex flex-col gap-1"
+              />
+              <CustomSelect
+                label="Escola"
+                value={editForm.escola_id || ""}
+                onChange={(value) =>
+                  setEditForm((f) => ({ ...f, escola_id: value }))
+                }
+                placeholder="Nenhuma / Global"
+                options={[
+                  { value: "", label: "Nenhuma / Global" },
+                  ...schools.map((s) => ({ value: s.id, label: s.nome })),
+                ]}
+                className="flex flex-col gap-1"
+              />
             </div>
 
             <div className="flex items-center gap-2">
@@ -1142,96 +1116,89 @@ export const Management = () => {
           </p>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Escola</label>
-              <select
-                value={exportFilters.escola_id}
-                onChange={(e) => {
-                  setExportFilters((f) => ({
-                    ...f,
-                    escola_id: e.target.value,
-                    turma_id: "", // Resetar turma quando escola muda
-                  }));
-                  loadTurmas(e.target.value);
-                }}
-                className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              >
-                <option value="">Todas as escolas</option>
-                {schools.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect
+              label="Escola"
+              value={exportFilters.escola_id}
+              onChange={(value) => {
+                setExportFilters((f) => ({
+                  ...f,
+                  escola_id: value,
+                  turma_id: "",
+                }));
+                loadTurmas(value);
+              }}
+              placeholder="Todas as escolas"
+              options={[
+                { value: "", label: "Todas as escolas" },
+                ...schools.map((s) => ({ value: s.id, label: s.nome })),
+              ]}
+              className="flex flex-col gap-1"
+            />
 
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Turma</label>
-              <select
-                value={exportFilters.turma_id}
-                onChange={(e) =>
-                  setExportFilters((f) => ({ ...f, turma_id: e.target.value }))
-                }
-                disabled={!exportFilters.escola_id}
-                className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:bg-slate-100 disabled:cursor-not-allowed"
-              >
-                <option value="">Todas as turmas</option>
-                {turmas.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect
+              label="Turma"
+              value={exportFilters.turma_id}
+              onChange={(value) =>
+                setExportFilters((f) => ({ ...f, turma_id: value }))
+              }
+              placeholder="Todas as turmas"
+              options={[
+                { value: "", label: "Todas as turmas" },
+                ...turmas.map((t) => ({ value: t.id, label: t.nome })),
+              ]}
+              disabled={!exportFilters.escola_id}
+              className="flex flex-col gap-1"
+              emptyLabel="Nenhuma turma disponível"
+            />
 
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Período</label>
-              <select
-                value={exportFilters.periodo}
-                onChange={(e) =>
-                  setExportFilters((f) => ({ ...f, periodo: e.target.value }))
-                }
-                className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              >
-                <option value="todos">Todo o período</option>
-                <option value="dia">Hoje</option>
-                <option value="semana">Esta semana</option>
-                <option value="mes">Este mês</option>
-              </select>
-            </div>
+            <CustomSelect
+              label="Período"
+              value={exportFilters.periodo}
+              onChange={(value) =>
+                setExportFilters((f) => ({ ...f, periodo: value }))
+              }
+              placeholder="Todo o período"
+              options={[
+                { value: "todos", label: "Todo o período" },
+                { value: "dia", label: "Hoje" },
+                { value: "semana", label: "Esta semana" },
+                { value: "mes", label: "Este mês" },
+              ]}
+              className="flex flex-col gap-1"
+            />
 
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Categoria</label>
-              <select
-                value={exportFilters.categoria}
-                onChange={(e) =>
-                  setExportFilters((f) => ({ ...f, categoria: e.target.value }))
-                }
-                className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              >
-                <option value="">Todas as categorias</option>
-                <option value="ocorrencia">Ocorrência</option>
-                <option value="suspensao">Suspensão</option>
-              </select>
-            </div>
+            <CustomSelect
+              label="Categoria"
+              value={exportFilters.categoria}
+              onChange={(value) =>
+                setExportFilters((f) => ({ ...f, categoria: value }))
+              }
+              placeholder="Todas as categorias"
+              options={[
+                { value: "", label: "Todas as categorias" },
+                { value: "ocorrencia", label: "Ocorrência" },
+                { value: "suspensao", label: "Suspensão" },
+              ]}
+              className="flex flex-col gap-1"
+            />
 
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Tipo</label>
-              <select
-                value={exportFilters.tipo}
-                onChange={(e) =>
-                  setExportFilters((f) => ({ ...f, tipo: e.target.value }))
-                }
-                className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              >
-                <option value="">Todos os tipos</option>
-                <option value="indisciplina">Indisciplina</option>
-                <option value="infrequencia">Infrequência</option>
-                <option value="atraso">Atraso</option>
-                <option value="desrespeito">Desrespeito</option>
-                <option value="outro">Outro</option>
-              </select>
-            </div>
+            <CustomSelect
+              label="Tipo"
+              value={exportFilters.tipo}
+              onChange={(value) =>
+                setExportFilters((f) => ({ ...f, tipo: value }))
+              }
+              placeholder="Todos os tipos"
+              options={[
+                { value: "", label: "Todos os tipos" },
+                { value: "indisciplina", label: "Indisciplina" },
+                { value: "infrequencia", label: "Infrequência" },
+                { value: "atraso", label: "Atraso" },
+                { value: "desrespeito", label: "Desrespeito" },
+                { value: "outro", label: "Outro" },
+              ]}
+              className="flex flex-col gap-1"
+            />
           </div>
 
           <div className="flex justify-end gap-2 mt-2">
@@ -1287,7 +1254,7 @@ export const Management = () => {
               type="password"
               value={deleteConfirmSenha}
               onChange={(e) => setDeleteConfirmSenha(e.target.value)}
-              className="h-11 rounded-lg border border-slate-300 px-3 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-200"
+              className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
               placeholder="Sua senha"
             />
           </div>
