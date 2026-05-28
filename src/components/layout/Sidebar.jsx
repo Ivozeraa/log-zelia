@@ -2,6 +2,8 @@ import { SidebarOptions as So } from '../ui/SidebarOptions'
 import { FaHome, FaExclamationCircle, FaPaste, FaCog } from 'react-icons/fa'
 import { useAuth } from '../../hooks/useAuth'
 
+import { SectionTitle } from '../ui/SectionTitle'
+
 export const Sidebar = ({ open, setOpen }) => {
   const { user } = useAuth()
 
@@ -31,9 +33,7 @@ export const Sidebar = ({ open, setOpen }) => {
           md:translate-x-0 md:top-16 md:h-[calc(100vh-4rem)]
         `}
       >
-        <div className="md:hidden mb-4">
-          <h1 className="text-lg font-bold">Menu</h1>
-        </div>
+        <SectionTitle text="Menu"/>
 
         <So to="/" icon={FaHome} text="Início" onClick={handleClick} />
         <So to="/advertencias" icon={FaExclamationCircle} text="Advertências" onClick={handleClick} />

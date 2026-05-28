@@ -26,7 +26,10 @@ dist-ssr
 .env
 
 # Cypress
+<<<<<<< HEAD
 cypress.config.js
 cypress
+=======
+>>>>>>> feature/modo-escuro
 cypress/videos
 cypress/screenshots

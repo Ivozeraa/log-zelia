@@ -7,12 +7,14 @@ export const FormInput = ({
   onChange,
   placeholder,
   className = "",
+  disabled = false,
 }) => {
   return (
     <div className="flex flex-col gap-2">
       <label className="text-sm font-semibold text-slate-700 dark:text-slate-400">
         {label}
       </label>
+
       <input
         type={type}
         value={value}

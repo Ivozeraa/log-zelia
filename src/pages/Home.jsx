@@ -1,11 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FaExclamationTriangle } from 'react-icons/fa'
-import { supabase } from '../utils/supabase'
-import { useAuth } from "../hooks/useAuth"
-import { Card } from '../components/ui/Card'
-import { Button } from '../components/ui/Button'
-import { Modal } from '../components/ui/Modal'
-import { notify } from '../utils/notify'
 import {
   ResponsiveContainer,
   LineChart,
@@ -16,48 +10,58 @@ import {
   YAxis
 } from 'recharts'
 
+import { supabase } from '../utils/supabase'
+import { useAuth } from '../hooks/useAuth'
+
+import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
+import { Modal } from '../components/ui/Modal'
+import { FormInput } from '../components/ui/FormInput'
+import { FormSelect } from '../components/ui/FormSelect'
 import { PageTitle } from '../components/ui/PageTitle'
+import { SectionTitle } from '../components/ui/SectionTitle'
+
+import { notify } from '../utils/notify'
 
 export const Home = () => {
   const { user } = useAuth()
+
   const [open, setOpen] = useState(false)
+
   const [escolas, setEscolas] = useState([])
   const [selectedEscola, setSelectedEscola] = useState('')
+
   const [turmas, setTurmas] = useState([])
-  const [alunos, setAlunos] = useState([])
   const [selectedTurma, setSelectedTurma] = useState('')
+
+  const [alunos, setAlunos] = useState([])
   const [selectedAluno, setSelectedAluno] = useState('')
-  const [loadingEscolas, setLoadingEscolas] = useState(false)
+
   const [loadingTurmas, setLoadingTurmas] = useState(false)
   const [loadingAlunos, setLoadingAlunos] = useState(false)
-  const [turmaOpen, setTurmaOpen] = useState(false)
-  const [alunoOpen, setAlunoOpen] = useState(false)
-  const [escolaOpen, setEscolaOpen] = useState(false)
-  const [tipoAdvertenciaOpen, setTipoAdvertenciaOpen] = useState(false)
-  const [tipoSituacaoOpen, setTipoSituacaoOpen] = useState(false)
-  const [alunoSearch, setAlunoSearch] = useState('')
+
   const [dataOcorrido, setDataOcorrido] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataTermino, setDataTermino] = useState('')
+
   const [tipoAdvertencia, setTipoAdvertencia] = useState('')
   const [tipoSituacao, setTipoSituacao] = useState('')
   const [descricao, setDescricao] = useState('')
+
   const [submitting, setSubmitting] = useState(false)
   const [formMessage, setFormMessage] = useState('')
-  const modalRef = useRef(null)
-  const alunosFiltrados = alunos.filter((aluno) =>
-    aluno.nome.toLowerCase().includes(alunoSearch.toLowerCase())
-  )
 
   const [graficoData, setGraficoData] = useState([])
 
-  const selectedTurmaObj = turmas.find((turma) => turma.id === selectedTurma)
-  const selectedAlunoObj = alunos.find((aluno) => aluno.id === selectedAluno)
+  const [stats, setStats] = useState({
+    total: 0,
+    mes: 0,
+    semana: 0
+  })
 
   const resetForm = () => {
     setSelectedTurma('')
     setSelectedAluno('')
-    setAlunoSearch('')
     setDataOcorrido('')
     setDataInicio('')
     setDataTermino('')
@@ -66,13 +70,6 @@ export const Home = () => {
     setDescricao('')
     setFormMessage('')
   }
-  const [stats, setStats] = useState({
-    total: 0,
-    mes: 0,
-    semana: 0
-  })
-
-  const [ultimasOcorrencias, setUltimasOcorrencias] = useState([])
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -99,20 +96,36 @@ export const Home = () => {
       )
 
       const inicioSemana = new Date(hoje)
-      inicioSemana.setDate(hoje.getDate() - hoje.getDay())
+
+      inicioSemana.setDate(
+        hoje.getDate() - hoje.getDay()
+      )
+
       inicioSemana.setHours(0, 0, 0, 0)
 
-      const mes = data.filter(o =>
+      const mes = data.filter((o) =>
         new Date(o.data_ocorrido) >= inicioMes
       ).length
 
-      const semana = data.filter(o =>
+      const semana = data.filter((o) =>
         new Date(o.data_ocorrido) >= inicioSemana
       ).length
 
-      setStats({ total, mes, semana })
+      setStats({
+        total,
+        mes,
+        semana
+      })
 
-      const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+      const diasSemana = [
+        'Dom',
+        'Seg',
+        'Ter',
+        'Qua',
+        'Qui',
+        'Sex',
+        'Sáb'
+      ]
 
       const dadosSemana = [
         { name: 'Dom', ocorrencias: 0 },
@@ -121,13 +134,14 @@ export const Home = () => {
         { name: 'Qua', ocorrencias: 0 },
         { name: 'Qui', ocorrencias: 0 },
         { name: 'Sex', ocorrencias: 0 },
-        { name: 'Sáb', ocorrencias: 0 },
+        { name: 'Sáb', ocorrencias: 0 }
       ]
 
       data.forEach((ocorrencia) => {
-        const [ano, mes, dia] = ocorrencia.data_ocorrido
-          .split('-')
-          .map(Number)
+        const [ano, mes, dia] =
+          ocorrencia.data_ocorrido
+            .split('-')
+            .map(Number)
 
         const dataOcorrencia = new Date(
           ano,
@@ -141,9 +155,10 @@ export const Home = () => {
           const diaSemana =
             diasSemana[dataOcorrencia.getDay()]
 
-          const diaEncontrado = dadosSemana.find(
-            item => item.name === diaSemana
-          )
+          const diaEncontrado =
+            dadosSemana.find(
+              (item) => item.name === diaSemana
+            )
 
           if (diaEncontrado) {
             diaEncontrado.ocorrencias += 1
@@ -152,15 +167,6 @@ export const Home = () => {
       })
 
       setGraficoData(dadosSemana)
-
-      const ultimas = [...data]
-        .sort(
-          (a, b) =>
-            new Date(b.data_ocorrido) - new Date(a.data_ocorrido)
-        )
-        .slice(0, 5)
-
-      setUltimasOcorrencias(ultimas)
     }
 
     loadDashboard()
@@ -170,133 +176,55 @@ export const Home = () => {
     const loadEscolas = async () => {
       if (!user) return
 
-      console.log('user:', user)
-
-      let query = supabase.from('escolas').select('id, nome')
+      let query = supabase
+        .from('escolas')
+        .select('id, nome')
 
       if (Number(user.role_id) === 1) {
         const { data, error } = await query
 
         if (error) {
-          notify.error("Erro carregando as escolas")
-          console.error('Erro carregando escolas:', error)
+          notify.error(
+            'Erro carregando as escolas'
+          )
+
+          console.error(error)
+
           setEscolas([])
+
           return
         }
 
-        console.log('escolas carregadas:', data)
-
         setEscolas(data || [])
 
-        if (data && data.length > 0) {
+        if (data?.length > 0) {
           setSelectedEscola(data[0].id)
         }
-      }
-      else if (user.escola_id) {
+      } else if (user.escola_id) {
         const { data, error } = await query
           .eq('id', user.escola_id)
           .single()
 
         if (error) {
-          notify.error("Erro carregando as escolas")
-          console.error('Erro carregando escola:', error)
+          notify.error(
+            'Erro carregando as escolas'
+          )
+
+          console.error(error)
+
           setEscolas([])
+
           return
         }
 
-        console.log('escola do usuário:', data)
-
         setEscolas([data])
+
         setSelectedEscola(data?.id || '')
       }
     }
 
     loadEscolas()
   }, [user])
-
-  const handleSubmit = async (event) => {
-    event.preventDefault()
-    if (!user?.id) {
-      setFormMessage('Erro: usuário não autenticado.')
-      return
-    }
-
-    if (!selectedEscola || !selectedTurma || !selectedAluno || !dataOcorrido || (tipoAdvertencia === 'suspensao' && (!dataInicio || !dataTermino)) || !tipoAdvertencia || !tipoSituacao || !descricao) {
-      notify.warning("Preencha todos os campos antes de registrar a ocorrência.")
-      setFormMessage('Preencha todos os campos antes de registrar a ocorrência.')
-      return
-    }
-
-    setSubmitting(true)
-    setFormMessage('')
-
-    const payload = {
-      escola_id: selectedEscola,
-      aluno_id: selectedAluno,
-      professor_id: user.id,
-      professor_nome: user.nome,
-      turma_id: selectedTurma,
-      data_ocorrido: dataOcorrido,
-      tipo: tipoSituacao,
-      categoria: tipoAdvertencia,
-      descricao: descricao,
-    }
-
-    if (tipoAdvertencia === 'suspensao') {
-      payload.data_inicio = dataInicio
-      payload.data_fim = dataTermino
-    }
-
-    let willSuspend = tipoAdvertencia === 'suspensao'
-
-    if (tipoAdvertencia === 'ocorrencia') {
-      const { count, error: countError } = await supabase
-        .from('ocorrencias')
-        .select('id', { count: 'exact', head: true })
-        .eq('aluno_id', selectedAluno)
-        .eq('categoria', 'ocorrencia')
-
-      if (countError) {
-        console.error('Erro ao contar ocorrências do aluno:', countError)
-      } else {
-        willSuspend = (count || 0) + 1 >= 3
-      }
-    }
-
-    console.log('user', user)
-    console.log('turma', selectedTurmaObj)
-    console.log('payload ocorrencia', payload)
-    const { error } = await supabase.from('ocorrencias').insert(payload)
-
-    if (error) {
-      console.error('Erro ao registrar ocorrência:', error)
-      setSubmitting(false)
-      setFormMessage('Ocorreu um erro ao registrar. Tente novamente.')
-      notify.error('Erro ao registrar ocorrência')
-      return
-    }
-
-    const statusToUpdate = willSuspend ? 'suspenso' : 'normal'
-
-    const { error: updateError } = await supabase
-      .from('alunos')
-      .update({ status: statusToUpdate })
-      .eq('id', selectedAluno)
-
-    setSubmitting(false)
-
-    if (updateError) {
-      console.error('Erro ao atualizar status do aluno:', updateError)
-      setFormMessage('Ocorrência registrada, mas não foi possível atualizar o status do aluno.')
-      notify.error('Erro ao atualizar status do aluno')
-      return
-    }
-
-    setFormMessage('Ocorrência registrada com sucesso!')
-    notify.success("Ocorrência registrada com sucesso!")
-    resetForm()
-    setOpen(false)
-  }
 
   useEffect(() => {
     const loadTurmas = async () => {
@@ -307,18 +235,25 @@ export const Home = () => {
       }
 
       setLoadingTurmas(true)
-      const { data: turmasData, error: turmasError } = await supabase
-        .from('turmas')
-        .select('id, nome, escola_id')
-        .eq('escola_id', selectedEscola)
-        .order('nome', { ascending: true })
 
-      if (turmasError) {
-        console.error('Erro carregando turmas:', turmasError)
+      const {
+        data: turmasData,
+        error
+      } = await supabase
+        .from('turmas')
+        .select('id, nome')
+        .eq('escola_id', selectedEscola)
+        .order('nome', {
+          ascending: true
+        })
+
+      if (error) {
+        console.error(error)
         setTurmas([])
       } else {
         setTurmas(turmasData || [])
       }
+
       setLoadingTurmas(false)
     }
 
@@ -330,77 +265,209 @@ export const Home = () => {
       if (!selectedTurma) {
         setAlunos([])
         setSelectedAluno('')
-        setAlunoSearch('')
         return
       }
 
       setLoadingAlunos(true)
-      const { data: alunosData, error: alunosError } = await supabase
+
+      const {
+        data: alunosData,
+        error
+      } = await supabase
         .from('alunos')
         .select('id, nome, matricula')
         .eq('turma_id', selectedTurma)
-        .order('nome', { ascending: true })
+        .order('nome', {
+          ascending: true
+        })
 
-      if (alunosError) {
-        console.error('Erro carregando alunos:', alunosError)
+      if (error) {
+        console.error(error)
         setAlunos([])
       } else {
         setAlunos(alunosData || [])
       }
+
       setLoadingAlunos(false)
     }
 
     loadAlunos()
   }, [selectedTurma])
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (modalRef.current && !modalRef.current.contains(event.target)) {
-        setTurmaOpen(false)
-        setAlunoOpen(false)
-        setEscolaOpen(false)
-        setTipoAdvertenciaOpen(false)
-        setTipoSituacaoOpen(false)
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+
+    if (!user?.id) {
+      setFormMessage(
+        'Erro: usuário não autenticado.'
+      )
+
+      return
+    }
+
+    if (
+      !selectedEscola ||
+      !selectedTurma ||
+      !selectedAluno ||
+      !dataOcorrido ||
+      !tipoAdvertencia ||
+      !tipoSituacao ||
+      !descricao ||
+      (
+        tipoAdvertencia === 'suspensao' &&
+        (!dataInicio || !dataTermino)
+      )
+    ) {
+      notify.warning(
+        'Preencha todos os campos antes de registrar a ocorrência.'
+      )
+
+      setFormMessage(
+        'Preencha todos os campos antes de registrar a ocorrência.'
+      )
+
+      return
+    }
+
+    setSubmitting(true)
+
+    setFormMessage('')
+
+    const payload = {
+      escola_id: selectedEscola,
+      aluno_id: selectedAluno,
+      professor_id: user.id,
+      professor_nome: user.nome,
+      turma_id: selectedTurma,
+      data_ocorrido: dataOcorrido,
+      tipo: tipoSituacao,
+      categoria: tipoAdvertencia,
+      descricao
+    }
+
+    if (tipoAdvertencia === 'suspensao') {
+      payload.data_inicio = dataInicio
+      payload.data_fim = dataTermino
+    }
+
+    let willSuspend =
+      tipoAdvertencia === 'suspensao'
+
+    if (tipoAdvertencia === 'ocorrencia') {
+      const {
+        count,
+        error: countError
+      } = await supabase
+        .from('ocorrencias')
+        .select('id', {
+          count: 'exact',
+          head: true
+        })
+        .eq('aluno_id', selectedAluno)
+        .eq('categoria', 'ocorrencia')
+
+      if (countError) {
+        console.error(countError)
+      } else {
+        willSuspend =
+          (count || 0) + 1 >= 3
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, []
+    const { error } = await supabase
+      .from('ocorrencias')
+      .insert(payload)
 
+    if (error) {
+      console.error(error)
 
-  )
+      notify.error(
+        'Erro ao registrar ocorrência'
+      )
+
+      setFormMessage(
+        'Ocorreu um erro ao registrar.'
+      )
+
+      setSubmitting(false)
+
+      return
+    }
+
+    const statusToUpdate =
+      willSuspend
+        ? 'suspenso'
+        : 'normal'
+
+    const {
+      error: updateError
+    } = await supabase
+      .from('alunos')
+      .update({
+        status: statusToUpdate
+      })
+      .eq('id', selectedAluno)
+
+    setSubmitting(false)
+
+    if (updateError) {
+      console.error(updateError)
+
+      notify.error(
+        'Erro ao atualizar status do aluno'
+      )
+
+      return
+    }
+
+    notify.success(
+      'Ocorrência registrada com sucesso!'
+    )
+
+    setFormMessage(
+      'Ocorrência registrada com sucesso!'
+    )
+
+    resetForm()
+
+    setOpen(false)
+  }
 
   return (
-    <div className='flex flex-col gap-10 w-full'>
-      <div className='flex flex-col md:flex-row items-start md:items-center justify-between gap-5'>
+    <div className="flex w-full flex-col gap-10">
+      <div className="flex flex-col items-start justify-between gap-5 md:flex-row md:items-center">
         <PageTitle
-          title="Dashboard"
+          title="Início"
           subtitle={
             <>
-              Bem-vindo(a),{" "}
-              <span className="text-green-700 font-semibold">
+              Bem-vindo(a),{' '}
+              <span className="font-semibold text-green-700">
                 {user?.nome}
               </span>
-              !, monitore as ocorrências registradas e adicione novas advertências.
+              ! monitore as ocorrências registradas e adicione novas advertências.
             </>
           }
         />
-        <div>
-          <Button
-            onClick={() => setOpen(!open)}
-            className="gap-2"
-          >
-            <FaExclamationTriangle size={20} className='text-white' />
-            <span>Adicionar Advertência</span>
-          </Button>
-        </div>
+
+        <Button
+          onClick={() => setOpen(true)}
+          className="gap-2"
+        >
+          <FaExclamationTriangle
+            size={20}
+            className="text-white"
+          />
+
+          <span>
+            Adicionar Advertência
+          </span>
+        </Button>
       </div>
 
-      <div className='flex flex-col gap-5'>
-        <p className='font-bold text-lg'>Dashboard</p>
+      <div className="flex flex-col gap-5">
+        <SectionTitle text="Dashboard" />
 
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full'>
+        <div className="grid w-full grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           <Card
             title="Ocorrências totais"
             content={stats.total}
@@ -415,46 +482,46 @@ export const Home = () => {
             title="Esta semana"
             content={stats.semana}
           />
-
-
         </div>
 
-        <div className='mt-1 text-sm'>
-          {stats.semana > stats.mes * 0.4 ? (
-            <span className='text-red-600 font-medium'>
+        <div className="mt-1 text-sm">
+          {stats.semana >
+          stats.mes * 0.4 ? (
+            <span className="font-medium text-red-600">
               ⚠️ Alta concentração de ocorrências nesta semana.
             </span>
           ) : (
-            <span className='text-green-600 font-medium'>
+            <span className="font-medium text-green-600">
               ✔️ Fluxo de ocorrências dentro do normal.
             </span>
           )}
         </div>
 
-        <div className='w-full bg-white dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-600 shadow-sm p-5'>
-          <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6'>
+        <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-600 dark:bg-slate-950">
+          <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className='text-lg font-bold text-slate-800 dark:text-white'>
+              <h2 className="text-lg font-bold text-slate-800 dark:text-white">
                 Fluxo de Ocorrências
               </h2>
 
-              <p className='text-sm text-slate-500 dark:text-slate-400'>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Monitoramento semanal de registros
               </p>
             </div>
 
-            <div className='bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-full w-fit'>
+            <div className="w-fit rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
               Últimos 7 dias
             </div>
-
-
           </div>
 
-
-
-          <div className='w-full h-80'>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={graficoData}>
+          <div className="h-80 w-full">
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+            >
+              <LineChart
+                data={graficoData}
+              >
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="#e2e8f0"
@@ -462,13 +529,17 @@ export const Home = () => {
 
                 <XAxis
                   dataKey="name"
-                  tick={{ fill: '#64748b' }}
+                  tick={{
+                    fill: '#64748b'
+                  }}
                   tickLine={false}
                   axisLine={false}
                 />
 
                 <YAxis
-                  tick={{ fill: '#64748b' }}
+                  tick={{
+                    fill: '#64748b'
+                  }}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -477,7 +548,8 @@ export const Home = () => {
                   contentStyle={{
                     borderRadius: '14px',
                     border: 'none',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                    boxShadow:
+                      '0 4px 20px rgba(0,0,0,0.08)'
                   }}
                 />
 
@@ -488,348 +560,230 @@ export const Home = () => {
                   strokeWidth={4}
                   dot={{
                     r: 5,
-                    fill: '#16a34a',
+                    fill: '#16a34a'
                   }}
                   activeDot={{
-                    r: 8,
+                    r: 8
                   }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
-
-
       </div>
 
-      <Modal isOpen={open} onClose={() => setOpen(!open)} title="Adicionar Advertência">
-        <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" ref={modalRef} onSubmit={handleSubmit}>
+      <Modal
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        title="Adicionar Advertência"
+      >
+        <form
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+          onSubmit={handleSubmit}
+        >
           {formMessage && (
             <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
               {formMessage}
             </div>
           )}
-          <div className="relative flex flex-col gap-2">
-            <label className="text-sm font-semibold text-slate-700">Escola</label>
-            <button
-              type="button"
-              onClick={() => {
-                setEscolaOpen((prev) => !prev)
-                setTurmaOpen(false)
-                setAlunoOpen(false)
-                setTipoAdvertenciaOpen(false)
-                setTipoSituacaoOpen(false)
-              }}
-              className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-            >
-              <span>{escolas.find(e => e.id === selectedEscola)?.nome || 'Selecionar escola'}</span>
-              <span className="text-slate-500">▾</span>
-            </button>
 
-            {escolaOpen && (
-              <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
-                {escolas.map((escola) => (
-                  <button
-                    key={escola.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedEscola(escola.id)
-                      setSelectedTurma('')
-                      setSelectedAluno('')
-                      setEscolaOpen(false)
-                    }}
-                    className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
-                  >
-                    {escola.nome}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="relative flex flex-col gap-2">
-            <label className="text-sm font-semibold text-slate-700">Turma</label>
-            <button
-              type="button"
-              onClick={() => {
-                setTurmaOpen((prev) => !prev)
-                setAlunoOpen(false)
-                setEscolaOpen(false)
-                setTipoAdvertenciaOpen(false)
-                setTipoSituacaoOpen(false)
-              }}
-              disabled={!selectedEscola || loadingTurmas}
-              className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-slate-100"
-            >
-              <span>{selectedTurmaObj?.nome || 'Selecionar turma'}</span>
-              <span className="text-slate-500">▾</span>
-            </button>
+          <FormSelect
+            label="Escola"
+            value={selectedEscola}
+            onChange={(event) => {
+              setSelectedEscola(
+                event.target.value
+              )
 
-            {turmaOpen && (
-              <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
-                {loadingTurmas ? (
-                  <div className="px-3 py-3 text-sm text-slate-500">Carregando turmas...</div>
-                ) : turmas.length > 0 ? (
-                  turmas.map((turma) => (
-                    <button
-                      key={turma.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedTurma(turma.id)
-                        setSelectedAluno('')
-                        setTurmaOpen(false)
-                      }}
-                      className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
-                    >
-                      {turma.nome}
-                    </button>
-                  ))
-                ) : (
-                  <div className="px-3 py-3 text-sm text-slate-500">Nenhuma turma encontrada</div>
-                )}
-              </div>
-            )}
-          </div>
+              setSelectedTurma('')
+              setSelectedAluno('')
+            }}
+          >
+            <option value="">
+              Selecionar escola
+            </option>
 
-          <div className="relative flex flex-col gap-2">
-            <label className="text-sm font-semibold text-slate-700">Aluno</label>
+            {escolas.map((escola) => (
+              <option
+                key={escola.id}
+                value={escola.id}
+              >
+                {escola.nome}
+              </option>
+            ))}
+          </FormSelect>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (!selectedTurma) return
-                setAlunoOpen((prev) => !prev)
-                setTurmaOpen(false)
-                setEscolaOpen(false)
-                setTipoAdvertenciaOpen(false)
-                setTipoSituacaoOpen(false)
-              }}
-              disabled={!selectedTurma || loadingAlunos}
-              className="flex w-full h-12 items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-slate-100"
-            >
-              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-                {selectedAlunoObj
-                  ? `${selectedAlunoObj.nome} - ${selectedAlunoObj.matricula || 'sem matrícula'}`
-                  : 'Selecionar aluno'}
-              </span>
-              <span className="text-slate-500 ml-2 shrink-0">▾</span>
-            </button>
+          <FormSelect
+            label="Turma"
+            value={selectedTurma}
+            disabled={
+              !selectedEscola ||
+              loadingTurmas
+            }
+            onChange={(event) => {
+              setSelectedTurma(
+                event.target.value
+              )
 
-            {alunoOpen && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                <div className="border-b border-slate-200 px-3 py-2">
-                  <input
-                    type="text"
-                    value={alunoSearch}
-                    onChange={(event) => setAlunoSearch(event.target.value)}
-                    placeholder="Buscar aluno..."
-                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                  />
-                </div>
+              setSelectedAluno('')
+            }}
+          >
+            <option value="">
+              Selecionar turma
+            </option>
 
-                <div className="max-h-60 overflow-y-auto">
-                  {loadingAlunos ? (
-                    <div className="px-3 py-3 text-sm text-slate-500">Carregando alunos...</div>
-                  ) : alunosFiltrados.length > 0 ? (
-                    alunosFiltrados.map((aluno) => (
-                      <button
-                        key={aluno.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedAluno(aluno.id)
-                          setAlunoOpen(false)
-                        }}
-                        className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
-                      >
-                        {aluno.nome} - {aluno.matricula || 'sem matrícula'}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-3 py-3 text-sm text-slate-500">Nenhum aluno encontrado</div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+            {turmas.map((turma) => (
+              <option
+                key={turma.id}
+                value={turma.id}
+              >
+                {turma.nome}
+              </option>
+            ))}
+          </FormSelect>
 
-          <div className="relative flex flex-col gap-2">
-            <label className="text-sm font-semibold text-slate-700">Tipo de advertência</label>
-            <button
-              type="button"
-              onClick={() => {
-                setTipoAdvertenciaOpen((prev) => !prev)
-                setTurmaOpen(false)
-                setAlunoOpen(false)
-                setEscolaOpen(false)
-                setTipoSituacaoOpen(false)
-              }}
-              className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-            >
-              <span>
-                {tipoAdvertencia === 'ocorrencia' ? 'Ocorrência' :
-                  tipoAdvertencia === 'suspensao' ? 'Suspensão' :
-                    'Selecionar tipo'}
-              </span>
-              <span className="text-slate-500">▾</span>
-            </button>
+          <FormSelect
+            label="Aluno"
+            value={selectedAluno}
+            disabled={
+              !selectedTurma ||
+              loadingAlunos
+            }
+            onChange={(event) =>
+              setSelectedAluno(
+                event.target.value
+              )
+            }
+          >
+            <option value="">
+              Selecionar aluno
+            </option>
 
-            {tipoAdvertenciaOpen && (
-              <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTipoAdvertencia('ocorrencia')
-                    setDataInicio('')
-                    setDataTermino('')
-                    setTipoAdvertenciaOpen(false)
-                  }}
-                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
-                >
-                  Ocorrência
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTipoAdvertencia('suspensao')
-                    setTipoAdvertenciaOpen(false)
-                  }}
-                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
-                >
-                  Suspensão
-                </button>
-              </div>
-            )}
-          </div>
+            {alunos.map((aluno) => (
+              <option
+                key={aluno.id}
+                value={aluno.id}
+              >
+                {aluno.nome} -{' '}
+                {aluno.matricula ||
+                  'sem matrícula'}
+              </option>
+            ))}
+          </FormSelect>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-slate-700">Data da ocorrência</label>
-            <input
-              type="date"
-              value={dataOcorrido}
-              onChange={(event) => setDataOcorrido(event.target.value)}
-              className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-            />
-          </div>
+          <FormSelect
+            label="Tipo de advertência"
+            value={tipoAdvertencia}
+            onChange={(event) =>
+              setTipoAdvertencia(
+                event.target.value
+              )
+            }
+          >
+            <option value="">
+              Selecionar tipo
+            </option>
 
-          {tipoAdvertencia === 'suspensao' && (
+            <option value="ocorrencia">
+              Ocorrência
+            </option>
+
+            <option value="suspensao">
+              Suspensão
+            </option>
+          </FormSelect>
+
+          <FormInput
+            type="date"
+            label="Data da ocorrência"
+            value={dataOcorrido}
+            onChange={(event) =>
+              setDataOcorrido(
+                event.target.value
+              )
+            }
+          />
+
+          {tipoAdvertencia ===
+            'suspensao' && (
             <>
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-700">Data de início</label>
-                <input
-                  type="date"
-                  value={dataInicio}
-                  onChange={(event) => setDataInicio(event.target.value)}
-                  className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                />
-              </div>
+              <FormInput
+                type="date"
+                label="Data de início"
+                value={dataInicio}
+                onChange={(event) =>
+                  setDataInicio(
+                    event.target.value
+                  )
+                }
+              />
 
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-700">Data de término</label>
-                <input
-                  type="date"
-                  value={dataTermino}
-                  onChange={(event) => setDataTermino(event.target.value)}
-                  className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                />
-              </div>
+              <FormInput
+                type="date"
+                label="Data de término"
+                value={dataTermino}
+                onChange={(event) =>
+                  setDataTermino(
+                    event.target.value
+                  )
+                }
+              />
             </>
           )}
 
+          <FormSelect
+            label="Tipo de situação"
+            value={tipoSituacao}
+            onChange={(event) =>
+              setTipoSituacao(
+                event.target.value
+              )
+            }
+          >
+            <option value="">
+              Selecionar situação
+            </option>
 
+            <option value="indisciplina">
+              Indisciplina
+            </option>
 
+            <option value="infrequencia">
+              Infrequência
+            </option>
 
+            <option value="atraso">
+              Atraso
+            </option>
 
-          <div className="relative flex flex-col gap-2">
-            <label className="text-sm font-semibold text-slate-700">Tipo de situação</label>
-            <button
-              type="button"
-              onClick={() => {
-                setTipoSituacaoOpen((prev) => !prev)
-                setTurmaOpen(false)
-                setAlunoOpen(false)
-                setEscolaOpen(false)
-                setTipoAdvertenciaOpen(false)
-              }}
-              className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-            >
-              <span>
-                {tipoSituacao === 'indisciplina' ? 'Indisciplina' :
-                  tipoSituacao === 'infrequencia' ? 'Infrequência' :
-                    tipoSituacao === 'atraso' ? 'Atraso' :
-                      tipoSituacao === 'desrespeito' ? 'Desrespeito' :
-                        tipoSituacao === 'outro' ? 'Outro' :
-                          'Selecionar situação'}
-              </span>
-              <span className="text-slate-500">▾</span>
-            </button>
+            <option value="desrespeito">
+              Desrespeito
+            </option>
 
-            {tipoSituacaoOpen && (
-              <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTipoSituacao('indisciplina')
-                    setTipoSituacaoOpen(false)
-                  }}
-                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
-                >
-                  Indisciplina
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTipoSituacao('infrequencia')
-                    setTipoSituacaoOpen(false)
-                  }}
-                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
-                >
-                  Infrequência
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTipoSituacao('atraso')
-                    setTipoSituacaoOpen(false)
-                  }}
-                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
-                >
-                  Atraso
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTipoSituacao('desrespeito')
-                    setTipoSituacaoOpen(false)
-                  }}
-                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
-                >
-                  Desrespeito
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTipoSituacao('outro')
-                    setTipoSituacaoOpen(false)
-                  }}
-                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
-                >
-                  Outro
-                </button>
-              </div>
-            )}
-          </div>
+            <option value="outro">
+              Outro
+            </option>
+          </FormSelect>
 
           <div className="sm:col-span-2 flex flex-col gap-2">
-            <label className="text-sm font-semibold text-slate-700">Descrição</label>
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-400">
+              Descrição
+            </label>
+
             <textarea
               placeholder="Descreva a ocorrência..."
               rows={5}
               value={descricao}
-              onChange={(event) => setDescricao(event.target.value)}
-              className="h-36 rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-none"
+              onChange={(event) =>
+                setDescricao(
+                  event.target.value
+                )
+              }
+              className="h-36 resize-none rounded-xl border border-slate-300 bg-white px-3 py-3 text-slate-900 outline-none transition focus:border-green-800 focus:ring-2 focus:ring-green-200 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
             />
           </div>
 
-          <div className="sm:col-span-2 flex flex-col gap-3 sm:flex-row sm:justify-end sm:items-center">
+          <div className="sm:col-span-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
             <Button
               type="button"
               variant="outline"
@@ -847,7 +801,9 @@ export const Home = () => {
               className="w-full sm:w-auto"
               disabled={submitting}
             >
-              {submitting ? 'Registrando...' : 'Registrar'}
+              {submitting
+                ? 'Registrando...'
+                : 'Registrar'}
             </Button>
           </div>
         </form>
