@@ -5,14 +5,12 @@ export const ConfigSwitch = ({ title, active, onClick }) => {
 
       <button
         onClick={onClick}
-        className={`w-14 h-8 rounded-full transition-all relative ${
-          active ? "bg-green-600" : "bg-zinc-400"
-        }`}
+        className={`w-14 h-8 rounded-full transition-all relative ${active ? "bg-green-600" : "bg-zinc-400"
+          }`}
       >
         <div
-          className={`w-6 h-6 bg-white rounded-full absolute top-1 transition-all ${
-            active ? "translate-x-7" : "translate-x-1"
-          }`}
+          className={`w-6 h-6 bg-white rounded-full absolute top-1 transition-all ${active ? "translate-x-7" : "translate-x-1"
+            }`}
         />
       </button>
     </div>
