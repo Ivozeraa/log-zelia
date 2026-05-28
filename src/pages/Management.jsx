@@ -482,510 +482,360 @@ export const Management = () => {
   }
 
   return (
-    <div className="flex w-full flex-col gap-8 text-slate-900 dark:text-white">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <PageTitle
-          title="Gerenciamento"
-          subtitle="Gerencie usuários e permissões."
-        />
+  <div className="flex flex-col gap-8 w-full dark:bg-slate-950">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <PageTitle
+        title="Gestão de Alunos"
+        subtitle="Filtre, mova turmas e importe os alunos por planilha CSV."
+      />
 
-        <div className="flex flex-wrap gap-3">
-          <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={() => navigate("/gestao/alunos")}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Button
+          onClick={() => navigate(-1)}
+          variant="outline"
+        >
+          Voltar
+        </Button>
+
+        <Button
+          onClick={handleDownloadTemplate}
+          className="whitespace-nowrap"
+          disabled={!selectedTurma}
+        >
+          {selectedTurma
+            ? "Baixar template CSV"
+            : "Selecione a turma para baixar"}
+        </Button>
+      </div>
+    </div>
+
+    <div className="space-y-4">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FormSelect
+            label="Filtrar escola"
+            value={selectedEscola}
+            onChange={(e) => setSelectedEscola(e.target.value)}
           >
-            <FaUsers size={16} />
-            Gerenciar alunos
-          </Button>
+            {escolaOptions.map((option) => (
+              <option
+                key={option.value}
+                value={option.value}
+              >
+                {option.label}
+              </option>
+            ))}
+          </FormSelect>
 
-          <Button className="flex items-center gap-2" onClick={handleExportPDF}>
-            <FaFilePdf size={16} />
-            Exportar PDF
-          </Button>
-
-          <Button onClick={() => setAddModalOpen(true)}>+ Novo usuário</Button>
+          <FormSelect
+            label="Filtrar turma"
+            value={selectedTurma}
+            onChange={(e) => setSelectedTurma(e.target.value)}
+          >
+            {turmaOptions.map((option) => (
+              <option
+                key={option.value}
+                value={option.value}
+              >
+                {option.label}
+              </option>
+            ))}
+          </FormSelect>
         </div>
-      </div>
 
-      <div className="grid gap-3 sm:grid-cols-4">
-        <Card title="Total de usuários" content={users.length} />
-
-        <Card
-          title="Professores PDT"
-          content={users.filter((u) => u.pdt).length}
-        />
-
-        <Card title="Escolas" content={schools.length} />
-
-        <Card title="Exibidos" content={filteredUsers.length} />
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-semibold text-slate-700">
-            Buscar usuário
-          </label>
-          <input
-            type="text"
+        <div className="mt-4">
+          <FormInput
+            label="Buscar aluno"
+            placeholder="Nome ou matrícula"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Nome ou e-mail"
-            className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
+            onChange={(event) =>
+              setSearch(event.target.value)
+            }
           />
         </div>
-        <CustomSelect
-          label="Filtrar função"
-          value={filterRole}
-          onChange={setFilterRole}
-          placeholder="Todas as funções"
-          options={[
-            { value: "", label: "Todas as funções" },
-            ...ROLES.map((r) => ({ value: r.id, label: r.label })),
-          ]}
-          className="flex flex-col gap-1"
-        />
-        <CustomSelect
-          label="Filtrar escola"
-          value={filterSchool}
-          onChange={setFilterSchool}
-          placeholder="Todas as escolas"
-          options={[
-            { value: "", label: "Todas as escolas" },
-            ...schools.map((s) => ({ value: s.id, label: s.nome })),
-          ]}
-          className="flex flex-col gap-1"
-        />
-      </div>
 
-      {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </div>
-      )}
-
-      <Table columns={columns} data={paginatedUsers} loading={loading} />
-
-      {totalPages > 1 && (
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="xs"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-          >
-            ←
-          </Button>
-
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <Button
-              key={page}
-              size="xs"
-              variant={currentPage === page ? "default" : "outline"}
-              onClick={() => setCurrentPage(page)}
-            >
-              {page}
-            </Button>
-          ))}
-
-          <Button
-            variant="outline"
-            size="xs"
-            disabled={currentPage === totalPages}
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <FormSelect
+            label="Turma de origem"
+            value={sourceTurma}
+            onChange={(e) =>
+              setSourceTurma(e.target.value)
             }
           >
-            →
-          </Button>
-        </div>
-      )}
-
-      <Modal
-        isOpen={addModalOpen}
-        onClose={() => setAddModalOpen(false)}
-        title="Adicionar usuário"
-      >
-        <div className="flex flex-col gap-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Nome *</label>
-              <input
-                type="text"
-                value={addForm.nome}
-                onChange={(e) =>
-                  setAddForm((f) => ({ ...f, nome: e.target.value }))
-                }
-                className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
-                placeholder="Nome completo"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">E-mail *</label>
-              <input
-                type="email"
-                value={addForm.email}
-                onChange={(e) =>
-                  setAddForm((f) => ({ ...f, email: e.target.value }))
-                }
-                className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
-                placeholder="email@exemplo.com"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Senha *</label>
-              <input
-                type="password"
-                value={addForm.password}
-                onChange={(e) =>
-                  setAddForm((f) => ({ ...f, password: e.target.value }))
-                }
-                className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
-                placeholder="Senha inicial"
-              />
-            </div>
-            <CustomSelect
-              label="Função *"
-              value={addForm.role_id}
-              onChange={(value) =>
-                setAddForm((f) => ({ ...f, role_id: value }))
-              }
-              placeholder="Selecione..."
-              options={[
-                { value: "", label: "Selecione..." },
-                ...ROLES.map((r) => ({ value: r.id, label: r.label })),
-              ]}
-              className="flex flex-col gap-1"
-            />
-            <CustomSelect
-              label="Escola"
-              value={addForm.escola_id}
-              onChange={(value) =>
-                setAddForm((f) => ({ ...f, escola_id: value }))
-              }
-              placeholder="Nenhuma / Global"
-              options={[
-                { value: "", label: "Nenhuma / Global" },
-                ...schools.map((s) => ({ value: s.id, label: s.nome })),
-              ]}
-              className="flex flex-col gap-1 sm:col-span-2"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={addForm.pdt}
-              onChange={(e) =>
-                setAddForm((prev) => ({
-                  ...prev,
-                  pdt: e.target.checked,
-                }))
-              }
-              className="h-4 w-4 accent-green-700"
-            />
-
-            <span className="text-sm text-slate-700 dark:text-slate-300">
-              Professor PDT
-            </span>
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setAddModalOpen(false)}>
-              Cancelar
-            </Button>
-
-            <Button onClick={handleAddUser} disabled={adding}>
-              {adding ? "Criando..." : "Criar usuário"}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={editModalOpen}
-        onClose={() => {
-          setEditModalOpen(false);
-          setEditForm(null);
-        }}
-        title="Editar usuário"
-      >
-        {editForm && (
-          <div className="flex flex-col gap-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium">Nome *</label>
-                <input
-                  type="text"
-                  value={editForm.nome || ""}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, nome: e.target.value }))
-                  }
-                  className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium">E-mail *</label>
-                <input
-                  type="email"
-                  value={editForm.email || ""}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, email: e.target.value }))
-                  }
-                  className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
-                />
-              </div>
-              <CustomSelect
-                label="Função *"
-                value={editForm.role_id || ""}
-                onChange={(value) =>
-                  setEditForm((f) => ({ ...f, role_id: value }))
-                }
-                placeholder="Selecione..."
-                options={getAllowedRoles().map((r) => ({
-                  value: r.id,
-                  label: r.label,
-                }))}
-                className="flex flex-col gap-1"
-              />
-              <CustomSelect
-                label="Escola"
-                value={editForm.escola_id || ""}
-                onChange={(value) =>
-                  setEditForm((f) => ({ ...f, escola_id: value }))
-                }
-                placeholder="Nenhuma / Global"
-                options={[
-                  { value: "", label: "Nenhuma / Global" },
-                  ...schools.map((s) => ({ value: s.id, label: s.nome })),
-                ]}
-                className="flex flex-col gap-1"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={editForm.pdt}
-                onChange={(e) =>
-                  setEditForm((prev) => ({
-                    ...prev,
-                    pdt: e.target.checked,
-                  }))
-                }
-                className="h-4 w-4 accent-green-700"
-              />
-
-              <span className="text-sm text-slate-700 dark:text-slate-300">
-                Professor PDT
-              </span>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setEditModalOpen(false);
-
-                  setEditForm(null);
-                }}
+            {origemTurmaOptions.map((option) => (
+              <option
+                key={option.value}
+                value={option.value}
               >
-                Cancelar
+                {option.label}
+              </option>
+            ))}
+          </FormSelect>
+
+          <FormSelect
+            label="Turma de destino"
+            value={targetTurma}
+            onChange={(e) =>
+              setTargetTurma(e.target.value)
+            }
+          >
+            {destinoTurmaOptions.map((option) => (
+              <option
+                key={option.value}
+                value={option.value}
+              >
+                {option.label}
+              </option>
+            ))}
+          </FormSelect>
+        </div>
+
+        <Button
+          onClick={handleBulkMove}
+          disabled={bulkLoading}
+          className="mt-4"
+        >
+          {bulkLoading
+            ? "Movendo alunos..."
+            : "Mover todos da turma"}
+        </Button>
+
+        <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            Relatório ou exclusão
+          </p>
+
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Selecione alunos ou use o filtro para gerar relatório e excluir
+            alunos da turma selecionada.
+          </p>
+
+          <div className="mt-4 grid items-end gap-3 sm:grid-cols-2">
+            <FormSelect
+              label="Formato do relatório"
+              value={reportFormat}
+              onChange={(e) =>
+                setReportFormat(e.target.value)
+              }
+            >
+              {reportFormatOptions.map((option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                >
+                  {option.label}
+                </option>
+              ))}
+            </FormSelect>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                onClick={handleDownloadFinalReport}
+                variant="outline"
+                disabled={reportLoading}
+              >
+                {reportLoading
+                  ? "Gerando relatório..."
+                  : "Gerar relatório"}
               </Button>
 
-              <Button onClick={handleEditUser} disabled={editing}>
-                {editing ? "Salvando..." : "Salvar"}
+              <Button
+                variant="destructive"
+                onClick={() =>
+                  setDeleteModalOpen(true)
+                }
+              >
+                Excluir alunos da turma
               </Button>
             </div>
           </div>
-        )}
-      </Modal>
+        </div>
 
-      {/* Export Occurrences Modal */}
-      <Modal
-        isOpen={exportModalOpen}
-        onClose={() => {
-          setExportModalOpen(false);
-          setExportFilters({
-            escola_id: "",
-            turma_id: "",
-            periodo: "todos",
-            categoria: "",
-            tipo: "",
-          });
-          setTurmas([]);
-        }}
-        title="Exportar Relatório de Ocorrências"
-      >
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-slate-600">
-            Configure os filtros para gerar o relatório de ocorrências em PDF.
+        <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            Importar CSV
           </p>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <CustomSelect
-              label="Escola"
-              value={exportFilters.escola_id}
-              onChange={(value) => {
-                setExportFilters((f) => ({
-                  ...f,
-                  escola_id: value,
-                  turma_id: "",
-                }));
-                loadTurmas(value);
-              }}
-              placeholder="Todas as escolas"
-              options={[
-                { value: "", label: "Todas as escolas" },
-                ...schools.map((s) => ({ value: s.id, label: s.nome })),
-              ]}
-              className="flex flex-col gap-1"
-            />
-
-            <CustomSelect
-              label="Turma"
-              value={exportFilters.turma_id}
-              onChange={(value) =>
-                setExportFilters((f) => ({ ...f, turma_id: value }))
-              }
-              placeholder="Todas as turmas"
-              options={[
-                { value: "", label: "Todas as turmas" },
-                ...turmas.map((t) => ({ value: t.id, label: t.nome })),
-              ]}
-              disabled={!exportFilters.escola_id}
-              className="flex flex-col gap-1"
-              emptyLabel="Nenhuma turma disponível"
-            />
-
-            <CustomSelect
-              label="Período"
-              value={exportFilters.periodo}
-              onChange={(value) =>
-                setExportFilters((f) => ({ ...f, periodo: value }))
-              }
-              placeholder="Todo o período"
-              options={[
-                { value: "todos", label: "Todo o período" },
-                { value: "dia", label: "Hoje" },
-                { value: "semana", label: "Esta semana" },
-                { value: "mes", label: "Este mês" },
-              ]}
-              className="flex flex-col gap-1"
-            />
-
-            <CustomSelect
-              label="Categoria"
-              value={exportFilters.categoria}
-              onChange={(value) =>
-                setExportFilters((f) => ({ ...f, categoria: value }))
-              }
-              placeholder="Todas as categorias"
-              options={[
-                { value: "", label: "Todas as categorias" },
-                { value: "ocorrencia", label: "Ocorrência" },
-                { value: "suspensao", label: "Suspensão" },
-              ]}
-              className="flex flex-col gap-1"
-            />
-
-            <CustomSelect
-              label="Tipo"
-              value={exportFilters.tipo}
-              onChange={(value) =>
-                setExportFilters((f) => ({ ...f, tipo: value }))
-              }
-              placeholder="Todos os tipos"
-              options={[
-                { value: "", label: "Todos os tipos" },
-                { value: "indisciplina", label: "Indisciplina" },
-                { value: "infrequencia", label: "Infrequência" },
-                { value: "atraso", label: "Atraso" },
-                { value: "desrespeito", label: "Desrespeito" },
-                { value: "outro", label: "Outro" },
-              ]}
-              className="flex flex-col gap-1"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 mt-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setExportModalOpen(false);
-                setExportFilters({
-                  escola_id: "",
-                  turma_id: "",
-                  periodo: "todos",
-                  categoria: "",
-                  tipo: "",
-                });
-                setTurmas([]);
-              }}
-              className="px-4 py-2"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleExportOccurrences}
-              disabled={exporting}
-              className="px-4 py-2"
-            >
-              {exporting ? "Exportando..." : "Exportar PDF"}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Delete User Modal */}
-      <Modal
-        isOpen={deleteModalOpen}
-        onClose={() => {
-          setDeleteModalOpen(false);
-          setSelectedUser(null);
-        }}
-        title="Excluir usuário"
-      >
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-slate-600">
-            Tem certeza que deseja excluir o usuário{" "}
-            <strong>{selectedUser?.nome}</strong>? Essa ação não pode ser
-            desfeita.
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Use o template para carregar alunos com nome, matrícula,
+            turma_id e escola_id.
           </p>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">
-              Confirme com sua senha
-            </label>
-            <input
-              type="password"
-              value={deleteConfirmSenha}
-              onChange={(e) => setDeleteConfirmSenha(e.target.value)}
-              className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
-              placeholder="Sua senha"
-            />
+
+          <input
+            type="file"
+            accept=".csv"
+            onChange={handleUploadCsv}
+            className="mt-3 block w-full text-sm text-slate-600 dark:text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-green-700 file:px-4 file:py-2 file:font-semibold file:text-white"
+          />
+
+          {fileName && (
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Arquivo: {fileName}
+            </p>
+          )}
+
+          {fileErrors.length > 0 && (
+            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+              <p className="font-semibold">
+                Erros no CSV:
+              </p>
+
+              <ul className="list-disc pl-5">
+                {fileErrors.map((error, index) => (
+                  <li key={index}>
+                    {error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Alunos encontrados
+            </p>
+
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">
+              {filteredAlunos.length}
+            </p>
           </div>
-          <div className="flex justify-end gap-2 mt-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDeleteModalOpen(false);
 
-                setSelectedUser(null);
-              }}
-            >
-              Cancelar
-            </Button>
-
-            <Button
-              variant="destructive"
-              onClick={handleDeleteUser}
-              disabled={deleting}
-            >
-              {deleting ? "Excluindo..." : "Excluir"}
-            </Button>
+          <div className="text-sm text-slate-600 dark:text-slate-300">
+            {selectedCount > 0
+              ? `${selectedCount} aluno(s) selecionado(s)`
+              : "Selecione alunos para ações rápidas"}
           </div>
         </div>
-      </Modal>
+
+        <div className="mt-4 overflow-x-auto rounded-3xl border border-slate-200 dark:border-slate-700">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+              <tr>
+                <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={
+                      filteredAlunos.length > 0 &&
+                      selectedAlunoIds.length === filteredAlunos.length
+                    }
+                    onChange={handleToggleAll}
+                  />
+                </th>
+
+                <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                  Aluno
+                </th>
+
+                <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                  Matrícula
+                </th>
+
+                <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                  Turma
+                </th>
+
+                <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                  Escola
+                </th>
+
+                <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                  Status
+                </th>
+
+                <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                  Ações
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-6 text-center text-slate-500 dark:text-slate-400"
+                  >
+                    Carregando alunos...
+                  </td>
+                </tr>
+              ) : filteredAlunos.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-6 text-center text-slate-500 dark:text-slate-400"
+                  >
+                    Nenhum aluno encontrado.
+                  </td>
+                </tr>
+              ) : (
+                filteredAlunos.map((aluno) => (
+                  <tr
+                    key={aluno.id}
+                    className="border-b border-slate-200 transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50"
+                  >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedAlunoIds.includes(aluno.id)}
+                        onChange={() =>
+                          handleToggleAluno(aluno.id)
+                        }
+                      />
+                    </td>
+
+                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                      {aluno.nome}
+                    </td>
+
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                      {aluno.matricula || "—"}
+                    </td>
+
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                      {getTurmaName(aluno.turma_id)}
+                    </td>
+
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                      {getEscolaName(aluno.escola_id)}
+                    </td>
+
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                      {aluno.status || "normal"}
+                    </td>
+
+                    <td className="flex flex-wrap gap-2 px-4 py-3">
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        onClick={() =>
+                          openEditAluno(aluno)
+                        }
+                      >
+                        Editar
+                      </Button>
+
+                      <Button
+                        size="xs"
+                        variant="destructive"
+                        onClick={() =>
+                          openDeleteAluno(aluno)
+                        }
+                      >
+                        Excluir
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
-  );
+  </div>
+);
 };
