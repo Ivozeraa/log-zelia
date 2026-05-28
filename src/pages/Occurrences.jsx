@@ -12,6 +12,7 @@ import { Button } from "../components/ui/Button";
 import { Table } from "../components/ui/Table";
 import { Pagination } from "../components/ui/Pagination";
 import { SectionTitle } from "../components/ui/SectionTitle";
+import { ActivityList } from "../components/ui/ActivityList";
 
 
 export const Occurrences = () => {
@@ -838,35 +839,35 @@ export const Occurrences = () => {
       )
       }
 
-      <div className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-slate-800">
-          Histórico de atividades
-        </h2>
-
-        <div className="rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100">
-          {activityLog.length === 0 ? (
-            <div className="px-4 py-4 text-sm text-slate-500">
-              Nenhuma atividade registrada.
+      <ActivityList
+        data={activityLog}
+        renderItem={(entry) => (
+          <>
+            <div className="text-sm text-slate-800 dark:text-slate-200">
+              <strong>
+                {entry.aplicadoPor}
+              </strong>{" "}
+              removeu a ocorrência de
+              <strong>
+                {" "}
+                {entry.aluno}{" "}
+              </strong>
+              ({entry.categoria} —{" "}
+              {entry.tipo})
             </div>
-          ) : (
-            activityLog.map((entry, index) => (
-              <div key={index} className="px-4 py-3">
-                <div className="text-sm text-slate-800">
-                  <strong>{entry.aplicadoPor}</strong> removeu a ocorrência de
-                  <strong> {entry.aluno} </strong>({entry.categoria} —{" "}
-                  {entry.tipo})
-                </div>
-                <div className="text-xs text-slate-500">
-                  Motivo: {entry.motivo}
-                </div>
-                <div className="text-xs text-slate-400">
-                  {entry.timestamp.toLocaleString("pt-BR")}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+
+            <div className="text-xs text-slate-500 dark:text-slate-400">
+              Motivo: {entry.motivo}
+            </div>
+
+            <div className="text-xs text-slate-400 dark:text-slate-500">
+              {entry.timestamp.toLocaleString(
+                "pt-BR"
+              )}
+            </div>
+          </>
+        )}
+      />
 
       <Modal
         isOpen={deleteModalOpen}
