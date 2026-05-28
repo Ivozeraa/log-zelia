@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaFilePdf, FaUsers } from "react-icons/fa";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
@@ -14,8 +12,6 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
 import { PageTitle } from "../components/ui/PageTitle";
-import { Modal } from "../components/ui/Modal";
-import { Button } from "../components/ui/Button";
 import { FormInput } from "../components/ui/FormInput";
 import { FormSelect } from "../components/ui/FormSelect";
 import { Card } from "../components/ui/Card";
@@ -49,8 +45,19 @@ export const Management = () => {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmSenha, setDeleteConfirmSenha] = useState("");
+  const [exportModalOpen, setExportModalOpen] = useState(false);
 
   const [selectedUser, setSelectedUser] = useState(null);
+  const [turmas, setTurmas] = useState([]);
+  const [exportFilters, setExportFilters] = useState({
+    escola_id: "",
+    turma_id: "",
+    periodo: "todos",
+    categoria: "",
+    tipo: "",
+  });
+  const [exporting, setExporting] = useState(false);
 
   const [addForm, setAddForm] = useState({
     nome: "",
@@ -72,9 +79,7 @@ export const Management = () => {
   useEffect(() => {
     if (user) {
       setIsDiretor(
-        user.role_id === 1 ||
-        user.role_id === 2 ||
-        user.role_id === 3
+        user.role_id === 1 || user.role_id === 2 || user.role_id === 3,
       );
     }
   }, [user]);
@@ -95,10 +100,7 @@ export const Management = () => {
         .order("nome", { ascending: true });
 
       if (user.role_id !== 1 && user.escola_id) {
-        usersQuery = usersQuery.eq(
-          "escola_id",
-          user.escola_id
-        );
+        usersQuery = usersQuery.eq("escola_id", user.escola_id);
       }
 
       const schoolsQuery = supabase
@@ -106,11 +108,10 @@ export const Management = () => {
         .select("*")
         .order("nome", { ascending: true });
 
-      const [usersResult, schoolsResult] =
-        await Promise.all([
-          usersQuery,
-          schoolsQuery,
-        ]);
+      const [usersResult, schoolsResult] = await Promise.all([
+        usersQuery,
+        schoolsQuery,
+      ]);
 
       setUsers(usersResult.data || []);
       setSchools(schoolsResult.data || []);
@@ -125,42 +126,26 @@ export const Management = () => {
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
       const matchesSearch = search
-        ? u.nome
-          ?.toLowerCase()
-          .includes(search.toLowerCase()) ||
-        u.email
-          ?.toLowerCase()
-          .includes(search.toLowerCase())
+        ? u.nome?.toLowerCase().includes(search.toLowerCase()) ||
+          u.email?.toLowerCase().includes(search.toLowerCase())
         : true;
 
       const matchesRole = filterRole
         ? Number(u.role_id) === Number(filterRole)
         : true;
 
-      const matchesSchool = filterSchool
-        ? u.escola_id === filterSchool
-        : true;
+      const matchesSchool = filterSchool ? u.escola_id === filterSchool : true;
 
-      return (
-        matchesSearch &&
-        matchesRole &&
-        matchesSchool
-      );
+      return matchesSearch && matchesRole && matchesSchool;
     });
   }, [users, search, filterRole, filterSchool]);
 
-  const totalPages = Math.ceil(
-    filteredUsers.length / itemsPerPage
-  );
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
 
   const paginatedUsers = useMemo(() => {
-    const start =
-      (currentPage - 1) * itemsPerPage;
+    const start = (currentPage - 1) * itemsPerPage;
 
-    return filteredUsers.slice(
-      start,
-      start + itemsPerPage
-    );
+    return filteredUsers.slice(start, start + itemsPerPage);
   }, [filteredUsers, currentPage]);
 
   useEffect(() => {
@@ -168,40 +153,18 @@ export const Management = () => {
   }, [search, filterRole, filterSchool]);
 
   const getRoleLabel = (roleId) => {
-    return (
-      ROLES.find(
-        (r) => r.id === Number(roleId)
-      )?.label || "—"
-    );
+    return ROLES.find((r) => r.id === Number(roleId))?.label || "—";
   };
 
   const getSchoolName = (schoolId) => {
-    return (
-      schools.find(
-        (s) => s.id === schoolId
-      )?.nome || "—"
-    );
+    return schools.find((s) => s.id === schoolId)?.nome || "—";
   };
 
   async function handleAddUser() {
-    const {
-      nome,
-      email,
-      password,
-      role_id,
-      escola_id,
-      pdt,
-    } = addForm;
+    const { nome, email, password, role_id, escola_id, pdt } = addForm;
 
-    if (
-      !nome ||
-      !email ||
-      !password ||
-      !role_id
-    ) {
-      notify.error(
-        "Preencha todos os campos obrigatórios."
-      );
+    if (!nome || !email || !password || !role_id) {
+      notify.error("Preencha todos os campos obrigatórios.");
       return;
     }
 
@@ -213,9 +176,7 @@ export const Management = () => {
       } = await supabase.auth.getSession();
 
       if (!session) {
-        notify.error(
-          "Usuário não autenticado."
-        );
+        notify.error("Usuário não autenticado.");
         return;
       }
 
@@ -224,8 +185,7 @@ export const Management = () => {
         {
           method: "POST",
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
@@ -233,26 +193,20 @@ export const Management = () => {
             email,
             password,
             role_id: Number(role_id),
-            escola_id:
-              escola_id || null,
+            escola_id: escola_id || null,
             pdt,
           }),
-        }
+        },
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        notify.error(
-          data.error ||
-          "Erro ao criar usuário."
-        );
+        notify.error(data.error || "Erro ao criar usuário.");
         return;
       }
 
-      notify.success(
-        "Usuário criado com sucesso."
-      );
+      notify.success("Usuário criado com sucesso.");
 
       setUsers((prev) => [
         ...prev,
@@ -260,13 +214,10 @@ export const Management = () => {
           id: data.user.id,
           nome,
           email,
-          role_id:
-            Number(role_id),
-          escola_id:
-            escola_id || null,
+          role_id: Number(role_id),
+          escola_id: escola_id || null,
           pdt,
-          created_at:
-            new Date().toISOString(),
+          created_at: new Date().toISOString(),
         },
       ]);
 
@@ -299,19 +250,14 @@ export const Management = () => {
         .update({
           nome: editForm.nome,
           email: editForm.email,
-          role_id: Number(
-            editForm.role_id
-          ),
-          escola_id:
-            editForm.escola_id || null,
+          role_id: Number(editForm.role_id),
+          escola_id: editForm.escola_id || null,
           pdt: editForm.pdt,
         })
         .eq("id", editForm.id);
 
       if (error) {
-        notify.error(
-          "Erro ao atualizar usuário."
-        );
+        notify.error("Erro ao atualizar usuário.");
         return;
       }
 
@@ -319,19 +265,15 @@ export const Management = () => {
         prev.map((u) =>
           u.id === editForm.id
             ? {
-              ...u,
-              ...editForm,
-              role_id: Number(
-                editForm.role_id
-              ),
-            }
-            : u
-        )
+                ...u,
+                ...editForm,
+                role_id: Number(editForm.role_id),
+              }
+            : u,
+        ),
       );
 
-      notify.success(
-        "Usuário atualizado."
-      );
+      notify.success("Usuário atualizado.");
 
       setEditModalOpen(false);
       setEditForm(null);
@@ -355,22 +297,13 @@ export const Management = () => {
         .eq("id", selectedUser.id);
 
       if (error) {
-        notify.error(
-          "Erro ao excluir usuário."
-        );
+        notify.error("Erro ao excluir usuário.");
         return;
       }
 
-      setUsers((prev) =>
-        prev.filter(
-          (u) =>
-            u.id !== selectedUser.id
-        )
-      );
+      setUsers((prev) => prev.filter((u) => u.id !== selectedUser.id));
 
-      notify.success(
-        "Usuário excluído."
-      );
+      notify.success("Usuário excluído.");
 
       setDeleteModalOpen(false);
       setSelectedUser(null);
@@ -387,52 +320,64 @@ export const Management = () => {
       const doc = new jsPDF();
 
       doc.setFontSize(18);
-      doc.text(
-        "Relatório de Usuários",
-        14,
-        20
-      );
+      doc.text("Relatório de Usuários", 14, 20);
 
-      const rows = filteredUsers.map(
-        (u) => [
-          u.nome,
-          u.email,
-          getRoleLabel(
-            u.role_id
-          ),
-          getSchoolName(
-            u.escola_id
-          ),
-          u.pdt ? "Sim" : "Não",
-        ]
-      );
+      const rows = filteredUsers.map((u) => [
+        u.nome,
+        u.email,
+        getRoleLabel(u.role_id),
+        getSchoolName(u.escola_id),
+        u.pdt ? "Sim" : "Não",
+      ]);
 
       autoTable(doc, {
         startY: 30,
-        head: [
-          [
-            "Nome",
-            "E-mail",
-            "Função",
-            "Escola",
-            "PDT",
-          ],
-        ],
+        head: [["Nome", "E-mail", "Função", "Escola", "PDT"]],
         body: rows,
       });
 
-      doc.save(
-        "usuarios.pdf"
-      );
+      doc.save("usuarios.pdf");
 
-      notify.success(
-        "PDF exportado."
-      );
+      notify.success("PDF exportado.");
     } catch (err) {
       console.error(err);
-      notify.error(
-        "Erro ao exportar PDF."
-      );
+      notify.error("Erro ao exportar PDF.");
+    }
+  }
+
+  async function loadTurmas(escolaId) {
+    if (!escolaId) {
+      setTurmas([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("turmas")
+        .select("id, nome")
+        .eq("escola_id", escolaId)
+        .order("nome", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      setTurmas(data || []);
+    } catch (err) {
+      console.error(err);
+      notify.error("Erro ao carregar turmas.");
+    }
+  }
+
+  async function handleExportOccurrences() {
+    try {
+      setExporting(true);
+      await handleExportPDF();
+    } catch (err) {
+      console.error(err);
+      notify.error("Erro ao exportar ocorrências.");
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -465,10 +410,7 @@ export const Management = () => {
     {
       key: "school",
       title: "Escola",
-      render: (u) =>
-        getSchoolName(
-          u.escola_id
-        ),
+      render: (u) => getSchoolName(u.escola_id),
     },
 
     {
@@ -488,13 +430,7 @@ export const Management = () => {
       key: "created_at",
       title: "Criado em",
       render: (u) =>
-        u.created_at
-          ? new Date(
-            u.created_at
-          ).toLocaleDateString(
-            "pt-BR"
-          )
-          : "—",
+        u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "—",
     },
 
     {
@@ -510,9 +446,7 @@ export const Management = () => {
             onClick={() => {
               setEditForm({
                 ...u,
-                role_id: String(
-                  u.role_id
-                ),
+                role_id: String(u.role_id),
               });
 
               setEditModalOpen(true);
@@ -539,9 +473,7 @@ export const Management = () => {
   if (!isDiretor) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3">
-        <div className="text-4xl">
-          🔒
-        </div>
+        <div className="text-4xl">🔒</div>
 
         <p className="text-lg font-medium text-slate-600 dark:text-slate-400">
           Você não tem permissão para acessar esta página.
@@ -562,58 +494,32 @@ export const Management = () => {
           <Button
             variant="outline"
             className="flex items-center gap-2"
-            onClick={() =>
-              navigate("/gestao/alunos")
-            }
+            onClick={() => navigate("/gestao/alunos")}
           >
             <FaUsers size={16} />
             Gerenciar alunos
           </Button>
 
-          <Button
-            className="flex items-center gap-2"
-            onClick={handleExportPDF}
-          >
+          <Button className="flex items-center gap-2" onClick={handleExportPDF}>
             <FaFilePdf size={16} />
             Exportar PDF
           </Button>
 
-          <Button
-            onClick={() =>
-              setAddModalOpen(true)
-            }
-          >
-            + Novo usuário
-          </Button>
+          <Button onClick={() => setAddModalOpen(true)}>+ Novo usuário</Button>
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-4">
-        <Card
-          title="Total de usuários"
-          content={users.length}
-        />
+        <Card title="Total de usuários" content={users.length} />
 
         <Card
           title="Professores PDT"
-          content={
-            users.filter(
-              (u) => u.pdt
-            ).length
-          }
+          content={users.filter((u) => u.pdt).length}
         />
 
-        <Card
-          title="Escolas"
-          content={schools.length}
-        />
+        <Card title="Escolas" content={schools.length} />
 
-        <Card
-          title="Exibidos"
-          content={
-            filteredUsers.length
-          }
-        />
+        <Card title="Exibidos" content={filteredUsers.length} />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -659,51 +565,25 @@ export const Management = () => {
         </div>
       )}
 
-      <Table
-        columns={columns}
-        data={paginatedUsers}
-        loading={loading}
-      />
+      <Table columns={columns} data={paginatedUsers} loading={loading} />
 
       {totalPages > 1 && (
         <div className="flex flex-wrap items-center justify-center gap-2">
           <Button
             variant="outline"
             size="xs"
-            disabled={
-              currentPage === 1
-            }
-            onClick={() =>
-              setCurrentPage(
-                (prev) =>
-                  Math.max(
-                    prev - 1,
-                    1
-                  )
-              )
-            }
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
           >
             ←
           </Button>
 
-          {Array.from(
-            { length: totalPages },
-            (_, i) => i + 1
-          ).map((page) => (
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
             <Button
               key={page}
               size="xs"
-              variant={
-                currentPage ===
-                  page
-                  ? "default"
-                  : "outline"
-              }
-              onClick={() =>
-                setCurrentPage(
-                  page
-                )
-              }
+              variant={currentPage === page ? "default" : "outline"}
+              onClick={() => setCurrentPage(page)}
             >
               {page}
             </Button>
@@ -712,18 +592,9 @@ export const Management = () => {
           <Button
             variant="outline"
             size="xs"
-            disabled={
-              currentPage ===
-              totalPages
-            }
+            disabled={currentPage === totalPages}
             onClick={() =>
-              setCurrentPage(
-                (prev) =>
-                  Math.min(
-                    prev + 1,
-                    totalPages
-                  )
-              )
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
             }
           >
             →
@@ -733,9 +604,7 @@ export const Management = () => {
 
       <Modal
         isOpen={addModalOpen}
-        onClose={() =>
-          setAddModalOpen(false)
-        }
+        onClose={() => setAddModalOpen(false)}
         title="Adicionar usuário"
       >
         <div className="flex flex-col gap-4">
@@ -809,14 +678,10 @@ export const Management = () => {
               type="checkbox"
               checked={addForm.pdt}
               onChange={(e) =>
-                setAddForm(
-                  (prev) => ({
-                    ...prev,
-                    pdt:
-                      e.target
-                        .checked,
-                  })
-                )
+                setAddForm((prev) => ({
+                  ...prev,
+                  pdt: e.target.checked,
+                }))
               }
               className="h-4 w-4 accent-green-700"
             />
@@ -827,26 +692,12 @@ export const Management = () => {
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() =>
-                setAddModalOpen(
-                  false
-                )
-              }
-            >
+            <Button variant="outline" onClick={() => setAddModalOpen(false)}>
               Cancelar
             </Button>
 
-            <Button
-              onClick={
-                handleAddUser
-              }
-              disabled={adding}
-            >
-              {adding
-                ? "Criando..."
-                : "Criar usuário"}
+            <Button onClick={handleAddUser} disabled={adding}>
+              {adding ? "Criando..." : "Criar usuário"}
             </Button>
           </div>
         </div>
@@ -916,18 +767,12 @@ export const Management = () => {
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={
-                  editForm.pdt
-                }
+                checked={editForm.pdt}
                 onChange={(e) =>
-                  setEditForm(
-                    (prev) => ({
-                      ...prev,
-                      pdt:
-                        e.target
-                          .checked,
-                    })
-                  )
+                  setEditForm((prev) => ({
+                    ...prev,
+                    pdt: e.target.checked,
+                  }))
                 }
                 className="h-4 w-4 accent-green-700"
               />
@@ -941,9 +786,7 @@ export const Management = () => {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setEditModalOpen(
-                    false
-                  );
+                  setEditModalOpen(false);
 
                   setEditForm(null);
                 }}
@@ -951,15 +794,8 @@ export const Management = () => {
                 Cancelar
               </Button>
 
-              <Button
-                onClick={
-                  handleEditUser
-                }
-                disabled={editing}
-              >
-                {editing
-                  ? "Salvando..."
-                  : "Salvar"}
+              <Button onClick={handleEditUser} disabled={editing}>
+                {editing ? "Salvando..." : "Salvar"}
               </Button>
             </div>
           </div>
@@ -1124,7 +960,7 @@ export const Management = () => {
             <input
               type="password"
               value={deleteConfirmSenha}
-              onChange={(e) => setDeleteConfirmSenha(e.target.value)}
+              onChange={(e) => setDeleteConfirmSenha(e.target.value)} 
               className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
               placeholder="Sua senha"
             />
@@ -1133,9 +969,7 @@ export const Management = () => {
             <Button
               variant="outline"
               onClick={() => {
-                setDeleteModalOpen(
-                  false
-                );
+                setDeleteModalOpen(false);
 
                 setSelectedUser(null);
               }}
@@ -1145,18 +979,14 @@ export const Management = () => {
 
             <Button
               variant="destructive"
-              onClick={
-                handleDeleteUser
-              }
+              onClick={handleDeleteUser}
               disabled={deleting}
             >
-              {deleting
-                ? "Excluindo..."
-                : "Excluir"}
+              {deleting ? "Excluindo..." : "Excluir"}
             </Button>
           </div>
         </div>
       </Modal>
     </div>
   );
-}
+};
