@@ -442,8 +442,7 @@ export const Management = () => {
           <Button
             size="xs"
             variant="outline"
-            className="border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950"
-            onClick={() => {
+            className="border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800" onClick={() => {
               setEditForm({
                 ...u,
                 role_id: String(u.role_id),

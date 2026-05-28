@@ -486,7 +486,7 @@ export const Home = () => {
 
         <div className="mt-1 text-sm">
           {stats.semana >
-          stats.mes * 0.4 ? (
+            stats.mes * 0.4 ? (
             <span className="font-medium text-red-600">
               ⚠️ Alta concentração de ocorrências nesta semana.
             </span>
@@ -537,6 +537,7 @@ export const Home = () => {
                 />
 
                 <YAxis
+                  allowDecimals={false}
                   tick={{
                     fill: '#64748b'
                   }}
@@ -706,30 +707,30 @@ export const Home = () => {
 
           {tipoAdvertencia ===
             'suspensao' && (
-            <>
-              <FormInput
-                type="date"
-                label="Data de início"
-                value={dataInicio}
-                onChange={(event) =>
-                  setDataInicio(
-                    event.target.value
-                  )
-                }
-              />
+              <>
+                <FormInput
+                  type="date"
+                  label="Data de início"
+                  value={dataInicio}
+                  onChange={(event) =>
+                    setDataInicio(
+                      event.target.value
+                    )
+                  }
+                />
 
-              <FormInput
-                type="date"
-                label="Data de término"
-                value={dataTermino}
-                onChange={(event) =>
-                  setDataTermino(
-                    event.target.value
-                  )
-                }
-              />
-            </>
-          )}
+                <FormInput
+                  type="date"
+                  label="Data de término"
+                  value={dataTermino}
+                  onChange={(event) =>
+                    setDataTermino(
+                      event.target.value
+                    )
+                  }
+                />
+              </>
+            )}
 
           <FormSelect
             label="Tipo de situação"
