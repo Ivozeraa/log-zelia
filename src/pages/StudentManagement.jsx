@@ -179,27 +179,27 @@ export const StudentManagement = () => {
       const alunoOccurrences = occurrenceMap[aluno.id] || [];
       return alunoOccurrences.length > 0
         ? alunoOccurrences.map((occ) => ({
-            aluno_nome: aluno.nome,
-            matricula: aluno.matricula,
-            turma: getTurmaName(aluno.turma_id),
-            escola: getEscolaName(aluno.escola_id),
-            status: aluno.status || "normal",
-            data_ocorrido: occ.data_ocorrido || "—",
-            categoria: occ.categoria || "—",
-            tipo: occ.tipo || "—",
-            descricao: occ.descricao || "—",
-          }))
+          aluno_nome: aluno.nome,
+          matricula: aluno.matricula,
+          turma: getTurmaName(aluno.turma_id),
+          escola: getEscolaName(aluno.escola_id),
+          status: aluno.status || "normal",
+          data_ocorrido: occ.data_ocorrido || "—",
+          categoria: occ.categoria || "—",
+          tipo: occ.tipo || "—",
+          descricao: occ.descricao || "—",
+        }))
         : [{
-            aluno_nome: aluno.nome,
-            matricula: aluno.matricula,
-            turma: getTurmaName(aluno.turma_id),
-            escola: getEscolaName(aluno.escola_id),
-            status: aluno.status || "normal",
-            data_ocorrido: "—",
-            categoria: "—",
-            tipo: "—",
-            descricao: "Sem ocorrências",
-          }];
+          aluno_nome: aluno.nome,
+          matricula: aluno.matricula,
+          turma: getTurmaName(aluno.turma_id),
+          escola: getEscolaName(aluno.escola_id),
+          status: aluno.status || "normal",
+          data_ocorrido: "—",
+          categoria: "—",
+          tipo: "—",
+          descricao: "Sem ocorrências",
+        }];
     });
   };
 
@@ -625,7 +625,7 @@ export const StudentManagement = () => {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <PageTitle
           title="Gestão de Alunos"
-          subtitle="Filtre, mova turmas e importe os alunos por planilha CSV." 
+          subtitle="Filtre, mova turmas e importe os alunos por planilha CSV."
         />
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Button onClick={() => navigate(-1)} variant="outline">
