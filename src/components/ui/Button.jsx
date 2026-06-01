@@ -3,23 +3,23 @@ import * as React from "react"
 import { cn } from "../../lib/utils"
 
 const variantClasses = {
-    default:
-      "bg-green-700 text-white hover:bg-green-800 border-transparent",
+  default:
+    "bg-green-700 text-white hover:bg-green-800 border-transparent",
 
-    outline:
-      "bg-slate-600 text-white border-slate-300 hover:bg-slate-500",
+  outline:
+    "bg-slate-600 text-white border-slate-300 hover:bg-slate-500",
 
-    secondary:
-      "bg-slate-50 text-slate-900 border-slate-200 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700 dark:hover:bg-slate-800",
+  secondary:
+    "bg-slate-50 text-slate-900 border-slate-200 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700 dark:hover:bg-slate-800",
 
-    ghost:
-      "bg-transparent text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800",
+  ghost:
+    "bg-transparent text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800",
 
-    destructive:
-      "bg-red-600 text-white hover:bg-red-700 border-transparent",
+  destructive:
+    "bg-red-600 text-white hover:bg-red-700 border-transparent",
 
-    link:
-      "bg-transparent text-green-700 underline-offset-4 hover:underline dark:text-green-400",
+  link:
+    "bg-transparent text-green-700 underline-offset-4 hover:underline dark:text-green-400",
 }
 
 const sizeClasses = {

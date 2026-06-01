@@ -127,7 +127,7 @@ export const Management = () => {
     return users.filter((u) => {
       const matchesSearch = search
         ? u.nome?.toLowerCase().includes(search.toLowerCase()) ||
-          u.email?.toLowerCase().includes(search.toLowerCase())
+        u.email?.toLowerCase().includes(search.toLowerCase())
         : true;
 
       const matchesRole = filterRole
@@ -265,10 +265,10 @@ export const Management = () => {
         prev.map((u) =>
           u.id === editForm.id
             ? {
-                ...u,
-                ...editForm,
-                role_id: Number(editForm.role_id),
-              }
+              ...u,
+              ...editForm,
+              role_id: Number(editForm.role_id),
+            }
             : u,
         ),
       );
@@ -442,8 +442,7 @@ export const Management = () => {
           <Button
             size="xs"
             variant="outline"
-            className="border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950"
-            onClick={() => {
+            className="border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800" onClick={() => {
               setEditForm({
                 ...u,
                 role_id: String(u.role_id),
@@ -960,7 +959,7 @@ export const Management = () => {
             <input
               type="password"
               value={deleteConfirmSenha}
-              onChange={(e) => setDeleteConfirmSenha(e.target.value)} 
+              onChange={(e) => setDeleteConfirmSenha(e.target.value)}
               className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
               placeholder="Sua senha"
             />

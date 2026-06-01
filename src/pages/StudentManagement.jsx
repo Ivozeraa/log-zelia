@@ -179,27 +179,27 @@ export const StudentManagement = () => {
       const alunoOccurrences = occurrenceMap[aluno.id] || [];
       return alunoOccurrences.length > 0
         ? alunoOccurrences.map((occ) => ({
-            aluno_nome: aluno.nome,
-            matricula: aluno.matricula,
-            turma: getTurmaName(aluno.turma_id),
-            escola: getEscolaName(aluno.escola_id),
-            status: aluno.status || "normal",
-            data_ocorrido: occ.data_ocorrido || "—",
-            categoria: occ.categoria || "—",
-            tipo: occ.tipo || "—",
-            descricao: occ.descricao || "—",
-          }))
+          aluno_nome: aluno.nome,
+          matricula: aluno.matricula,
+          turma: getTurmaName(aluno.turma_id),
+          escola: getEscolaName(aluno.escola_id),
+          status: aluno.status || "normal",
+          data_ocorrido: occ.data_ocorrido || "—",
+          categoria: occ.categoria || "—",
+          tipo: occ.tipo || "—",
+          descricao: occ.descricao || "—",
+        }))
         : [{
-            aluno_nome: aluno.nome,
-            matricula: aluno.matricula,
-            turma: getTurmaName(aluno.turma_id),
-            escola: getEscolaName(aluno.escola_id),
-            status: aluno.status || "normal",
-            data_ocorrido: "—",
-            categoria: "—",
-            tipo: "—",
-            descricao: "Sem ocorrências",
-          }];
+          aluno_nome: aluno.nome,
+          matricula: aluno.matricula,
+          turma: getTurmaName(aluno.turma_id),
+          escola: getEscolaName(aluno.escola_id),
+          status: aluno.status || "normal",
+          data_ocorrido: "—",
+          categoria: "—",
+          tipo: "—",
+          descricao: "Sem ocorrências",
+        }];
     });
   };
 
@@ -621,28 +621,35 @@ export const StudentManagement = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8 w-full">
+    <div className="flex flex-col gap-8 w-full dark:bg-slate-950">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <PageTitle
           title="Gestão de Alunos"
-          subtitle="Filtre, mova turmas e importe os alunos por planilha CSV." 
+          subtitle="Filtre, mova turmas e importe os alunos por planilha CSV."
         />
+
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button onClick={() => navigate(-1)} variant="outline">
+          <Button
+            onClick={() => navigate(-1)}
+            variant="outline"
+          >
             Voltar
           </Button>
+
           <Button
             onClick={handleDownloadTemplate}
             className="whitespace-nowrap"
             disabled={!selectedTurma}
           >
-            {selectedTurma ? "Baixar template CSV" : "Selecione a turma para baixar"}
+            {selectedTurma
+              ? "Baixar template CSV"
+              : "Selecione a turma para baixar"}
           </Button>
         </div>
       </div>
 
       <div className="space-y-4">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm" >
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <div className="grid gap-3 sm:grid-cols-2">
             <CustomSelect
               label="Filtrar escola"
@@ -651,6 +658,7 @@ export const StudentManagement = () => {
               options={escolaOptions}
               placeholder="Todas as escolas"
             />
+
             <CustomSelect
               label="Filtrar turma"
               value={selectedTurma}
@@ -665,11 +673,12 @@ export const StudentManagement = () => {
             label="Buscar aluno"
             placeholder="Nome ou matrícula"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            className=""
+            onChange={(event) =>
+              setSearch(event.target.value)
+            }
           />
 
-          <div className="grid gap-3 sm:grid-cols-2 mt-2">
+          <div className="mt-2 grid gap-3 sm:grid-cols-2">
             <CustomSelect
               label="Turma de origem"
               value={sourceTurma}
@@ -677,6 +686,7 @@ export const StudentManagement = () => {
               options={origemTurmaOptions}
               placeholder="Selecione a turma de origem"
             />
+
             <CustomSelect
               label="Turma de destino"
               value={targetTurma}
@@ -686,16 +696,28 @@ export const StudentManagement = () => {
             />
           </div>
 
-          <Button onClick={handleBulkMove} disabled={bulkLoading} className="mt-4">
-            {bulkLoading ? "Movendo alunos..." : "Mover todos da turma"}
+          <Button
+            onClick={handleBulkMove}
+            disabled={bulkLoading}
+            className="mt-4"
+          >
+            {bulkLoading
+              ? "Movendo alunos..."
+              : "Mover todos da turma"}
           </Button>
 
-          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 mt-4">
-            <p className="text-sm font-semibold text-slate-700">Relatório ou exclusão</p>
-            <p className="text-sm text-slate-500">
-              Selecione alunos ou use o filtro para gerar relatório e excluir alunos da turma selecionada.
+          <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              Relatório ou exclusão
             </p>
-            <div className="grid gap-3 sm:grid-cols-2 items-end">
+
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Selecione alunos ou use o filtro
+              para gerar relatório e excluir
+              alunos da turma selecionada.
+            </p>
+
+            <div className="grid items-end gap-3 sm:grid-cols-2">
               <CustomSelect
                 label="Formato do relatório"
                 value={reportFormat}
@@ -703,17 +725,25 @@ export const StudentManagement = () => {
                 options={reportFormatOptions}
                 placeholder="Selecione o formato"
               />
+
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
-                  onClick={handleDownloadFinalReport}
+                  onClick={
+                    handleDownloadFinalReport
+                  }
                   variant="outline"
                   disabled={reportLoading}
                 >
-                  {reportLoading ? "Gerando relatório..." : "Gerar relatório"}
+                  {reportLoading
+                    ? "Gerando relatório..."
+                    : "Gerar relatório"}
                 </Button>
+
                 <Button
                   variant="destructive"
-                  onClick={() => setDeleteModalOpen(true)}
+                  onClick={() =>
+                    setDeleteModalOpen(true)
+                  }
                 >
                   Excluir alunos da turma
                 </Button>
@@ -721,336 +751,209 @@ export const StudentManagement = () => {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 mt-4">
-            <p className="text-sm font-semibold text-slate-700">Importar CSV</p>
-            <p className="text-sm text-slate-500">
-              Use o template para carregar alunos com nome, matrícula, turma_id e escola_id.
+          <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              Importar CSV
             </p>
+
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Use o template para carregar
+              alunos com nome, matrícula,
+              turma_id e escola_id.
+            </p>
+
             <input
               type="file"
               accept=".csv"
               onChange={handleUploadCsv}
-              className="mt-3 block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-green-700 file:px-4 file:py-2 file:text-white file:font-semibold"
+              className="mt-3 block w-full text-sm text-slate-600 dark:text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-green-700 file:px-4 file:py-2 file:font-semibold file:text-white"
             />
+
             {fileName && (
-              <p className="mt-2 text-sm text-slate-500">Arquivo: {fileName}</p>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                Arquivo: {fileName}
+              </p>
             )}
+
             {fileErrors.length > 0 && (
-              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                <p className="font-semibold">Erros no CSV:</p>
+              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+                <p className="font-semibold">
+                  Erros no CSV:
+                </p>
+
                 <ul className="list-disc pl-5">
-                  {fileErrors.map((error, index) => (
-                    <li key={index}>{error}</li>
-                  ))}
+                  {fileErrors.map(
+                    (error, index) => (
+                      <li key={index}>
+                        {error}
+                      </li>
+                    )
+                  )}
                 </ul>
               </div>
             )}
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-slate-500">Alunos encontrados</p>
-              <p className="text-2xl font-bold text-slate-900">{filteredAlunos.length}</p>
-            </div>
-            <div className="text-sm text-slate-600">
-              {selectedCount > 0
-                ? `${selectedCount} aluno(s) selecionado(s)`
-                : "Selecione alunos para ações rápidas"}
-            </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Alunos encontrados
+            </p>
+
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">
+              {filteredAlunos.length}
+            </p>
           </div>
 
-          <div className="mt-4 overflow-x-auto rounded-3xl border border-slate-200">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-100 text-slate-700">
-                <tr>
-                  <th className="border-b border-slate-200 px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={filteredAlunos.length > 0 && selectedAlunoIds.length === filteredAlunos.length}
-                      onChange={handleToggleAll}
-                    />
-                  </th>
-                  <th className="border-b border-slate-200 px-4 py-3">Aluno</th>
-                  <th className="border-b border-slate-200 px-4 py-3">Matrícula</th>
-                  <th className="border-b border-slate-200 px-4 py-3">Turma</th>
-                  <th className="border-b border-slate-200 px-4 py-3">Escola</th>
-                  <th className="border-b border-slate-200 px-4 py-3">Status</th>
-                  <th className="border-b border-slate-200 px-4 py-3">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
-                      Carregando alunos...
-                    </td>
-                  </tr>
-                ) : filteredAlunos.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
-                      Nenhum aluno encontrado.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredAlunos.map((aluno) => (
-                    <tr key={aluno.id} className="border-b border-slate-200 last:border-none hover:bg-slate-50 transition">
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedAlunoIds.includes(aluno.id)}
-                          onChange={() => handleToggleAluno(aluno.id)}
-                        />
-                      </td>
-                      <td className="px-4 py-3 font-medium text-slate-900">{aluno.nome}</td>
-                      <td className="px-4 py-3 text-slate-600">{aluno.matricula || "—"}</td>
-                      <td className="px-4 py-3 text-slate-600">{getTurmaName(aluno.turma_id)}</td>
-                      <td className="px-4 py-3 text-slate-600">{getEscolaName(aluno.escola_id)}</td>
-                      <td className="px-4 py-3 text-slate-600">{aluno.status || "normal"}</td>
-                      <td className="px-4 py-3 flex flex-wrap gap-2">
-                        <Button size="xs" variant="outline" onClick={() => openEditAluno(aluno)}>
-                          Editar
-                        </Button>
-                        <Button size="xs" variant="destructive" onClick={() => openDeleteAluno(aluno)}>
-                          Excluir
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          <div className="text-sm text-slate-600 dark:text-slate-300">
+            {selectedCount > 0
+              ? `${selectedCount} aluno(s) selecionado(s)`
+              : "Selecione alunos para ações rápidas"}
           </div>
+        </div>
+
+        <div className="mt-4 overflow-x-auto rounded-3xl border border-slate-200 dark:border-slate-700">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+              <tr>
+                <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={
+                      filteredAlunos.length >
+                      0 &&
+                      selectedAlunoIds.length ===
+                      filteredAlunos.length
+                    }
+                    onChange={handleToggleAll}
+                  />
+                </th>
+
+                <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                  Aluno
+                </th>
+
+                <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                  Matrícula
+                </th>
+
+                <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                  Turma
+                </th>
+
+                <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                  Escola
+                </th>
+
+                <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                  Status
+                </th>
+
+                <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                  Ações
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-6 text-center text-slate-500 dark:text-slate-400"
+                  >
+                    Carregando alunos...
+                  </td>
+                </tr>
+              ) : filteredAlunos.length ===
+                0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-6 text-center text-slate-500 dark:text-slate-400"
+                  >
+                    Nenhum aluno encontrado.
+                  </td>
+                </tr>
+              ) : (
+                filteredAlunos.map((aluno) => (
+                  <tr
+                    key={aluno.id}
+                    className="border-b border-slate-200 transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50"
+                  >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedAlunoIds.includes(
+                          aluno.id
+                        )}
+                        onChange={() =>
+                          handleToggleAluno(
+                            aluno.id
+                          )
+                        }
+                      />
+                    </td>
+
+                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                      {aluno.nome}
+                    </td>
+
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                      {aluno.matricula ||
+                        "—"}
+                    </td>
+
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                      {getTurmaName(
+                        aluno.turma_id
+                      )}
+                    </td>
+
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                      {getEscolaName(
+                        aluno.escola_id
+                      )}
+                    </td>
+
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                      {aluno.status ||
+                        "normal"}
+                    </td>
+
+                    <td className="flex flex-wrap gap-2 px-4 py-3">
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        onClick={() =>
+                          openEditAluno(
+                            aluno
+                          )
+                        }
+                      >
+                        Editar
+                      </Button>
+
+                      <Button
+                        size="xs"
+                        variant="destructive"
+                        onClick={() =>
+                          openDeleteAluno(
+                            aluno
+                          )
+                        }
+                      >
+                        Excluir
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
-
-      <Modal
-        isOpen={deleteModalOpen}
-        onClose={() => {
-          setDeleteModalOpen(false);
-          setConfirmDeleteText("");
-        }}
-        title="Excluir alunos da turma"
-      >
-        <div className="space-y-4">
-          <p>
-            Esta ação excluirá todos os alunos da turma selecionada. Selecione a turma e digite <span className="font-semibold">EXCLUIR</span> para confirmar.
-          </p>
-          <CustomSelect
-            label="Turma para exclusão"
-            value={selectedTurma}
-            onChange={setSelectedTurma}
-            options={deleteTurmaOptions}
-            placeholder="Selecione a turma"
-          />
-          <FormInput
-            label="Digite EXCLUIR para confirmar"
-            value={confirmDeleteText}
-            onChange={(event) => setConfirmDeleteText(event.target.value)}
-          />
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteCompleted} disabled={bulkLoading}>
-              {bulkLoading ? "Excluindo..." : "Confirmar exclusão"}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={editModalOpen}
-        onClose={() => {
-          setEditModalOpen(false);
-          setEditingAluno(null);
-        }}
-        title={`Editar aluno${editingAluno ? `: ${editingAluno.nome}` : ""}`}
-      >
-        <form onSubmit={(e) => { e.preventDefault(); handleSaveAluno(); }} className="grid gap-4" ref={modalRef}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-slate-700">Nome</label>
-              <input
-                type="text"
-                value={editForm?.nome || ""}
-                onChange={(event) => setEditForm((prev) => ({ ...prev, nome: event.target.value }))}
-                className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-slate-700">Matrícula</label>
-              <input
-                type="text"
-                value={editForm?.matricula || ""}
-                onChange={(event) => setEditForm((prev) => ({ ...prev, matricula: event.target.value }))}
-                className="h-12 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="relative flex flex-col gap-2">
-              <label className="text-sm font-semibold text-slate-700">Escola</label>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditEscolaOpen((prev) => !prev);
-                  setEditTurmaOpen(false);
-                  setEditStatusOpen(false);
-                }}
-                className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              >
-                <span>{escolas.find(e => e.id === editForm?.escola_id)?.nome || 'Selecione a escola'}</span>
-                <span className="text-slate-500">▾</span>
-              </button>
-
-              {editEscolaOpen && (
-                <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
-                  {escolas.map((escola) => (
-                    <button
-                      key={escola.id}
-                      type="button"
-                      onClick={() => {
-                        setEditForm((prev) => ({ ...prev, escola_id: escola.id }));
-                        setEditEscolaOpen(false);
-                      }}
-                      className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
-                    >
-                      {escola.nome}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="relative flex flex-col gap-2">
-              <label className="text-sm font-semibold text-slate-700">Turma</label>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditTurmaOpen((prev) => !prev);
-                  setEditEscolaOpen(false);
-                  setEditStatusOpen(false);
-                }}
-                className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              >
-                <span>{turmas.find(t => t.id === editForm?.turma_id)?.nome || 'Selecione a turma'}</span>
-                <span className="text-slate-500">▾</span>
-              </button>
-
-              {editTurmaOpen && (
-                <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
-                  {turmas.map((turma) => (
-                    <button
-                      key={turma.id}
-                      type="button"
-                      onClick={() => {
-                        setEditForm((prev) => ({ ...prev, turma_id: turma.id }));
-                        setEditTurmaOpen(false);
-                      }}
-                      className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
-                    >
-                      {turma.nome}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="relative flex flex-col gap-2">
-            <label className="text-sm font-semibold text-slate-700">Status</label>
-            <button
-              type="button"
-              onClick={() => {
-                setEditStatusOpen((prev) => !prev);
-                setEditEscolaOpen(false);
-                setEditTurmaOpen(false);
-              }}
-              className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-            >
-              <span>
-                {editForm?.status === 'normal' ? 'Normal' :
-                  editForm?.status === 'suspenso' ? 'Suspenso' :
-                    editForm?.status === 'expulso' ? 'Expulso' :
-                      'Selecione o status'}
-              </span>
-              <span className="text-slate-500">▾</span>
-            </button>
-
-            {editStatusOpen && (
-              <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditForm((prev) => ({ ...prev, status: 'normal' }));
-                    setEditStatusOpen(false);
-                  }}
-                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
-                >
-                  Normal
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditForm((prev) => ({ ...prev, status: 'suspenso' }));
-                    setEditStatusOpen(false);
-                  }}
-                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
-                >
-                  Suspenso
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditForm((prev) => ({ ...prev, status: 'expulso' }));
-                    setEditStatusOpen(false);
-                  }}
-                  className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
-                >
-                  Expulso
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setEditModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit">
-              Salvar
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal
-        isOpen={deleteAlunoModalOpen}
-        onClose={() => {
-          setDeleteAlunoModalOpen(false);
-          setAlunoToDelete(null);
-          setDeleteAlunoConfirmText("");
-        }}
-        title={`Excluir aluno${alunoToDelete ? `: ${alunoToDelete.nome}` : ""}`}
-      >
-        <div className="space-y-4">
-          <p>
-            Esta ação excluirá o aluno selecionado. Digite <span className="font-semibold">EXCLUIR</span> para confirmar.
-          </p>
-          <FormInput
-            label="Digite EXCLUIR para confirmar"
-            value={deleteAlunoConfirmText}
-            onChange={(event) => setDeleteAlunoConfirmText(event.target.value)}
-          />
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setDeleteAlunoModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteAluno}>
-              Excluir aluno
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 };

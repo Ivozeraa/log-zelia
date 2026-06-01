@@ -33,7 +33,9 @@ export const Sidebar = ({ open, setOpen }) => {
           md:translate-x-0 md:top-16 md:h-[calc(100vh-4rem)]
         `}
       >
-        <SectionTitle text="Menu"/>
+        <div className="md:hidden">
+          <SectionTitle text="Menu" />
+        </div>
 
         <So to="/" icon={FaHome} text="Início" onClick={handleClick} />
         <So to="/advertencias" icon={FaExclamationCircle} text="Advertências" onClick={handleClick} />

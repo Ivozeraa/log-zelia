@@ -37,9 +37,8 @@ export const CustomSelect = ({
         type="button"
         disabled={disabled}
         onClick={() => setOpen((prev) => !prev)}
-        className={`flex h-11 w-full items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0 ${
-          disabled ? "cursor-not-allowed bg-slate-100 text-slate-400" : ""
-        }`}
+        className={`flex h-11 w-full items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0 ${disabled ? "cursor-not-allowed bg-slate-100 text-slate-400" : ""
+          }`}
       >
         <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
           {selectedOption ? selectedOption.label : placeholder}

@@ -3,6 +3,7 @@ import { useAuth } from "../../hooks/useAuth"
 import { uploadAvatar } from "../../utils/uploadAvatar"
 import { supabase } from "../../utils/supabase"
 import { Button } from "../ui/Button"
+import { FormInput } from "../ui/FormInput"
 import { FaUser } from "react-icons/fa"
 
 export const EditProfile = () => {
@@ -24,7 +25,9 @@ export const EditProfile = () => {
   const [successSenha, setSuccessSenha] = useState(null)
 
   useEffect(() => {
-    if (user?.nome) setNome(user.nome)
+    if (user?.nome) {
+      setNome(user.nome)
+    }
   }, [user?.nome])
 
   async function handleSaveNome() {
@@ -43,11 +46,17 @@ export const EditProfile = () => {
         .update({ nome })
         .eq("id", user.id)
 
-      if (error) throw error
+      if (error) {
+        throw error
+      }
 
       await refreshUser()
+
       setSuccessNome("Alterações salvas")
-      setTimeout(() => setSuccessNome(null), 3000)
+
+      setTimeout(() => {
+        setSuccessNome(null)
+      }, 3000)
     } catch {
       setErrorNome("Erro ao salvar")
     } finally {
@@ -57,6 +66,7 @@ export const EditProfile = () => {
 
   async function handleSaveAvatar(e) {
     const file = e.target.files?.[0]
+
     if (!file) return
 
     setLoadingAvatar(true)
@@ -65,11 +75,18 @@ export const EditProfile = () => {
 
     try {
       const publicUrl = await uploadAvatar(file)
-      if (!publicUrl) throw new Error()
+
+      if (!publicUrl) {
+        throw new Error()
+      }
 
       await refreshUser()
+
       setSuccessAvatar("Foto atualizada")
-      setTimeout(() => setSuccessAvatar(null), 3000)
+
+      setTimeout(() => {
+        setSuccessAvatar(null)
+      }, 3000)
     } catch {
       setErrorAvatar("Erro ao enviar foto")
     } finally {
@@ -100,15 +117,20 @@ export const EditProfile = () => {
 
     try {
       const { error } = await supabase.auth.updateUser({
-        password: novaSenha
+        password: novaSenha,
       })
 
-      if (error) throw error
+      if (error) {
+        throw error
+      }
 
       setSuccessSenha("Senha atualizada")
       setNovaSenha("")
       setConfirmarSenha("")
-      setTimeout(() => setSuccessSenha(null), 3000)
+
+      setTimeout(() => {
+        setSuccessSenha(null)
+      }, 3000)
     } catch {
       setErrorSenha("Erro ao atualizar senha")
     } finally {
@@ -117,27 +139,32 @@ export const EditProfile = () => {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200">
-
-      <h1 className="text-2xl font-semibold mb-6 text-center">
-         Foto de perfil
+    <div className="p-6">
+      <h1 className="mb-6 text-center text-2xl font-semibold text-slate-900 dark:text-white">
+        Foto de perfil
       </h1>
 
-      <div className="flex flex-col items-center gap-3 mb-8">
+      <div className="mb-8 flex flex-col items-center gap-3">
         {user?.avatar_url ? (
           <img
             src={user.avatar_url}
             alt="Avatar"
-            className="w-24 h-24 rounded-full object-cover"
+            className="h-24 w-24 rounded-full object-cover ring-4 ring-slate-200 dark:ring-slate-800"
           />
         ) : (
-          <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
-            <FaUser size={32} className="text-gray-400" />
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800">
+            <FaUser
+              size={32}
+              className="text-slate-500 dark:text-slate-400"
+            />
           </div>
         )}
 
-        <label className="text-blue-500 text-sm font-medium cursor-pointer hover:underline">
-          {loadingAvatar ? "Enviando..." : "Alterar foto de perfil"}
+        <label className="cursor-pointer text-sm font-medium text-green-700 hover:underline dark:text-green-400">
+          {loadingAvatar
+            ? "Enviando..."
+            : "Alterar foto de perfil"}
+
           <input
             type="file"
             accept="image/*"
@@ -146,54 +173,76 @@ export const EditProfile = () => {
           />
         </label>
 
-        {errorAvatar && <p className="text-red-500 text-sm">{errorAvatar}</p>}
-        {successAvatar && <p className="text-green-500 text-sm">{successAvatar}</p>}
+        {errorAvatar && (
+          <p className="text-sm text-red-500">
+            {errorAvatar}
+          </p>
+        )}
+
+        {successAvatar && (
+          <p className="text-sm text-green-500">
+            {successAvatar}
+          </p>
+        )}
       </div>
 
-      <div className="border-t border-gray-200 pt-6 space-y-4">
-        <div>
-          <label className="block text-sm text-gray-600 mb-1">
-            Nome
-          </label>
-          <input
-            type="text"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
-          />
-        </div>
+      <div className="space-y-4 border-t-[1px] border-slate-300 pt-6 dark:border-slate-700">
+        <FormInput
+          label="Nome"
+          value={nome}
+          onChange={(e) =>
+            setNome(e.target.value)
+          }
+        />
 
         <Button
           onClick={handleSaveNome}
           disabled={loadingNome}
           className="w-full"
         >
-          {loadingNome ? "Salvando..." : "Salvar alterações"}
+          {loadingNome
+            ? "Salvando..."
+            : "Salvar alterações"}
         </Button>
 
-        {errorNome && <p className="text-red-500 text-sm">{errorNome}</p>}
-        {successNome && <p className="text-green-500 text-sm">{successNome}</p>}
+        {errorNome && (
+          <p className="text-sm text-red-500">
+            {errorNome}
+          </p>
+        )}
+
+        {successNome && (
+          <p className="text-sm text-green-500">
+            {successNome}
+          </p>
+        )}
       </div>
 
-      <div className="border-t border-gray-200 mt-8 pt-6 space-y-4">
-        <h2 className="text-lg font-semibold">
+      <div className="mt-8 space-y-4 border-t-[1px] border-slate-300 pt-6 dark:border-slate-700">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
           Alterar senha
         </h2>
 
-        <input
+        <FormInput
           type="password"
-          placeholder="Nova senha"
+          label="Nova senha"
+          placeholder="Digite a nova senha"
           value={novaSenha}
-          onChange={(e) => setNovaSenha(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
+          onChange={(e) =>
+            setNovaSenha(e.target.value)
+          }
         />
 
-        <input
+        <FormInput
           type="password"
-          placeholder="Confirmar nova senha"
+          label="Confirmar senha"
+          placeholder="Confirme a nova senha"
           value={confirmarSenha}
-          onChange={(e) => setConfirmarSenha(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
+          onChange={(e) =>
+            setConfirmarSenha(
+              e.target.value
+            )
+          }
         />
 
         <Button
@@ -201,13 +250,23 @@ export const EditProfile = () => {
           disabled={loadingSenha}
           className="w-full"
         >
-          {loadingSenha ? "Alterando..." : "Alterar senha"}
+          {loadingSenha
+            ? "Alterando..."
+            : "Alterar senha"}
         </Button>
 
-        {errorSenha && <p className="text-red-500 text-sm">{errorSenha}</p>}
-        {successSenha && <p className="text-green-500 text-sm">{successSenha}</p>}
-      </div>
+        {errorSenha && (
+          <p className="text-sm text-red-500">
+            {errorSenha}
+          </p>
+        )}
 
+        {successSenha && (
+          <p className="text-sm text-green-500">
+            {successSenha}
+          </p>
+        )}
+      </div>
     </div>
   )
 }
