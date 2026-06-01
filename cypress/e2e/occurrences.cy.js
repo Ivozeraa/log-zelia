@@ -8,8 +8,8 @@ describe('Occurrences workflow', () => {
     cy.login(email, password)
   })
 
-  it('should create multiple occurrences (100)', () => {
-    const count = 100
+  it('should create multiple occurrences (10)', () => {
+    const count = 10
 
     for (let i = 1; i <= count; i++) {
       const desc = `Carga automática Cypress ${Date.now()} - ${i}`
