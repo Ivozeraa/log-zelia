@@ -57,7 +57,7 @@ export const Login = () => {
           className="p-8 w-full max-w-md space-y-5"
         >
 
-          <h1 className="text-2xl font-bold text-center text-gray-800">
+          <h1 className="text-2xl font-bold text-center text-gray-800 dark:text-white">
             Sistema de Ocorrências
           </h1>
 
