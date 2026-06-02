@@ -599,7 +599,7 @@ export const Home = () => {
             }}
             options={[
               { value: '', label: 'Selecionar escola' },
-              ...escolas.map((e) => ({ value: String(e.id), label: e.nome })),
+              ...escolas.map((e) => ({ value: String(e.id), label: e.nome })).sort((a, b) => a.label.localeCompare(b.label)),
             ]}
             placeholder="Selecionar escola"
           />
@@ -614,7 +614,7 @@ export const Home = () => {
             }}
             options={[
               { value: '', label: 'Selecionar turma' },
-              ...turmas.map((t) => ({ value: String(t.id), label: t.nome })),
+              ...turmas.map((t) => ({ value: String(t.id), label: t.nome })).sort((a, b) => a.label.localeCompare(b.label)),
             ]}
             placeholder="Selecionar turma"
           />
@@ -626,7 +626,7 @@ export const Home = () => {
             onChange={(val) => setSelectedAluno(val)}
             options={[
               { value: '', label: 'Selecionar aluno' },
-              ...alunos.map((a) => ({ value: String(a.id), label: `${a.nome} - ${a.matricula || 'sem matrícula'}` })),
+              ...alunos.map((a) => ({ value: String(a.id), label: `${a.nome} - ${a.matricula || 'sem matrícula'}` })).sort((a, b) => a.label.localeCompare(b.label)),
             ]}
             placeholder="Selecionar aluno"
             showSearch={true}

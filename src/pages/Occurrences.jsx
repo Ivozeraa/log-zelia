@@ -14,6 +14,20 @@ import { Pagination } from "../components/ui/Pagination";
 import { SectionTitle } from "../components/ui/SectionTitle";
 import { ActivityList } from "../components/ui/ActivityList";
 
+const formatDataOcorrido = (data) => {
+  if (!data) return "—";
+  try {
+    const date = new Date(data);
+    const dia = String(date.getDate()).padStart(2, "0");
+    const mes = String(date.getMonth() + 1).padStart(2, "0");
+    const ano = date.getFullYear();
+    const hora = String(date.getHours()).padStart(2, "0");
+    const minuto = String(date.getMinutes()).padStart(2, "0");
+    return `${dia}/${mes}/${ano} - ${hora}:${minuto}`;
+  } catch {
+    return data;
+  }
+};
 
 export const Occurrences = () => {
   const { user } = useAuth();
@@ -114,7 +128,7 @@ export const Occurrences = () => {
 
   const turmaOptions = [
     { value: "", label: "Todas as turmas" },
-    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })),
+    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })).sort((a, b) => a.label.localeCompare(b.label)),
   ];
 
   useEffect(() => {
@@ -534,7 +548,7 @@ export const Occurrences = () => {
               title="Última"
               content={
                 <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  {selectedAlunoOccurrencesSorted[0]?.data_ocorrido || "—"}
+                  {formatDataOcorrido(selectedAlunoOccurrencesSorted[0]?.data_ocorrido)}
                 </span>
               }
             />
@@ -570,7 +584,7 @@ export const Occurrences = () => {
                               </span>
 
                               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                                {occ.data_ocorrido || "Data não informada"}
+                                {formatDataOcorrido(occ.data_ocorrido)}
                               </span>
                             </div>
 
@@ -612,7 +626,7 @@ export const Occurrences = () => {
                                 title="Aplicação"
                                 content={
                                   <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                    {occ.data_aplicacao || "—"}
+                                    {formatDataOcorrido(occ.data_aplicacao)}
                                   </span>
                                 }
                               />
@@ -787,7 +801,7 @@ export const Occurrences = () => {
                 key: "data",
                 title: "Data",
                 render: (aluno) =>
-                  aluno.latest?.data_ocorrido || "—",
+                  formatDataOcorrido(aluno.latest?.data_ocorrido),
               },
 
               {

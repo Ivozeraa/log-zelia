@@ -140,27 +140,27 @@ export const StudentManagement = () => {
 
   const escolaOptions = [
     { value: "", label: "Todas as escolas" },
-    ...escolas.map((escola) => ({ value: String(escola.id), label: escola.nome })),
+    ...escolas.map((escola) => ({ value: String(escola.id), label: escola.nome })).sort((a, b) => a.label.localeCompare(b.label)),
   ];
 
   const turmaOptions = [
     { value: "", label: "Todas as turmas" },
-    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })),
+    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })).sort((a, b) => a.label.localeCompare(b.label)),
   ];
 
   const origemTurmaOptions = [
     { value: "", label: "Selecione a turma de origem" },
-    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })),
+    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })).sort((a, b) => a.label.localeCompare(b.label)),
   ];
 
   const destinoTurmaOptions = [
     { value: "", label: "Selecione a turma de destino" },
-    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })),
+    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })).sort((a, b) => a.label.localeCompare(b.label)),
   ];
 
   const deleteTurmaOptions = [
     { value: "", label: "Selecione a turma" },
-    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })),
+    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })).sort((a, b) => a.label.localeCompare(b.label)),
   ];
 
   const reportFormatOptions = [
@@ -517,9 +517,9 @@ export const StudentManagement = () => {
 
     setBulkLoading(true);
     try {
-      const query = supabase.from("alunos").update({ turma_id: targetTurma }).eq("turma_id", sourceTurma);
+      let query = supabase.from("alunos").update({ turma_id: targetTurma }).eq("turma_id", sourceTurma);
       if (user?.role_id !== 1 && user?.escola_id) {
-        query.eq("escola_id", user.escola_id);
+        query = query.eq("escola_id", user.escola_id);
       }
 
       const { error } = await query;
@@ -596,9 +596,9 @@ export const StudentManagement = () => {
 
     setBulkLoading(true);
     try {
-      const query = supabase.from("alunos").delete().eq("turma_id", selectedTurma);
+      let query = supabase.from("alunos").delete().eq("turma_id", selectedTurma);
       if (user?.role_id !== 1 && user?.escola_id) {
-        query.eq("escola_id", user.escola_id);
+        query = query.eq("escola_id", user.escola_id);
       }
       const { error } = await query;
       if (error) {
@@ -608,7 +608,10 @@ export const StudentManagement = () => {
       }
 
       setAlunos((prev) => prev.filter((aluno) => aluno.turma_id !== selectedTurma));
-      setSelectedAlunoIds((prev) => prev.filter((id) => !alunos.find((aluno) => aluno.id === id && aluno.turma_id === selectedTurma)));
+      setSelectedAlunoIds((prev) => {
+        const alunosToDelete = alunos.filter((a) => a.turma_id === selectedTurma).map((a) => a.id);
+        return prev.filter((id) => !alunosToDelete.includes(id));
+      });
       setDeleteModalOpen(false);
       setConfirmDeleteText("");
       notify.success("Alunos excluídos com sucesso.");
@@ -739,6 +742,39 @@ export const StudentManagement = () => {
 
               <Button variant="destructive" onClick={handleDeleteAluno} disabled={deleteAlunoConfirmText.trim().toUpperCase() !== "EXCLUIR"}>
                 Excluir
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Delete Batch Modal */}
+        <Modal
+          isOpen={deleteModalOpen}
+          onClose={() => { setDeleteModalOpen(false); setConfirmDeleteText(""); }}
+          title="Excluir alunos da turma"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              Tem certeza que deseja excluir <strong>todos os alunos da turma {turmas.find((t) => t.id === selectedTurma)?.nome}</strong>? Esta ação não pode ser desfeita.
+            </p>
+
+            <div>
+              <p className="text-sm text-slate-500">Digite <strong>EXCLUIR</strong> para confirmar.</p>
+              <input
+                type="text"
+                value={confirmDeleteText}
+                onChange={(e) => setConfirmDeleteText(e.target.value)}
+                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setDeleteModalOpen(false); setConfirmDeleteText(""); }}>
+                Cancelar
+              </Button>
+
+              <Button variant="destructive" onClick={handleDeleteCompleted} disabled={confirmDeleteText.trim().toUpperCase() !== "EXCLUIR" || bulkLoading}>
+                {bulkLoading ? "Excluindo..." : "Excluir"}
               </Button>
             </div>
           </div>

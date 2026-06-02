@@ -552,7 +552,7 @@ export const Management = () => {
           placeholder="Todas as escolas"
           options={[
             { value: "", label: "Todas as escolas" },
-            ...schools.map((s) => ({ value: s.id, label: s.nome })),
+            ...schools.map((s) => ({ value: s.id, label: s.nome })).sort((a, b) => a.label.localeCompare(b.label)),
           ]}
           className="flex flex-col gap-1"
         />
@@ -666,7 +666,7 @@ export const Management = () => {
               placeholder="Nenhuma / Global"
               options={[
                 { value: "", label: "Nenhuma / Global" },
-                ...schools.map((s) => ({ value: s.id, label: s.nome })),
+                ...schools.map((s) => ({ value: s.id, label: s.nome })).sort((a, b) => a.label.localeCompare(b.label)),
               ]}
               className="flex flex-col gap-1 sm:col-span-2"
             />
@@ -757,7 +757,7 @@ export const Management = () => {
                 placeholder="Nenhuma / Global"
                 options={[
                   { value: "", label: "Nenhuma / Global" },
-                  ...schools.map((s) => ({ value: s.id, label: s.nome })),
+                  ...schools.map((s) => ({ value: s.id, label: s.nome })).sort((a, b) => a.label.localeCompare(b.label)),
                 ]}
                 className="flex flex-col gap-1"
               />
@@ -837,7 +837,7 @@ export const Management = () => {
               placeholder="Todas as escolas"
               options={[
                 { value: "", label: "Todas as escolas" },
-                ...schools.map((s) => ({ value: s.id, label: s.nome })),
+                ...schools.map((s) => ({ value: s.id, label: s.nome })).sort((a, b) => a.label.localeCompare(b.label)),
               ]}
               className="flex flex-col gap-1"
             />
@@ -851,7 +851,7 @@ export const Management = () => {
               placeholder="Todas as turmas"
               options={[
                 { value: "", label: "Todas as turmas" },
-                ...turmas.map((t) => ({ value: t.id, label: t.nome })),
+                ...turmas.map((t) => ({ value: t.id, label: t.nome })).sort((a, b) => a.label.localeCompare(b.label)),
               ]}
               disabled={!exportFilters.escola_id}
               className="flex flex-col gap-1"
