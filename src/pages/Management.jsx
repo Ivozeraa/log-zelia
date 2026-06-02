@@ -742,7 +742,7 @@ export const Management = () => {
                   setEditForm((f) => ({ ...f, role_id: value }))
                 }
                 placeholder="Selecione..."
-                options={getAllowedRoles().map((r) => ({
+                options={ROLES.map((r) => ({
                   value: r.id,
                   label: r.label,
                 }))}
