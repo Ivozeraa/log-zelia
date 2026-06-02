@@ -515,16 +515,18 @@ export const Occurrences = () => {
             <Card
               title="Status"
               content={
-                <span
-                  className={`text-lg font-semibold capitalize ${selectedAluno.status?.toLowerCase() === "normal"
-                    ? "text-green-700"
-                    : selectedAluno.status?.toLowerCase().includes("suspenso")
-                      ? "text-amber-700"
-                      : "text-red-700"
-                    }`}
-                >
-                  {selectedAluno.status || "Normal"}
-                </span>
+                (() => {
+                  const st = (selectedAluno.status || "normal").toLowerCase();
+                  const cls = st === "normal"
+                    ? "inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-lg font-semibold text-green-700"
+                    : st.includes("suspenso")
+                      ? "inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-lg font-semibold text-amber-700"
+                      : st.includes("expulso")
+                        ? "inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-lg font-semibold text-red-700"
+                        : "inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-lg font-semibold text-slate-700";
+
+                  return <span className={`${cls} capitalize`}>{st}</span>;
+                })()
               }
             />
 
@@ -744,11 +746,22 @@ export const Occurrences = () => {
               {
                 key: "status",
                 title: "Status",
-                render: (aluno) => (
-                  <span className="capitalize">
-                    {aluno.status || "normal"}
-                  </span>
-                ),
+                  render: (aluno) => {
+                    const st = (aluno.status || "normal").toLowerCase();
+                    const badgeClasses = st === "normal"
+                      ? "inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700"
+                      : st.includes("suspenso")
+                        ? "inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700"
+                        : st.includes("expulso")
+                          ? "inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700"
+                          : "inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700";
+
+                    return (
+                      <span className={`${badgeClasses} capitalize`}>
+                        {st}
+                      </span>
+                    );
+                  },
               },
 
               {

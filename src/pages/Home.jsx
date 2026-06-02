@@ -17,7 +17,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { FormInput } from '../components/ui/FormInput'
-import { FormSelect } from '../components/ui/FormSelect'
+import { CustomSelect } from '../components/ui/CustomSelect'
 import { PageTitle } from '../components/ui/PageTitle'
 import { SectionTitle } from '../components/ui/SectionTitle'
 
@@ -36,6 +36,7 @@ export const Home = () => {
 
   const [alunos, setAlunos] = useState([])
   const [selectedAluno, setSelectedAluno] = useState('')
+
 
   const [loadingTurmas, setLoadingTurmas] = useState(false)
   const [loadingAlunos, setLoadingAlunos] = useState(false)
@@ -588,111 +589,60 @@ export const Home = () => {
             </div>
           )}
 
-          <FormSelect
+          <CustomSelect
             label="Escola"
             value={selectedEscola}
-            onChange={(event) => {
-              setSelectedEscola(
-                event.target.value
-              )
-
+            onChange={(val) => {
+              setSelectedEscola(val)
               setSelectedTurma('')
               setSelectedAluno('')
             }}
-          >
-            <option value="">
-              Selecionar escola
-            </option>
+            options={[
+              { value: '', label: 'Selecionar escola' },
+              ...escolas.map((e) => ({ value: String(e.id), label: e.nome })),
+            ]}
+            placeholder="Selecionar escola"
+          />
 
-            {escolas.map((escola) => (
-              <option
-                key={escola.id}
-                value={escola.id}
-              >
-                {escola.nome}
-              </option>
-            ))}
-          </FormSelect>
-
-          <FormSelect
+          <CustomSelect
             label="Turma"
             value={selectedTurma}
-            disabled={
-              !selectedEscola ||
-              loadingTurmas
-            }
-            onChange={(event) => {
-              setSelectedTurma(
-                event.target.value
-              )
-
+            disabled={!selectedEscola || loadingTurmas}
+            onChange={(val) => {
+              setSelectedTurma(val)
               setSelectedAluno('')
             }}
-          >
-            <option value="">
-              Selecionar turma
-            </option>
+            options={[
+              { value: '', label: 'Selecionar turma' },
+              ...turmas.map((t) => ({ value: String(t.id), label: t.nome })),
+            ]}
+            placeholder="Selecionar turma"
+          />
 
-            {turmas.map((turma) => (
-              <option
-                key={turma.id}
-                value={turma.id}
-              >
-                {turma.nome}
-              </option>
-            ))}
-          </FormSelect>
-
-          <FormSelect
+          <CustomSelect
             label="Aluno"
             value={selectedAluno}
-            disabled={
-              !selectedTurma ||
-              loadingAlunos
-            }
-            onChange={(event) =>
-              setSelectedAluno(
-                event.target.value
-              )
-            }
-          >
-            <option value="">
-              Selecionar aluno
-            </option>
+            disabled={!selectedTurma || loadingAlunos}
+            onChange={(val) => setSelectedAluno(val)}
+            options={[
+              { value: '', label: 'Selecionar aluno' },
+              ...alunos.map((a) => ({ value: String(a.id), label: `${a.nome} - ${a.matricula || 'sem matrícula'}` })),
+            ]}
+            placeholder="Selecionar aluno"
+            showSearch={true}
+          />
 
-            {alunos.map((aluno) => (
-              <option
-                key={aluno.id}
-                value={aluno.id}
-              >
-                {aluno.nome} -{' '}
-                {aluno.matricula ||
-                  'sem matrícula'}
-              </option>
-            ))}
-          </FormSelect>
-
-          <FormSelect
+          <CustomSelect
             label="Tipo de advertência"
             value={tipoAdvertencia}
-            onChange={(event) =>
-              setTipoAdvertencia(
-                event.target.value
-              )
-            }
-          >
-            <option value="">
-              Selecionar tipo
-            </option>
-
-            <option value="ocorrencia">
-              Ocorrência
-            </option>
-
-            <option value="suspensao">
-              Suspensão
-            </option>
-          </FormSelect>
+            onChange={(val) => setTipoAdvertencia(val)}
+            options={[
+              { value: '', label: 'Selecionar tipo' },
+              { value: 'ocorrencia', label: 'Ocorrência' },
+              { value: 'suspensao', label: 'Suspensão' },
+            ]}
+            placeholder="Selecionar tipo"
+          />
 
           <FormInput
             type="date"
@@ -732,39 +682,20 @@ export const Home = () => {
               </>
             )}
 
-          <FormSelect
+          <CustomSelect
             label="Tipo de situação"
             value={tipoSituacao}
-            onChange={(event) =>
-              setTipoSituacao(
-                event.target.value
-              )
-            }
-          >
-            <option value="">
-              Selecionar situação
-            </option>
-
-            <option value="indisciplina">
-              Indisciplina
-            </option>
-
-            <option value="infrequencia">
-              Infrequência
-            </option>
-
-            <option value="atraso">
-              Atraso
-            </option>
-
-            <option value="desrespeito">
-              Desrespeito
-            </option>
-
-            <option value="outro">
-              Outro
-            </option>
-          </FormSelect>
+            onChange={(val) => setTipoSituacao(val)}
+            options={[
+              { value: '', label: 'Selecionar situação' },
+              { value: 'indisciplina', label: 'Indisciplina' },
+              { value: 'infrequencia', label: 'Infrequência' },
+              { value: 'atraso', label: 'Atraso' },
+              { value: 'desrespeito', label: 'Desrespeito' },
+              { value: 'outro', label: 'Outro' },
+            ]}
+            placeholder="Selecionar situação"
+          />
 
           <div className="sm:col-span-2 flex flex-col gap-2">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-400">

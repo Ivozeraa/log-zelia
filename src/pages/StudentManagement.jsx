@@ -646,6 +646,104 @@ export const StudentManagement = () => {
               : "Selecione a turma para baixar"}
           </Button>
         </div>
+        {/* Edit Aluno Modal */}
+        <Modal
+          isOpen={editModalOpen}
+          onClose={() => {
+            setEditModalOpen(false);
+            setEditingAluno(null);
+            setEditForm(null);
+          }}
+          title="Editar aluno"
+        >
+          {editForm && (
+            <div ref={modalRef} className="space-y-4">
+              <FormInput
+                label="Nome"
+                value={editForm.nome}
+                onChange={(e) => setEditForm((p) => ({ ...p, nome: e.target.value }))}
+              />
+
+              <FormInput
+                label="Matrícula"
+                value={editForm.matricula}
+                onChange={(e) => setEditForm((p) => ({ ...p, matricula: e.target.value }))}
+              />
+
+              <CustomSelect
+                label="Escola"
+                value={String(editForm.escola_id || "")}
+                onChange={(val) => setEditForm((p) => ({ ...p, escola_id: val }))}
+                options={escolaOptions}
+                placeholder="Selecione a escola"
+              />
+
+              <CustomSelect
+                label="Turma"
+                value={String(editForm.turma_id || "")}
+                onChange={(val) => setEditForm((p) => ({ ...p, turma_id: val }))}
+                options={turmaOptions}
+                placeholder="Selecione a turma"
+              />
+
+              <CustomSelect
+                label="Status"
+                value={editForm.status || ""}
+                onChange={(val) => setEditForm((p) => ({ ...p, status: val }))}
+                options={[
+                  { value: "normal", label: "Normal" },
+                  { value: "suspenso", label: "Suspenso" },
+                  { value: "expulso", label: "Expulso" },
+                ]}
+                placeholder="Selecione o status"
+              />
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => { setEditModalOpen(false); setEditingAluno(null); setEditForm(null); }}>
+                  Cancelar
+                </Button>
+
+                <Button onClick={handleSaveAluno}>
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Delete Aluno Modal */}
+        <Modal
+          isOpen={deleteAlunoModalOpen}
+          onClose={() => { setDeleteAlunoModalOpen(false); setAlunoToDelete(null); setDeleteAlunoConfirmText(""); }}
+          title="Excluir aluno"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              Tem certeza que deseja excluir o aluno <strong>{alunoToDelete?.nome}</strong>? Esta ação não pode ser desfeita.
+            </p>
+
+            <div>
+              <p className="text-sm text-slate-500">Digite <strong>EXCLUIR</strong> para confirmar.</p>
+              <input
+                type="text"
+                value={deleteAlunoConfirmText}
+                onChange={(e) => setDeleteAlunoConfirmText(e.target.value)}
+                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setDeleteAlunoModalOpen(false); setAlunoToDelete(null); setDeleteAlunoConfirmText(""); }}>
+                Cancelar
+              </Button>
+
+              <Button variant="destructive" onClick={handleDeleteAluno} disabled={deleteAlunoConfirmText.trim().toUpperCase() !== "EXCLUIR"}>
+                Excluir
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
       </div>
 
       <div className="space-y-4">
@@ -790,6 +888,24 @@ export const StudentManagement = () => {
                     )
                   )}
                 </ul>
+              </div>
+            )}
+
+            {turmas.length > 0 && (
+              <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900">
+                <p className="font-semibold">IDs das turmas</p>
+                <p className="text-sm text-slate-500">Lista de IDs das turmas no formato <span className="font-mono">id — nome</span></p>
+
+                <div className="mt-2 grid gap-2">
+                  {turmas.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50 px-3 py-2">
+                      <div className="text-sm font-mono text-slate-700">{t.id} — {t.nome}</div>
+                      <Button size="sm" onClick={() => copyToClipboard(String(t.id))}>
+                        Copiar
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
