@@ -468,7 +468,7 @@ export const Occurrences = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <input
+            <FormInput
               type="checkbox"
               id="apenasComOcorrencia"
               checked={apenasComOcorrencia}
@@ -760,22 +760,22 @@ export const Occurrences = () => {
               {
                 key: "status",
                 title: "Status",
-                  render: (aluno) => {
-                    const st = (aluno.status || "normal").toLowerCase();
-                    const badgeClasses = st === "normal"
-                      ? "inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700"
-                      : st.includes("suspenso")
-                        ? "inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700"
-                        : st.includes("expulso")
-                          ? "inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700"
-                          : "inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700";
+                render: (aluno) => {
+                  const st = (aluno.status || "normal").toLowerCase();
+                  const badgeClasses = st === "normal"
+                    ? "inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700"
+                    : st.includes("suspenso")
+                      ? "inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700"
+                      : st.includes("expulso")
+                        ? "inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700"
+                        : "inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700";
 
-                    return (
-                      <span className={`${badgeClasses} capitalize`}>
-                        {st}
-                      </span>
-                    );
-                  },
+                  return (
+                    <span className={`${badgeClasses} capitalize`}>
+                      {st}
+                    </span>
+                  );
+                },
               },
 
               {
@@ -911,13 +911,12 @@ export const Occurrences = () => {
           </p>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">Senha</label>
-            <input
+            <FormInput
               type="password"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              className="h-11 rounded-lg border px-3"
               placeholder="Digite sua senha"
+              className="h-11 rounded-lg border px-3"
             />
           </div>
 
@@ -1089,7 +1088,7 @@ export const Occurrences = () => {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-semibold text-slate-700">Data da ocorrência</label>
-              <input
+              <FormInput
                 type="date"
                 value={editDataOcorrido}
                 onChange={(e) => setEditDataOcorrido(e.target.value)}
@@ -1101,7 +1100,7 @@ export const Occurrences = () => {
               <>
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-semibold text-slate-700">Data de início</label>
-                  <input
+                  <FormInput
                     type="date"
                     value={editDataInicio}
                     onChange={(e) => setEditDataInicio(e.target.value)}
@@ -1111,7 +1110,7 @@ export const Occurrences = () => {
 
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-semibold text-slate-700">Data de término</label>
-                  <input
+                  <FormInput
                     type="date"
                     value={editDataFim}
                     onChange={(e) => setEditDataFim(e.target.value)}

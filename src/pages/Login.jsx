@@ -61,19 +61,19 @@ export const Login = () => {
             Sistema de Ocorrências
           </h1>
 
-          <input
+          <FormInput
             type="email"
             placeholder="Email"
-            className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            onChange={e => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full"
           />
 
           <div className="relative">
-            <input
+            <FormInput
               type={showPassword ? "text" : "password"}
               placeholder="Senha"
-              className="w-full border border-gray-300 rounded-lg p-3 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              onChange={e => setSenha(e.target.value)}
+              onChange={(e) => setSenha(e.target.value)}
+              className="w-full pr-12"
             />
             <button
               type="button"
