@@ -14,7 +14,20 @@ import { Pagination } from "../components/ui/Pagination";
 import { SectionTitle } from "../components/ui/SectionTitle";
 import { ActivityList } from "../components/ui/ActivityList";
 
-const formatDataOcorrido = (data) => {
+const formatData = (data) => {
+  if (!data) return "—";
+  try {
+    const date = new Date(data);
+    const dia = String(date.getDate()).padStart(2, "0");
+    const mes = String(date.getMonth() + 1).padStart(2, "0");
+    const ano = date.getFullYear();
+    return `${dia}/${mes}/${ano}`;
+  } catch {
+    return data;
+  }
+};
+
+const formatDataComHora = (data) => {
   if (!data) return "—";
   try {
     const date = new Date(data);
@@ -23,7 +36,8 @@ const formatDataOcorrido = (data) => {
     const ano = date.getFullYear();
     const hora = String(date.getHours()).padStart(2, "0");
     const minuto = String(date.getMinutes()).padStart(2, "0");
-    return `${dia}/${mes}/${ano} - ${hora}:${minuto}`;
+    const segundo = String(date.getSeconds()).padStart(2, "0");
+    return `${dia}/${mes}/${ano} - ${hora}:${minuto}:${segundo}`;
   } catch {
     return data;
   }
@@ -560,9 +574,7 @@ export const Occurrences = () => {
               title="Última"
               content={
                 <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  {formatDataOcorrido(
-                    selectedAlunoOccurrencesSorted[0]?.data_ocorrido,
-                  )}
+                  {formatData(selectedAlunoOccurrencesSorted[0]?.data_ocorrido)}
                 </span>
               }
             />
@@ -592,13 +604,13 @@ export const Occurrences = () => {
                         key={occ.id}
                         title={
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 mb-3">
                               <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                                 #{idx + 1}
                               </span>
 
                               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                                {formatDataOcorrido(occ.data_ocorrido)}
+                                {formatData(occ.data_ocorrido)}
                               </span>
                             </div>
 
@@ -640,7 +652,7 @@ export const Occurrences = () => {
                                 title="Aplicação"
                                 content={
                                   <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                    {formatDataOcorrido(occ.data_aplicacao)}
+                                    {formatDataComHora(occ.data_aplicacao)}
                                   </span>
                                 }
                               />
@@ -759,12 +771,12 @@ export const Occurrences = () => {
                     }}
                     data-cy="student-name-button"
                     className="
-    text-left font-medium
-    text-slate-900 dark:text-slate-100
-    transition
-    hover:text-blue-600 dark:hover:text-blue-400
-    hover:underline
-  "
+                      text-left font-medium
+                      text-slate-900 dark:text-slate-100
+                      transition
+                      hover:text-blue-600 dark:hover:text-blue-400
+                      hover:underline
+                    "
                   >
                     {aluno.nome}
                   </Button>
