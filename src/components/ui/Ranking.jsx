@@ -159,7 +159,7 @@ const RankingProfessores = ({ escolaId, mesLabel, userId, userName }) => {
       <div className="mb-6 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-lg font-bold text-slate-800 dark:text-white">Ranking de Professores</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Que mais registram ocorrências em {mesLabel}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Que mais registraram ocorrências em {mesLabel}</p>
         </div>
         <div className="w-fit rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">Top 3 do mês</div>
       </div>
