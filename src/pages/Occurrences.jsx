@@ -4,7 +4,7 @@ import { useAuth } from "../hooks/useAuth";
 import { notify } from "../utils/notify";
 
 import { Modal } from "../components/ui/Modal";
-import { PageTitle } from "../components/ui/PageTitle"
+import { PageTitle } from "../components/ui/PageTitle";
 import { Card } from "../components/ui/Card";
 import { FormInput } from "../components/ui/FormInput";
 import { CustomSelect } from "../components/ui/CustomSelect";
@@ -128,7 +128,9 @@ export const Occurrences = () => {
 
   const turmaOptions = [
     { value: "", label: "Todas as turmas" },
-    ...turmas.map((turma) => ({ value: String(turma.id), label: turma.nome })).sort((a, b) => a.label.localeCompare(b.label)),
+    ...turmas
+      .map((turma) => ({ value: String(turma.id), label: turma.nome }))
+      .sort((a, b) => a.label.localeCompare(b.label)),
   ];
 
   useEffect(() => {
@@ -293,13 +295,17 @@ export const Occurrences = () => {
 
     setOccurrences((prev) =>
       prev.map((item) =>
-        item.id === editingOccurrence.id ? { ...item, ...updatedOccurrence } : item,
+        item.id === editingOccurrence.id
+          ? { ...item, ...updatedOccurrence }
+          : item,
       ),
     );
 
     setSelectedAlunoOccurrences((prev) =>
       prev.map((item) =>
-        item.id === editingOccurrence.id ? { ...item, ...updatedOccurrence } : item,
+        item.id === editingOccurrence.id
+          ? { ...item, ...updatedOccurrence }
+          : item,
       ),
     );
 
@@ -373,11 +379,15 @@ export const Occurrences = () => {
             .in("id", professorIds);
 
           if (!usersError) {
-            const names = Object.fromEntries(users.map((user) => [user.id, user.nome]));
+            const names = Object.fromEntries(
+              users.map((user) => [user.id, user.nome]),
+            );
             enrichedOccurrences = occurrencesData.map((item) => ({
               ...item,
               professor_nome:
-                item.professor_nome || names[item.professor_id] || item.professor_nome,
+                item.professor_nome ||
+                names[item.professor_id] ||
+                item.professor_nome,
             }));
           }
         }
@@ -433,15 +443,23 @@ export const Occurrences = () => {
                     Advertências
                   </button>
                   <span className="text-slate-400 mx-1">›</span>
-                  <span className="font-semibold text-slate-900">{selectedAluno.nome}</span>
+                  <span className="font-semibold text-slate-900">
+                    {selectedAluno.nome}
+                  </span>
                 </div>
-                <h1 className="text-3xl font-bold text-slate-900">{selectedAluno.nome}</h1>
+                <h1 className="text-3xl font-bold text-slate-900">
+                  {selectedAluno.nome}
+                </h1>
                 <p className="mt-2 text-sm text-slate-500">
-                  Detalhes completos das ocorrências registradas para este aluno.
+                  Detalhes completos das ocorrências registradas para este
+                  aluno.
                 </p>
               </>
             ) : (
-              <PageTitle title="Advertências" subtitle="Centralize informações, acompanhe ocorrências e acesse recursos rapidamente." />
+              <PageTitle
+                title="Advertências"
+                subtitle="Centralize informações, acompanhe ocorrências e acesse recursos rapidamente."
+              />
             )}
           </div>
         </div>
@@ -484,20 +502,14 @@ export const Occurrences = () => {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Card
-              title="Alunos exibidos"
-              content={filteredAlunos.length}
-            />
+            <Card title="Alunos exibidos" content={filteredAlunos.length} />
 
             <Card
               title="Alunos com ocorrência"
               content={Object.keys(alunoSummary).length}
             />
 
-            <Card
-              title="Turmas"
-              content={turmas.length}
-            />
+            <Card title="Turmas" content={turmas.length} />
           </div>
         </div>
       )}
@@ -521,17 +533,18 @@ export const Occurrences = () => {
               title="Turma"
               content={
                 <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                  {turmas.find((t) => t.id === selectedAluno.turma_id)?.nome || "—"}
+                  {turmas.find((t) => t.id === selectedAluno.turma_id)?.nome ||
+                    "—"}
                 </span>
               }
             />
 
             <Card
               title="Status"
-              content={
-                (() => {
-                  const st = (selectedAluno.status || "normal").toLowerCase();
-                  const cls = st === "normal"
+              content={(() => {
+                const st = (selectedAluno.status || "normal").toLowerCase();
+                const cls =
+                  st === "normal"
                     ? "inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-lg font-semibold text-green-700"
                     : st.includes("suspenso")
                       ? "inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-lg font-semibold text-amber-700"
@@ -539,16 +552,17 @@ export const Occurrences = () => {
                         ? "inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-lg font-semibold text-red-700"
                         : "inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-lg font-semibold text-slate-700";
 
-                  return <span className={`${cls} capitalize`}>{st}</span>;
-                })()
-              }
+                return <span className={`${cls} capitalize`}>{st}</span>;
+              })()}
             />
 
             <Card
               title="Última"
               content={
                 <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  {formatDataOcorrido(selectedAlunoOccurrencesSorted[0]?.data_ocorrido)}
+                  {formatDataOcorrido(
+                    selectedAlunoOccurrencesSorted[0]?.data_ocorrido,
+                  )}
                 </span>
               }
             />
@@ -737,8 +751,8 @@ export const Occurrences = () => {
 
                       setSelectedAlunoOccurrences(
                         occurrences.filter(
-                          (item) => item.aluno_id === aluno.id
-                        )
+                          (item) => item.aluno_id === aluno.id,
+                        ),
                       );
 
                       setStudentDetailsOpen(true);
@@ -760,9 +774,10 @@ export const Occurrences = () => {
               {
                 key: "status",
                 title: "Status",
-                  render: (aluno) => {
-                    const st = (aluno.status || "normal").toLowerCase();
-                    const badgeClasses = st === "normal"
+                render: (aluno) => {
+                  const st = (aluno.status || "normal").toLowerCase();
+                  const badgeClasses =
+                    st === "normal"
                       ? "inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700"
                       : st.includes("suspenso")
                         ? "inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700"
@@ -770,12 +785,10 @@ export const Occurrences = () => {
                           ? "inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700"
                           : "inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700";
 
-                    return (
-                      <span className={`${badgeClasses} capitalize`}>
-                        {st}
-                      </span>
-                    );
-                  },
+                  return (
+                    <span className={`${badgeClasses} capitalize`}>{st}</span>
+                  );
+                },
               },
 
               {
@@ -784,72 +797,9 @@ export const Occurrences = () => {
               },
 
               {
-                key: "categoria",
-                title: "Categoria",
-                render: (aluno) =>
-                  aluno.latest?.categoria || "—",
-              },
-
-              {
-                key: "tipo",
-                title: "Tipo",
-                render: (aluno) =>
-                  aluno.latest?.tipo || "—",
-              },
-
-              {
-                key: "data",
-                title: "Data",
-                render: (aluno) =>
-                  formatDataOcorrido(aluno.latest?.data_ocorrido),
-              },
-
-              {
                 key: "total",
                 title: "Total",
-                render: (aluno) =>
-                  aluno.summary.count,
-              },
-
-              {
-                key: "descricao",
-                title: "Descrição",
-                render: (aluno) => (
-                  <div className="max-w-[320px] truncate">
-                    {aluno.latest?.descricao || "—"}
-                  </div>
-                ),
-              },
-
-              {
-                key: "acoes",
-                title: "Ações",
-                render: (aluno) =>
-                  aluno.latest && (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        onClick={() =>
-                          openEditOccurrence(aluno.latest)
-                        }
-                        className="text-blue-600 hover:text-blue-800 border-blue-200"
-                      >
-                        Editar
-                      </Button>
-
-                      <Button
-                        size="xs"
-                        variant="destructive"
-                        onClick={() => {
-                          setSelectedOccurrence(aluno.latest);
-                          setDeleteModalOpen(true);
-                        }}
-                      >
-                        Excluir
-                      </Button>
-                    </div>
-                  ),
+                render: (aluno) => aluno.summary.count,
               },
             ]}
           />
@@ -862,24 +812,15 @@ export const Occurrences = () => {
             />
           )}
         </>
-      )
-      }
+      )}
 
       <ActivityList
         data={activityLog}
         renderItem={(entry) => (
           <>
             <div className="text-sm text-slate-800 dark:text-slate-200">
-              <strong>
-                {entry.aplicadoPor}
-              </strong>{" "}
-              removeu a ocorrência de
-              <strong>
-                {" "}
-                {entry.aluno}{" "}
-              </strong>
-              ({entry.categoria} —{" "}
-              {entry.tipo})
+              <strong>{entry.aplicadoPor}</strong> removeu a ocorrência de
+              <strong> {entry.aluno} </strong>({entry.categoria} — {entry.tipo})
             </div>
 
             <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -887,9 +828,7 @@ export const Occurrences = () => {
             </div>
 
             <div className="text-xs text-slate-400 dark:text-slate-500">
-              {entry.timestamp.toLocaleString(
-                "pt-BR"
-              )}
+              {entry.timestamp.toLocaleString("pt-BR")}
             </div>
           </>
         )}
@@ -963,7 +902,9 @@ export const Occurrences = () => {
         <form onSubmit={handleSaveEdit} className="grid gap-4" ref={modalRef}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="relative flex flex-col gap-2">
-              <label className="text-sm font-semibold text-slate-700">Tipo de advertência</label>
+              <label className="text-sm font-semibold text-slate-700">
+                Tipo de advertência
+              </label>
               <button
                 type="button"
                 onClick={() => {
@@ -973,9 +914,11 @@ export const Occurrences = () => {
                 className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               >
                 <span>
-                  {editCategoria === 'ocorrencia' ? 'Ocorrência' :
-                    editCategoria === 'suspensao' ? 'Suspensão' :
-                      'Selecionar tipo'}
+                  {editCategoria === "ocorrencia"
+                    ? "Ocorrência"
+                    : editCategoria === "suspensao"
+                      ? "Suspensão"
+                      : "Selecionar tipo"}
                 </span>
                 <span className="text-slate-500">▾</span>
               </button>
@@ -985,9 +928,9 @@ export const Occurrences = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setEditCategoria('ocorrencia');
-                      setEditDataInicio('');
-                      setEditDataFim('');
+                      setEditCategoria("ocorrencia");
+                      setEditDataInicio("");
+                      setEditDataFim("");
                       setEditCategoriaOpen(false);
                     }}
                     className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
@@ -997,7 +940,7 @@ export const Occurrences = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setEditCategoria('suspensao');
+                      setEditCategoria("suspensao");
                       setEditCategoriaOpen(false);
                     }}
                     className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
@@ -1009,7 +952,9 @@ export const Occurrences = () => {
             </div>
 
             <div className="relative flex flex-col gap-2">
-              <label className="text-sm font-semibold text-slate-700">Tipo de situação</label>
+              <label className="text-sm font-semibold text-slate-700">
+                Tipo de situação
+              </label>
               <button
                 type="button"
                 onClick={() => {
@@ -1019,12 +964,17 @@ export const Occurrences = () => {
                 className="flex h-12 items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               >
                 <span>
-                  {editTipo === 'indisciplina' ? 'Indisciplina' :
-                    editTipo === 'infrequencia' ? 'Infrequência' :
-                      editTipo === 'atraso' ? 'Atraso' :
-                        editTipo === 'desrespeito' ? 'Desrespeito' :
-                          editTipo === 'outro' ? 'Outro' :
-                            'Selecionar situação'}
+                  {editTipo === "indisciplina"
+                    ? "Indisciplina"
+                    : editTipo === "infrequencia"
+                      ? "Infrequência"
+                      : editTipo === "atraso"
+                        ? "Atraso"
+                        : editTipo === "desrespeito"
+                          ? "Desrespeito"
+                          : editTipo === "outro"
+                            ? "Outro"
+                            : "Selecionar situação"}
                 </span>
                 <span className="text-slate-500">▾</span>
               </button>
@@ -1034,7 +984,7 @@ export const Occurrences = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setEditTipo('indisciplina');
+                      setEditTipo("indisciplina");
                       setEditTipoOpen(false);
                     }}
                     className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
@@ -1044,7 +994,7 @@ export const Occurrences = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setEditTipo('infrequencia');
+                      setEditTipo("infrequencia");
                       setEditTipoOpen(false);
                     }}
                     className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
@@ -1054,7 +1004,7 @@ export const Occurrences = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setEditTipo('atraso');
+                      setEditTipo("atraso");
                       setEditTipoOpen(false);
                     }}
                     className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
@@ -1064,7 +1014,7 @@ export const Occurrences = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setEditTipo('desrespeito');
+                      setEditTipo("desrespeito");
                       setEditTipoOpen(false);
                     }}
                     className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
@@ -1074,7 +1024,7 @@ export const Occurrences = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setEditTipo('outro');
+                      setEditTipo("outro");
                       setEditTipoOpen(false);
                     }}
                     className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
@@ -1088,7 +1038,9 @@ export const Occurrences = () => {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-slate-700">Data da ocorrência</label>
+              <label className="text-sm font-semibold text-slate-700">
+                Data da ocorrência
+              </label>
               <input
                 type="date"
                 value={editDataOcorrido}
@@ -1100,7 +1052,9 @@ export const Occurrences = () => {
             {editCategoria === "suspensao" && (
               <>
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-semibold text-slate-700">Data de início</label>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Data de início
+                  </label>
                   <input
                     type="date"
                     value={editDataInicio}
@@ -1110,7 +1064,9 @@ export const Occurrences = () => {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-semibold text-slate-700">Data de término</label>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Data de término
+                  </label>
                   <input
                     type="date"
                     value={editDataFim}
@@ -1123,7 +1079,9 @@ export const Occurrences = () => {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-slate-700">Descrição</label>
+            <label className="text-sm font-semibold text-slate-700">
+              Descrição
+            </label>
             <textarea
               value={editDescricao}
               onChange={(e) => setEditDescricao(e.target.value)}
@@ -1143,16 +1101,12 @@ export const Occurrences = () => {
             >
               Cancelar
             </Button>
-            <Button
-              type="submit"
-              disabled={savingEdit}
-              className="px-4 py-3"
-            >
+            <Button type="submit" disabled={savingEdit} className="px-4 py-3">
               {savingEdit ? "Salvando..." : "Salvar alterações"}
             </Button>
           </div>
         </form>
       </Modal>
-    </div >
+    </div>
   );
 };

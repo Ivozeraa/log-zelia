@@ -20,6 +20,7 @@ import { FormInput } from '../components/ui/FormInput'
 import { CustomSelect } from '../components/ui/CustomSelect'
 import { PageTitle } from '../components/ui/PageTitle'
 import { SectionTitle } from '../components/ui/SectionTitle'
+import { RankingOcorrencias } from '../components/ui/Ranking'
 
 import { notify } from '../utils/notify'
 
@@ -573,6 +574,11 @@ export const Home = () => {
           </div>
         </div>
       </div>
+      <div>
+        <RankingOcorrencias escolaId={user?.escola_id} />
+     
+      </div>
+
 
       <Modal
         isOpen={open}
