@@ -614,7 +614,7 @@ export const Occurrences = () => {
                               </span>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 mb-3 -mt-3">
                               <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
                                 {occ.categoria || "—"}
                               </span>
