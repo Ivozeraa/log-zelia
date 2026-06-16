@@ -15,6 +15,7 @@ import { PageTitle } from "../components/ui/PageTitle";
 import { FormInput } from "../components/ui/FormInput";
 import { Card } from "../components/ui/Card";
 import { Table } from "../components/ui/Table";
+import { Pagination } from "../components/ui/Pagination";
 
 const ROLES = [
   { id: 1, label: "Super Admin" },

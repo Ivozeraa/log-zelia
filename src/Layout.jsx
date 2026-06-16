@@ -14,7 +14,7 @@ function Layout() {
           <Sidebar />
         </aside>
 
-        <main className="w-full md:ml-64 p-6 z-10 relative">
+        <main className="w-full md:ml-64 p-4 sm:p-6 z-10 relative">
           <Outlet />
         </main>
 

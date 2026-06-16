@@ -370,8 +370,8 @@ export const Home = () => {
         </Button>
       </div>
 
-      <div className="flex flex-col gap-5">
-        <SectionTitle text="Dashboard" />
+      <div className="flex flex-col gap-2">
+        <SectionTitle text="Visão Geral" />
 
         <div className="grid w-full grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           <Card title="Ocorrências totais" content={stats.total} />
@@ -406,22 +406,38 @@ export const Home = () => {
             </div>
           </div>
 
-          <div className="h-80 w-full">
+          <div className="w-full h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={graficoData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <LineChart
+                data={graficoData}
+                margin={{
+                  top: 0,
+                  right: 20,
+                  left: 0,
+                  bottom: 0,
+                }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#e2e8f0"
+                />
+
                 <XAxis
                   dataKey="name"
-                  tick={{ fill: "#64748b" }}
+                  tick={{ fill: "#64748b", fontSize: 12 }}
                   tickLine={false}
                   axisLine={false}
+                  interval={0}
                 />
+
                 <YAxis
                   allowDecimals={false}
-                  tick={{ fill: "#64748b" }}
+                  tick={{ fill: "#64748b", fontSize: 12 }}
                   tickLine={false}
                   axisLine={false}
+                  width={30}
                 />
+
                 <Tooltip
                   contentStyle={{
                     borderRadius: "14px",
@@ -429,13 +445,19 @@ export const Home = () => {
                     boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
                   }}
                 />
+
                 <Line
                   type="monotone"
                   dataKey="ocorrencias"
                   stroke="#16a34a"
-                  strokeWidth={4}
-                  dot={{ r: 5, fill: "#16a34a" }}
-                  activeDot={{ r: 8 }}
+                  strokeWidth={3}
+                  dot={{
+                    r: 4,
+                    fill: "#16a34a",
+                  }}
+                  activeDot={{
+                    r: 6,
+                  }}
                 />
               </LineChart>
             </ResponsiveContainer>
