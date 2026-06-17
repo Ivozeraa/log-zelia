@@ -50,7 +50,7 @@ export const Login = () => {
           <img
             src={logo}
             alt="Logo"
-            className="w-52 md:w-36 drop-shadow-lg object-contain"
+            className="w-52 md:w-84 drop-shadow-lg object-contain"
           />
         </div>
       </section>
