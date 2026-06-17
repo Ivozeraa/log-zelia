@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { FormInput } from "./FormInput";
 
 export const CustomSelect = ({
   label,
@@ -64,10 +65,8 @@ export const CustomSelect = ({
   };
 
   const filteredOptions = showSearch
-    ? options.filter(
-        (option) =>
-          option.value === "" ||
-          option.label.toLowerCase().includes(searchTerm.toLowerCase()),
+    ? options.filter((option) =>
+        option.value === "" || option.label.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : options;
 
@@ -131,7 +130,7 @@ export const CustomSelect = ({
       {open && !disabled && (
         <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
           {showSearch && (
-            <div className="sticky top-0 border-b border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
+            <div className="sticky top-0 border-b border-slate-200 bg-white p-2">
               <input
                 type="text"
                 placeholder="Pesquisar..."

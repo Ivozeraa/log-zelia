@@ -25,7 +25,7 @@ export const Sidebar = ({ open, setOpen }) => {
 
       <aside
         className={`
-          fixed top-0 left-0 h-full w-64 bg-white dark:bg-slate-950 border-r-2 border-gray-300 dark:border-slate-700 p-6 gap-5 flex flex-col z-1000
+          fixed top-0 left-0 h-full w-64 bg-white dark:bg-slate-950 border-r-2 border-gray-300 dark:border-slate-700 p-6 pb-4 gap-5 flex flex-col z-1000
           transform transition-transform duration-300
 
           ${open ? "translate-x-0" : "-translate-x-full"}
@@ -44,7 +44,7 @@ export const Sidebar = ({ open, setOpen }) => {
           <So to="/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
         )}
 
-        <div className="mt-auto">
+        <div className="mt-auto border-t border-t-2 border-gray-300 dark:border-slate-700 pt-4">
           <So to="/configuracoes" icon={FaCog} text="Configurações" onClick={handleClick} />
         </div>
       </aside>

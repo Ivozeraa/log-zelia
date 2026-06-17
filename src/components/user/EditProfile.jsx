@@ -165,7 +165,7 @@ export const EditProfile = () => {
             ? "Enviando..."
             : "Alterar foto de perfil"}
 
-          <input
+          <FormInput
             type="file"
             accept="image/*"
             onChange={handleSaveAvatar}

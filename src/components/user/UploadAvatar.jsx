@@ -1,5 +1,6 @@
 import { uploadAvatar } from "../../utils/uploadAvatar"
 import { useAuth } from "../../hooks/useAuth"
+import { FormInput } from "../ui/FormInput"
 
 export function UploadAvatar() {
   const { refreshUser } = useAuth()
@@ -13,7 +14,7 @@ export function UploadAvatar() {
   }
 
   return (
-    <input
+    <FormInput
       type="file"
       accept="image/*"
       onChange={handleChange}

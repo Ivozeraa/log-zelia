@@ -727,8 +727,7 @@ export const StudentManagement = () => {
 
             <div>
               <p className="text-sm text-slate-500">Digite <strong>EXCLUIR</strong> para confirmar.</p>
-              <input
-                type="text"
+              <FormInput
                 value={deleteAlunoConfirmText}
                 onChange={(e) => setDeleteAlunoConfirmText(e.target.value)}
                 className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2"
@@ -760,8 +759,7 @@ export const StudentManagement = () => {
 
             <div>
               <p className="text-sm text-slate-500">Digite <strong>EXCLUIR</strong> para confirmar.</p>
-              <input
-                type="text"
+              <FormInput
                 value={confirmDeleteText}
                 onChange={(e) => setConfirmDeleteText(e.target.value)}
                 className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2"
@@ -896,7 +894,7 @@ export const StudentManagement = () => {
               turma_id e escola_id.
             </p>
 
-            <input
+            <FormInput
               type="file"
               accept=".csv"
               onChange={handleUploadCsv}
@@ -970,7 +968,7 @@ export const StudentManagement = () => {
             <thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
               <tr>
                 <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-                  <input
+                  <FormInput
                     type="checkbox"
                     checked={
                       filteredAlunos.length >
@@ -1035,7 +1033,7 @@ export const StudentManagement = () => {
                     className="border-b border-slate-200 transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50"
                   >
                     <td className="px-4 py-3">
-                      <input
+                      <FormInput
                         type="checkbox"
                         checked={selectedAlunoIds.includes(
                           aluno.id

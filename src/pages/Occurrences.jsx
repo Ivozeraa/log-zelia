@@ -43,15 +43,131 @@ const formatDataComHora = (data) => {
   }
 };
 
+const PERIODO_OPTIONS = [
+  { value: "", label: "Todos os períodos" },
+  { value: "hoje", label: "Hoje" },
+  { value: "semana", label: "Essa Semana" },
+  { value: "mes", label: "Esse Mês" },
+  { value: "ano", label: "Esse Ano" },
+];
+
+// Evita problemas de timezone ao interpretar datas no formato "YYYY-MM-DD"
+const parseDataOcorrido = (data) => {
+  if (!data) return null;
+
+  const partes = String(data).split("T")[0].split("-");
+  if (partes.length !== 3) {
+    const fallback = new Date(data);
+    return Number.isNaN(fallback.getTime()) ? null : fallback;
+  }
+
+  const [ano, mes, dia] = partes.map(Number);
+  return new Date(ano, mes - 1, dia);
+};
+
+const dataDentroDoPeriodo = (data, periodo) => {
+  if (!periodo) return true;
+
+  const dataOcorrido = parseDataOcorrido(data);
+  if (!dataOcorrido) return false;
+
+  const hoje = new Date();
+  const inicioHoje = new Date(
+    hoje.getFullYear(),
+    hoje.getMonth(),
+    hoje.getDate(),
+  );
+
+  if (periodo === "hoje") {
+    return dataOcorrido.getTime() === inicioHoje.getTime();
+  }
+
+  if (periodo === "semana") {
+    const inicioSemana = new Date(inicioHoje);
+    inicioSemana.setDate(inicioHoje.getDate() - inicioHoje.getDay());
+    const fimSemana = new Date(inicioSemana);
+    fimSemana.setDate(inicioSemana.getDate() + 6);
+    return dataOcorrido >= inicioSemana && dataOcorrido <= fimSemana;
+  }
+
+  if (periodo === "mes") {
+    return (
+      dataOcorrido.getFullYear() === hoje.getFullYear() &&
+      dataOcorrido.getMonth() === hoje.getMonth()
+    );
+  }
+
+  if (periodo === "ano") {
+    return dataOcorrido.getFullYear() === hoje.getFullYear();
+  }
+
+  return true;
+};
+
+// Conta as suspensões de um aluno: as aplicadas diretamente (categoria
+// "suspensao") + uma suspensão "automática" para cada grupo de 3
+// ocorrências simples (categoria "ocorrencia") acumuladas.
+const contarSuspensoes = (ocorrenciasDoAluno) => {
+  if (!ocorrenciasDoAluno || ocorrenciasDoAluno.length === 0) return 0;
+
+  const suspensoesDiretas = ocorrenciasDoAluno.filter(
+    (item) => item.categoria === "suspensao",
+  ).length;
+
+  const totalOcorrenciasSimples = ocorrenciasDoAluno.filter(
+    (item) => item.categoria === "ocorrencia",
+  ).length;
+
+  const suspensoesPorAcumulo = Math.floor(totalOcorrenciasSimples / 3);
+
+  return suspensoesDiretas + suspensoesPorAcumulo;
+};
+
+// Ordena cronologicamente para sinalizar quais ocorrências geraram (ou são)
+// uma suspensão e devolve a lista já na ordem de exibição (mais recente
+// primeiro), cada item com `suspensaoGerada` preenchido quando aplicável.
+const ordenarESinalizarSuspensoes = (lista) => {
+  const ascendente = [...lista].sort((a, b) =>
+    (a.data_ocorrido || "").localeCompare(b.data_ocorrido || ""),
+  );
+
+  let contadorSimples = 0;
+  let numeroSuspensao = 0;
+
+  const sinalizadas = ascendente.map((occ) => {
+    if (occ.categoria === "suspensao") {
+      numeroSuspensao += 1;
+      return {
+        ...occ,
+        suspensaoGerada: { numero: numeroSuspensao, origem: "direta" },
+      };
+    }
+
+    contadorSimples += 1;
+
+    if (contadorSimples % 3 === 0) {
+      numeroSuspensao += 1;
+      return {
+        ...occ,
+        suspensaoGerada: { numero: numeroSuspensao, origem: "acumulo" },
+      };
+    }
+
+    return { ...occ, suspensaoGerada: null };
+  });
+
+  return sinalizadas.sort((a, b) =>
+    (b.data_ocorrido || "").localeCompare(a.data_ocorrido || ""),
+  );
+};
+
 export const Occurrences = () => {
   const { user } = useAuth();
 
   const [search, setSearch] = useState("");
   const [selectedTurma, setSelectedTurma] = useState("");
+  const [selectedPeriodo, setSelectedPeriodo] = useState("");
   const [apenasComOcorrencia, setApenasComOcorrencia] = useState(false);
-  const [selectedProfessor, setSelectedProfessor] = useState("");
-  const [dataInicio, setDataInicio] = useState("");
-  const [dataFim, setDataFim] = useState("");
 
   const [turmas, setTurmas] = useState([]);
   const [alunos, setAlunos] = useState([]);
@@ -87,15 +203,13 @@ export const Occurrences = () => {
   const [selectedAluno, setSelectedAluno] = useState(null);
   const [selectedAlunoOccurrences, setSelectedAlunoOccurrences] = useState([]);
 
+  // Ocorrências respeitando o filtro de período selecionado (usado na
+  // listagem geral: cards, tabela e coluna de suspensões)
   const filteredOccurrences = useMemo(() => {
-    return occurrences.filter((occ) => {
-      if (selectedProfessor && occ.professor_nome !== selectedProfessor)
-        return false;
-      if (dataInicio && occ.data_ocorrido < dataInicio) return false;
-      if (dataFim && occ.data_ocorrido > dataFim) return false;
-      return true;
-    });
-  }, [occurrences, selectedProfessor, dataInicio, dataFim]);
+    return occurrences.filter((occ) =>
+      dataDentroDoPeriodo(occ.data_ocorrido, selectedPeriodo),
+    );
+  }, [occurrences, selectedPeriodo]);
 
   const alunoSummary = useMemo(() => {
     return filteredOccurrences.reduce((acc, occurrence) => {
@@ -119,6 +233,23 @@ export const Occurrences = () => {
 
       return acc;
     }, {});
+  }, [filteredOccurrences]);
+
+  // Quantidade de suspensões por aluno, já considerando o filtro de período
+  // (mostrada na coluna "Suspensões" da listagem)
+  const suspensoesPorAluno = useMemo(() => {
+    const agrupado = filteredOccurrences.reduce((acc, occ) => {
+      if (!acc[occ.aluno_id]) acc[occ.aluno_id] = [];
+      acc[occ.aluno_id].push(occ);
+      return acc;
+    }, {});
+
+    return Object.fromEntries(
+      Object.entries(agrupado).map(([alunoId, lista]) => [
+        alunoId,
+        contarSuspensoes(lista),
+      ]),
+    );
   }, [filteredOccurrences]);
 
   const filteredAlunos = useMemo(() => {
@@ -147,11 +278,20 @@ export const Occurrences = () => {
     return filteredAlunos.slice(start, end);
   }, [filteredAlunos, currentPage]);
 
-  const selectedAlunoOccurrencesSorted = useMemo(() => {
-    return [...selectedAlunoOccurrences].sort((a, b) =>
-      (b.data_ocorrido || "").localeCompare(a.data_ocorrido || ""),
-    );
-  }, [selectedAlunoOccurrences]);
+  // Histórico completo do aluno (não é afetado pelo filtro de período da
+  // listagem), já sinalizando quais ocorrências geraram suspensão
+  const selectedAlunoOccurrencesSorted = useMemo(
+    () => ordenarESinalizarSuspensoes(selectedAlunoOccurrences),
+    [selectedAlunoOccurrences],
+  );
+
+  // Total de suspensões do aluno selecionado, considerando todo o
+  // histórico (ocorrências que geraram suspensão por acúmulo + suspensões
+  // aplicadas diretamente)
+  const suspensoesDoAlunoSelecionado = useMemo(
+    () => contarSuspensoes(selectedAlunoOccurrences),
+    [selectedAlunoOccurrences],
+  );
 
   const turmaOptions = [
     { value: "", label: "Todas as turmas" },
@@ -160,19 +300,9 @@ export const Occurrences = () => {
       .sort((a, b) => a.label.localeCompare(b.label)),
   ];
 
-  const professorOptions = useMemo(() => {
-    const nomes = [
-      ...new Set(occurrences.map((o) => o.professor_nome).filter(Boolean)),
-    ].sort();
-    return [
-      { value: "", label: "Todos os professores" },
-      ...nomes.map((n) => ({ value: n, label: n })),
-    ];
-  }, [occurrences]);
-
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedTurma, apenasComOcorrencia, selectedProfessor, dataInicio, dataFim]);
+  }, [search, selectedTurma, selectedPeriodo, apenasComOcorrencia]);
 
   async function handleDelete() {
     if (!selectedOccurrence) return;
@@ -505,7 +635,7 @@ export const Occurrences = () => {
       {!studentDetailsOpen && (
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:w-auto">
+            <div className="grid w-full gap-3 sm:grid-cols-3 sm:w-auto">
               <FormInput
                 label="Buscar Aluno"
                 value={search}
@@ -520,33 +650,17 @@ export const Occurrences = () => {
                 placeholder="Todas as turmas"
               />
               <CustomSelect
-                label="Filtrar por Professor"
-                value={selectedProfessor}
-                onChange={setSelectedProfessor}
-                options={professorOptions}
-                placeholder="Todos os professores"
+                label="Período"
+                value={selectedPeriodo}
+                onChange={setSelectedPeriodo}
+                options={PERIODO_OPTIONS}
+                placeholder="Todos os períodos"
               />
-              <div />
             </div>
           </div>
 
-          <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:w-auto">
-            <FormInput
-              label="Data início"
-              type="date"
-              value={dataInicio}
-              onChange={(e) => setDataInicio(e.target.value)}
-            />
-            <FormInput
-              label="Data fim"
-              type="date"
-              value={dataFim}
-              onChange={(e) => setDataFim(e.target.value)}
-            />
-          </div>
-
           <div className="flex items-center gap-2">
-            <input
+            <FormInput
               type="checkbox"
               id="apenasComOcorrencia"
               checked={apenasComOcorrencia}
@@ -583,7 +697,7 @@ export const Occurrences = () => {
       {studentDetailsOpen && selectedAluno ? (
         <div className="flex flex-col gap-6">
           {/* Summary Cards */}
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-5">
             <Card
               title="Ocorrências Totais"
               content={selectedAlunoOccurrencesSorted.length}
@@ -614,6 +728,21 @@ export const Occurrences = () => {
 
                 return <span className={`${cls} capitalize`}>{st}</span>;
               })()}
+            />
+
+            <Card
+              title="Suspensões"
+              content={
+                <span
+                  className={
+                    suspensoesDoAlunoSelecionado > 0
+                      ? "inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-lg font-semibold text-red-700"
+                      : "inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-lg font-semibold text-slate-700"
+                  }
+                >
+                  {suspensoesDoAlunoSelecionado}
+                </span>
+              }
             />
 
             <Card
@@ -660,7 +789,7 @@ export const Occurrences = () => {
                               </span>
                             </div>
 
-                            <div className="flex items-center gap-2 mb-3 -mt-3">
+                            <div className="flex flex-wrap items-center gap-2 mb-3 -mt-3">
                               <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
                                 {occ.categoria || "—"}
                               </span>
@@ -668,6 +797,14 @@ export const Occurrences = () => {
                               <span className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700 dark:bg-purple-950 dark:text-purple-300">
                                 {occ.tipo || "—"}
                               </span>
+
+                              {occ.suspensaoGerada && (
+                                <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 dark:bg-red-950 dark:text-red-300">
+                                  {occ.suspensaoGerada.origem === "direta"
+                                    ? `Suspensão #${occ.suspensaoGerada.numero}`
+                                    : `Gerou suspensão #${occ.suspensaoGerada.numero}`}
+                                </span>
+                              )}
                             </div>
                           </div>
                         }
@@ -808,7 +945,7 @@ export const Occurrences = () => {
                       setSelectedAluno(aluno);
 
                       setSelectedAlunoOccurrences(
-                        filteredOccurrences.filter(
+                        occurrences.filter(
                           (item) => item.aluno_id === aluno.id,
                         ),
                       );
@@ -859,6 +996,20 @@ export const Occurrences = () => {
                 title: "Total",
                 render: (aluno) => aluno.summary.count,
               },
+
+              {
+                key: "suspensoes",
+                title: "Suspensões",
+                render: (aluno) => {
+                  const total = suspensoesPorAluno[aluno.id] || 0;
+                  const badgeClasses =
+                    total > 0
+                      ? "inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700"
+                      : "inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500";
+
+                  return <span className={badgeClasses}>{total}</span>;
+                },
+              },
             ]}
           />
 
@@ -908,13 +1059,12 @@ export const Occurrences = () => {
           </p>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">Senha</label>
-            <input
+            <FormInput
               type="password"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              className="h-11 rounded-lg border px-3"
               placeholder="Digite sua senha"
+              className="h-11 rounded-lg border px-3"
             />
           </div>
 
