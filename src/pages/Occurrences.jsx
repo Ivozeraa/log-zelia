@@ -49,6 +49,9 @@ export const Occurrences = () => {
   const [search, setSearch] = useState("");
   const [selectedTurma, setSelectedTurma] = useState("");
   const [apenasComOcorrencia, setApenasComOcorrencia] = useState(false);
+  const [selectedProfessor, setSelectedProfessor] = useState("");
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
 
   const [turmas, setTurmas] = useState([]);
   const [alunos, setAlunos] = useState([]);
@@ -84,8 +87,18 @@ export const Occurrences = () => {
   const [selectedAluno, setSelectedAluno] = useState(null);
   const [selectedAlunoOccurrences, setSelectedAlunoOccurrences] = useState([]);
 
+  const filteredOccurrences = useMemo(() => {
+    return occurrences.filter((occ) => {
+      if (selectedProfessor && occ.professor_nome !== selectedProfessor)
+        return false;
+      if (dataInicio && occ.data_ocorrido < dataInicio) return false;
+      if (dataFim && occ.data_ocorrido > dataFim) return false;
+      return true;
+    });
+  }, [occurrences, selectedProfessor, dataInicio, dataFim]);
+
   const alunoSummary = useMemo(() => {
-    return occurrences.reduce((acc, occurrence) => {
+    return filteredOccurrences.reduce((acc, occurrence) => {
       const existing = acc[occurrence.aluno_id] || {
         count: 0,
         latest: null,
@@ -106,7 +119,7 @@ export const Occurrences = () => {
 
       return acc;
     }, {});
-  }, [occurrences]);
+  }, [filteredOccurrences]);
 
   const filteredAlunos = useMemo(() => {
     return alunos.filter((aluno) => {
@@ -147,9 +160,19 @@ export const Occurrences = () => {
       .sort((a, b) => a.label.localeCompare(b.label)),
   ];
 
+  const professorOptions = useMemo(() => {
+    const nomes = [
+      ...new Set(occurrences.map((o) => o.professor_nome).filter(Boolean)),
+    ].sort();
+    return [
+      { value: "", label: "Todos os professores" },
+      ...nomes.map((n) => ({ value: n, label: n })),
+    ];
+  }, [occurrences]);
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedTurma, apenasComOcorrencia]);
+  }, [search, selectedTurma, apenasComOcorrencia, selectedProfessor, dataInicio, dataFim]);
 
   async function handleDelete() {
     if (!selectedOccurrence) return;
@@ -482,7 +505,7 @@ export const Occurrences = () => {
       {!studentDetailsOpen && (
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div className="grid w-full gap-3 sm:grid-cols-2 sm:w-auto">
+            <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:w-auto">
               <FormInput
                 label="Buscar Aluno"
                 value={search}
@@ -496,7 +519,30 @@ export const Occurrences = () => {
                 options={turmaOptions}
                 placeholder="Todas as turmas"
               />
+              <CustomSelect
+                label="Filtrar por Professor"
+                value={selectedProfessor}
+                onChange={setSelectedProfessor}
+                options={professorOptions}
+                placeholder="Todos os professores"
+              />
+              <div />
             </div>
+          </div>
+
+          <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:w-auto">
+            <FormInput
+              label="Data início"
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+            />
+            <FormInput
+              label="Data fim"
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+            />
           </div>
 
           <div className="flex items-center gap-2">
@@ -762,7 +808,7 @@ export const Occurrences = () => {
                       setSelectedAluno(aluno);
 
                       setSelectedAlunoOccurrences(
-                        occurrences.filter(
+                        filteredOccurrences.filter(
                           (item) => item.aluno_id === aluno.id,
                         ),
                       );
