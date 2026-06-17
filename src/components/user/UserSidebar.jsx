@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "../../hooks/useAuth"
-import { FaRegUserCircle, FaUserEdit, FaSignOutAlt } from "react-icons/fa"
+import { FaRegUserCircle, FaUserEdit, FaSignOutAlt, FaArrowLeft } from "react-icons/fa"
 import { Modal } from "../ui/Modal"
 import { Button } from "../ui/Button"
 import { EditProfile } from "./EditProfile"
@@ -103,6 +103,16 @@ export const UserSidebar = ({ open, setOpen }) => {
           ${open ? "translate-x-0" : "translate-x-full"}
         `}
       >
+        <button
+          type="button"
+          aria-label="Voltar"
+          className="self-start inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+          onClick={() => setOpen(false)}
+        >
+          <FaArrowLeft />
+          Voltar
+        </button>
+
         {/* Avatar + nome */}
         <div className="flex flex-col items-center gap-3">
           <div className="relative">
