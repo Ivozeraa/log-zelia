@@ -424,7 +424,7 @@ export const Home = () => {
             </div>
           </div>
 
-          <div className="w-full h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px]">
+          <div className="w-full h-62.5 sm:h-75 md:h-87.5 lg:h-100">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={graficoData}

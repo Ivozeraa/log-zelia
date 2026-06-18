@@ -140,7 +140,7 @@ const FaqItem = ({ pergunta, resposta }) => {
 
 const ContactItem = ({ icon: Icon, label, value }) => (
   <div className="flex items-center gap-3 p-3 border border-slate-200 dark:border-slate-700 rounded-xl">
-    <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center text-green-700 flex-shrink-0">
+    <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center text-green-700 shrink-0">
       <Icon size={16} />
     </div>
     <div className="flex flex-col gap-0.5">
@@ -518,7 +518,7 @@ const AdminChamados = () => {
                       </p>
                       <p className="text-xs text-slate-400 mt-0.5">{c.email}</p>
                     </td>
-                    <td className="px-4 py-3 max-w-[200px]">
+                    <td className="px-4 py-3 max-w-50">
                       <p className="truncate text-slate-700 dark:text-slate-300">
                         {c.assunto}
                       </p>
@@ -733,7 +733,7 @@ export const Suporte = () => {
 
           <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-600 dark:bg-slate-950">
             <div className="mb-5 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center text-green-700 flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center text-green-700 shrink-0">
                 <FaInbox size={16} />
               </div>
               <div>
@@ -758,7 +758,7 @@ export const Suporte = () => {
         {/* Send form */}
         <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-600 dark:bg-slate-950">
           <div className="mb-5 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center text-green-700 flex-shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center text-green-700 shrink-0">
               <FaHeadset size={16} />
             </div>
             <div>
@@ -868,7 +868,7 @@ export const Suporte = () => {
         <div className="flex flex-col gap-6">
           <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-600 dark:bg-slate-950">
             <div className="mb-4 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center text-green-700 flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center text-green-700 shrink-0">
                 <FaQuestionCircle size={16} />
               </div>
               <div>
@@ -889,7 +889,7 @@ export const Suporte = () => {
 
           <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-600 dark:bg-slate-950">
             <div className="mb-4 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center text-green-700 flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center text-green-700 shrink-0">
                 <FaHeadset size={16} />
               </div>
               <div>

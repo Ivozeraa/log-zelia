@@ -652,7 +652,7 @@ const AdminFeedbacks = () => {
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 max-w-[180px]">
+                    <td className="px-4 py-3 max-w-45">
                       <p className="truncate text-slate-700 dark:text-slate-300">
                         {f.titulo || "—"}
                       </p>
@@ -994,7 +994,7 @@ export const Feedback = () => {
 
           <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-600 dark:bg-slate-950">
             <div className="mb-5 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center text-green-700 flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center text-green-700 shrink-0">
                 <FaChartBar size={16} />
               </div>
               <div>

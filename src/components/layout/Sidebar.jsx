@@ -47,7 +47,7 @@ export const Sidebar = ({ open, setOpen }) => {
         <So to="/suporte" icon={FaWrench} text="Suporte" onClick={handleClick} />
         <So to="/feedback" icon={FaClipboardCheck} text="Feedback" onClick={handleClick} />
 
-        <div className="mt-auto border-t border-t-2 border-gray-300 dark:border-slate-700 pt-4">
+        <div className="mt-aut border-t-2 border-gray-300 dark:border-slate-700 pt-4">
           <So to="/configuracoes" icon={FaCog} text="Configurações" onClick={handleClick} />
         </div>
       </aside>
