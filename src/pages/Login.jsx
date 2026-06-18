@@ -37,13 +37,13 @@ export const Login = () => {
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
 
       {/* Painel da foto */}
-      <section className="relative w-full h-56 md:h-auto md:w-1/2 flex-shrink-0">
+      <section className="relative w-full h-56 md:h-auto md:w-1/2 shrink-0">
         <img
           src={bgImg}
           alt="Escola"
           className="w-full h-full object-cover md:rounded-r-3xl"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-green-700/50 to-green-900/80 md:rounded-r-3xl" />
+        <div className="absolute inset-0 bg-linear-to-b from-green-700/50 to-green-900/80 md:rounded-r-3xl" />
 
         {/* Logo + texto sobre a imagem */}
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">

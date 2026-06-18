@@ -323,6 +323,24 @@ export const Home = () => {
         return;
       }
 
+      if (willSuspend) {
+        const aluno = alunos.find((a) => String(a.id) === String(alunoId));
+
+        const { error: notificationError } = await supabase
+          .from("notificacoes")
+          .insert({
+            escola_id: selectedEscola,
+            aluno_id: alunoId,
+            aluno_nome: aluno?.nome || "Aluno",
+            mensagem: `${aluno?.nome} foi suspenso.`,
+            lida: false,
+          });
+
+        if (notificationError) {
+          console.error(notificationError);
+        }
+      }
+
       const { error: updateError } = await supabase
         .from("alunos")
         .update({ status: willSuspend ? "suspenso" : "normal" })
@@ -417,10 +435,7 @@ export const Home = () => {
                   bottom: 0,
                 }}
               >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#e2e8f0"
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
 
                 <XAxis
                   dataKey="name"
