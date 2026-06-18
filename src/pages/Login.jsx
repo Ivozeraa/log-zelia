@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button'
 import bgImg from "../assets/images/escola-frente.jpg"
 import logo from "../assets/images/logo-login.png"
 import { notify } from '../utils/notify'
+import { FormInput } from "../components/ui/FormInput"
 
 
 export const Login = () => {
