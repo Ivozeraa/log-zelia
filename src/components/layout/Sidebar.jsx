@@ -1,5 +1,5 @@
 import { SidebarOptions as So } from '../ui/SidebarOptions'
-import { FaHome, FaExclamationCircle, FaPaste, FaCog } from 'react-icons/fa'
+import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaLifeRing, FaClipboardCheck, FaWrench  } from 'react-icons/fa'
 import { useAuth } from '../../hooks/useAuth'
 
 import { SectionTitle } from '../ui/SectionTitle'
@@ -43,6 +43,9 @@ export const Sidebar = ({ open, setOpen }) => {
         {canSeeManagement && (
           <So to="/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
         )}
+
+        <So to="/suporte" icon={FaWrench} text="Suporte" onClick={handleClick} />
+        <So to="/feedback" icon={FaClipboardCheck} text="Feedback" onClick={handleClick} />
 
         <div className="mt-auto border-t border-t-2 border-gray-300 dark:border-slate-700 pt-4">
           <So to="/configuracoes" icon={FaCog} text="Configurações" onClick={handleClick} />

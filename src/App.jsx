@@ -11,6 +11,8 @@ import ProtectedRoute from "./routers/ProtectedRoute";
 import { Login } from "./pages/Login";
 import { Loading } from "./components/ui/Loading";
 import { ToastProvider } from "./components/ui/ToastProvide";
+import { Suporte } from "./pages/Suport";
+import { Feedback } from "./pages/Feedback";
 
 function App() {
   const { loading } = useAuth();
@@ -50,6 +52,9 @@ function App() {
             />
             <Route path="configuracoes" element={<Settings />} />
             <Route path="editar-perfil" element={<EditProfile />} />
+            <Route path="suporte" element={<Suporte />} />
+            <Route path="feedback" element={<Feedback />} />
+            <Route path="*" element={<h1 className="text-center mt-20 text-2xl">404 - Página Não Encontrada</h1>} />
           </Route>
         </Routes>
       </Router>
