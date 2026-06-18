@@ -563,40 +563,11 @@ export const Management = () => {
 
       <Table columns={columns} data={paginatedUsers} loading={loading} />
 
-      {totalPages > 1 && (
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="xs"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-          >
-            ←
-          </Button>
-
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <Button
-              key={page}
-              size="xs"
-              variant={currentPage === page ? "default" : "outline"}
-              onClick={() => setCurrentPage(page)}
-            >
-              {page}
-            </Button>
-          ))}
-
-          <Button
-            variant="outline"
-            size="xs"
-            disabled={currentPage === totalPages}
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-            }
-          >
-            →
-          </Button>
-        </div>
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
 
       <Modal
         isOpen={addModalOpen}
