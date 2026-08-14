@@ -1,0 +1,375 @@
+.horarios-module {
+  color: #0f172a;
+}
+
+.dark .horarios-module {
+  color: #f8fafc;
+}
+
+.horarios-module .horarios-panel {
+  overflow: hidden;
+}
+
+.horarios-module select,
+.horarios-module input:not([type='checkbox']) {
+  min-height: 3rem;
+  border-radius: 0.75rem;
+  border-width: 1px;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.horarios-module select:focus,
+.horarios-module input:not([type='checkbox']):focus {
+  border-color: #16a34a !important;
+  box-shadow: 0 0 0 3px rgb(22 163 74 / 0.12) !important;
+}
+
+.horarios-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: #334155;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.dark .horarios-field {
+  color: #cbd5e1;
+}
+
+.horarios-field select {
+  width: 100%;
+}
+
+.horarios-section {
+  min-width: 0;
+}
+
+.horarios-soft-panel,
+.horarios-item-row,
+.horarios-constraint-card,
+.horarios-review-card,
+.horarios-grade-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.03);
+}
+
+.horarios-soft-panel,
+.horarios-item-row,
+.horarios-constraint-card,
+.horarios-review-card,
+.horarios-grade-card {
+  padding: 1rem;
+}
+
+.dark .horarios-soft-panel,
+.dark .horarios-item-row,
+.dark .horarios-constraint-card,
+.dark .horarios-review-card,
+.dark .horarios-grade-card {
+  border-color: #334155;
+  background: #020617;
+}
+
+.horarios-soft-panel {
+  background: #f8fafc;
+}
+
+.dark .horarios-soft-panel {
+  background: #0f172a;
+}
+
+.horarios-summary {
+  border: 1px solid #dcfce7;
+  border-radius: 1rem;
+  background: #f0fdf4;
+  padding: 1rem;
+  color: #166534;
+}
+
+.dark .horarios-summary {
+  border-color: #14532d;
+  background: #052e16;
+  color: #bbf7d0;
+}
+
+.horarios-area-pill,
+.horarios-chip,
+.horarios-step-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.horarios-area-pill {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.dark .horarios-area-pill {
+  background: #14532d;
+  color: #bbf7d0;
+}
+
+.horarios-chip {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.dark .horarios-chip {
+  background: #1e293b;
+  color: #cbd5e1;
+}
+
+.horarios-step-badge {
+  background: #ecfdf5;
+  color: #15803d;
+}
+
+.dark .horarios-step-badge {
+  background: #052e16;
+  color: #86efac;
+}
+
+.horarios-icon-button {
+  display: inline-flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  color: #dc2626;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.horarios-icon-button:hover {
+  background: #fef2f2;
+}
+
+.dark .horarios-icon-button:hover {
+  background: #450a0a;
+}
+
+.horarios-subheader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.75rem;
+}
+
+.dark .horarios-subheader {
+  border-color: #334155;
+}
+
+.horarios-availability-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 0.75rem 0;
+}
+
+.dark .horarios-availability-row {
+  border-color: #1e293b;
+}
+
+.horarios-day-button,
+.horarios-slot-button {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  transition: all 160ms ease;
+}
+
+.horarios-day-button {
+  border-radius: 999px;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.horarios-day-button:hover,
+.horarios-slot-button:hover {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.horarios-day-button.is-selected {
+  border-color: #dc2626;
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.horarios-slot-button {
+  height: 2rem;
+  width: 2rem;
+  border-radius: 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 800;
+}
+
+.horarios-slot-button.is-unavailable {
+  border-color: #f97316;
+  background: #f97316;
+  color: #ffffff;
+}
+
+.horarios-slot-button.is-training {
+  border-color: #f59e0b;
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.dark .horarios-day-button,
+.dark .horarios-slot-button {
+  border-color: #334155;
+  background: #0f172a;
+  color: #cbd5e1;
+}
+
+.horarios-day-grid {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+  padding: 0.65rem;
+}
+
+.dark .horarios-day-grid {
+  border-color: #334155;
+  background: #0f172a;
+}
+
+.horarios-review-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.horarios-problem-card,
+.horarios-error-card,
+.horarios-status {
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.horarios-problem-card {
+  border: 1px solid #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.horarios-status {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.horarios-error-card {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.dark .horarios-problem-card {
+  border-color: #92400e;
+  background: #451a03;
+  color: #fde68a;
+}
+
+.dark .horarios-status {
+  border-color: #1e40af;
+  background: #172554;
+  color: #bfdbfe;
+}
+
+.dark .horarios-error-card {
+  border-color: #991b1b;
+  background: #450a0a;
+  color: #fecaca;
+}
+
+.horarios-grade-card {
+  overflow: hidden;
+}
+
+.horarios-grade-card table {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+}
+
+.horarios-grade-card th {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 0.75rem;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.horarios-grade-card td {
+  border: 1px solid #e2e8f0;
+  padding: 0.75rem;
+}
+
+.horarios-grade-card tbody tr:hover td {
+  background: #f8fafc;
+}
+
+.dark .horarios-grade-card th,
+.dark .horarios-grade-card td {
+  border-color: #334155;
+}
+
+.dark .horarios-grade-card th {
+  background: #0f172a;
+  color: #cbd5e1;
+}
+
+.dark .horarios-grade-card tbody tr:hover td {
+  background: #0f172a;
+}
+
+.horarios-footer {
+  border-color: #e2e8f0 !important;
+}
+
+.dark .horarios-footer {
+  border-color: #334155 !important;
+}
+
+.horarios-loading {
+  color: #64748b;
+}
+
+@media (max-width: 768px) {
+  .horarios-module {
+    margin-inline: -0.25rem;
+  }
+
+  .horarios-stepper {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .horarios-grade-card th,
+  .horarios-grade-card td {
+    padding: 0.6rem;
+  }
+}
