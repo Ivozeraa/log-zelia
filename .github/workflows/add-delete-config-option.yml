@@ -1,0 +1,180 @@
+name: Patch Horarios delete configuration
+
+on:
+  push:
+    branches:
+      - agent/fix-horarios-core
+    paths:
+      - src/pages/Horarios.jsx
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Patch delete configuration flow
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/pages/Horarios.jsx')
+          text = path.read_text(encoding='utf-8')
+
+          text = text.replace(
+              "  const [statusMessage, setStatusMessage] = useState('');",
+              "  const [statusMessage, setStatusMessage] = useState('');\n  const [deleteConfigModalOpen, setDeleteConfigModalOpen] = useState(false);\n  const [deletingConfiguration, setDeletingConfiguration] = useState(false);",
+              1,
+          )
+
+          marker = "  const saveConfiguration = async (complete = false) => {"
+          delete_fn = '''  const deleteConfiguration = async () => {
+    if (!selectedConfigId) {
+      notify.error('Nenhuma configuração salva está selecionada.');
+      return;
+    }
+
+    setDeletingConfiguration(true);
+
+    try {
+      const childTables = [
+        'horario_grade_gerada',
+        'horario_pdt',
+        'horario_professor_turma',
+        'horario_professor_folgas',
+        'horario_professor_indisponibilidades',
+        'horario_formacao_area',
+        'horario_professores',
+        'horario_disciplinas',
+        'horario_config_turmas',
+        'horario_areas',
+      ];
+
+      for (const table of childTables) {
+        const result = await supabase
+          .from(table)
+          .delete()
+          .eq('configuracao_id', selectedConfigId);
+
+        if (result.error) {
+          throw new Error(`Falha ao excluir ${table}: ${result.error.message}`);
+        }
+      }
+
+      const configResult = await supabase
+        .from('horario_configuracoes')
+        .delete()
+        .eq('id', selectedConfigId);
+
+      if (configResult.error) throw configResult.error;
+
+      const remainingConfigs = configs.filter(
+        (config) => String(config.id) !== String(selectedConfigId),
+      );
+
+      setConfigs(remainingConfigs);
+      setSelectedConfigId('');
+      setCurrentConfig(
+        emptyConfig(user?.escola_id || schools[0]?.id || ''),
+      );
+      setGeneratedSchedule(emptyGrade);
+      setCurrentStep(1);
+      setStatusMessage('');
+      setDeleteConfigModalOpen(false);
+      notify.success('Configuração excluída com sucesso.');
+    } catch (error) {
+      console.error(error);
+      notify.error(
+        `Não foi possível excluir a configuração: ${error.message || 'erro desconhecido'}.`,
+      );
+    } finally {
+      setDeletingConfiguration(false);
+    }
+  };
+
+'''
+          if marker not in text:
+              raise SystemExit('saveConfiguration marker not found')
+          text = text.replace(marker, delete_fn + marker, 1)
+
+          old = '''            <div className="md:col-span-2"><Button type="button" onClick={() => saveConfiguration(false)} disabled={saving}>{saving ? 'Salvando...' : 'Salvar configuração'}</Button></div>'''
+          new = '''            <div className="flex flex-wrap items-center gap-3 md:col-span-2">
+              <Button type="button" onClick={() => saveConfiguration(false)} disabled={saving || deletingConfiguration}>
+                {saving ? 'Salvando...' : 'Salvar configuração'}
+              </Button>
+              {selectedConfigId && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => setDeleteConfigModalOpen(true)}
+                  disabled={saving || deletingConfiguration}
+                >
+                  <FaTrash className="mr-2" />
+                  Apagar configuração
+                </Button>
+              )}
+            </div>'''
+          if old not in text:
+              raise SystemExit('step 1 action marker not found')
+          text = text.replace(old, new, 1)
+
+          modal_marker = "      <Modal isOpen={professorModalOpen}"
+          modal = '''      <Modal
+        isOpen={deleteConfigModalOpen}
+        onClose={() => !deletingConfiguration && setDeleteConfigModalOpen(false)}
+        title="Apagar configuração"
+      >
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40">
+            <h3 className="font-semibold text-red-900 dark:text-red-200">
+              Esta ação não pode ser desfeita.
+            </h3>
+            <p className="mt-2 text-sm text-red-800 dark:text-red-300">
+              A configuração <strong>{currentConfig.nome || 'sem nome'}</strong> será removida junto com turmas, professores, disciplinas, vínculos, PDT, restrições e grade gerada.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setDeleteConfigModalOpen(false)}
+              disabled={deletingConfiguration}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={deleteConfiguration}
+              disabled={deletingConfiguration}
+            >
+              {deletingConfiguration ? 'Apagando...' : 'Sim, apagar configuração'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+'''
+          if modal_marker not in text:
+              raise SystemExit('professor modal marker not found')
+          text = text.replace(modal_marker, modal + modal_marker, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Horarios.jsx
+          git diff --cached --quiet || git commit -m "feat(horarios): add configuration deletion"
+          git push origin HEAD:${GITHUB_REF_NAME}
