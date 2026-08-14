@@ -115,7 +115,18 @@ export const Horarios = () => {
     max_aulas_consecutivas_default: 2,
     pdt_turma_id: '',
   });
+  const [disciplinaModalOpen, setDisciplinaModalOpen] = useState(false);
+  const [editingDisciplinaId, setEditingDisciplinaId] = useState(null);
   const [disciplinaForm, setDisciplinaForm] = useState({ nome: '', area_id: '' });
+  const [vinculoModalOpen, setVinculoModalOpen] = useState(false);
+  const [editingLinkId, setEditingLinkId] = useState(null);
+  const [linkDraft, setLinkDraft] = useState({
+    professor_id: '',
+    turma_id: '',
+    disciplina_id: '',
+    aulas_semana: 2,
+    max_aulas_consecutivas: 2,
+  });
   const [generatedSchedule, setGeneratedSchedule] = useState(emptyGrade);
   const [statusMessage, setStatusMessage] = useState('');
 
@@ -169,7 +180,6 @@ export const Horarios = () => {
 
   const selectedModalUser = byId(usuarios, professorDraft.usuario_id);
   const selectedModalProfessor = byId(currentConfig.professores, editingProfessorId);
-  const isModalPdt = Boolean(selectedModalUser?.pdt || selectedModalProfessor?.usuario_id && byId(usuarios, selectedModalProfessor.usuario_id)?.pdt);
 
   useEffect(() => {
     let active = true;
@@ -398,7 +408,6 @@ export const Horarios = () => {
       notify.error('Esse professor já está adicionado à configuração.');
       return;
     }
-
     setCurrentConfig((prev) => {
       const professorData = {
         id: targetId,
@@ -430,17 +439,45 @@ export const Horarios = () => {
     }));
   };
 
-  const updateProfessor = (id, field, value) => setCurrentConfig((prev) => ({
-    ...prev,
-    professores: prev.professores.map((item) => String(item.id) === String(id) ? { ...item, [field]: value } : item),
-  }));
+  const openDisciplinaModal = (discipline = null) => {
+    setEditingDisciplinaId(discipline?.id || null);
+    setDisciplinaForm({
+      nome: discipline?.nome || '',
+      area_id: discipline?.area_id || '',
+    });
+    setDisciplinaModalOpen(true);
+  };
 
-  const addDisciplina = () => {
-    const nome = disciplinaForm.nome.trim();
-    if (!nome || !byId(currentConfig.areas, disciplinaForm.area_id)) return notify.error('Disciplina exige nome e área válida.');
-    if (currentConfig.disciplinas.some((item) => item.nome.toLowerCase() === nome.toLowerCase())) return notify.error('Essa disciplina já existe na configuração.');
-    setCurrentConfig((prev) => ({ ...prev, disciplinas: [...prev.disciplinas, { id: newId('disc'), nome, area_id: String(disciplinaForm.area_id) }] }));
+  const closeDisciplinaModal = () => {
+    setDisciplinaModalOpen(false);
+    setEditingDisciplinaId(null);
     setDisciplinaForm({ nome: '', area_id: '' });
+  };
+
+  const saveDisciplinaFromModal = () => {
+    const nome = disciplinaForm.nome.trim();
+    if (!nome || !byId(currentConfig.areas, disciplinaForm.area_id)) {
+      return notify.error('Disciplina exige nome e área válida.');
+    }
+
+    const duplicate = currentConfig.disciplinas.find(
+      (item) =>
+        item.nome.toLowerCase() === nome.toLowerCase() &&
+        String(item.id) !== String(editingDisciplinaId),
+    );
+    if (duplicate) return notify.error('Essa disciplina já existe na configuração.');
+
+    setCurrentConfig((prev) => ({
+      ...prev,
+      disciplinas: editingDisciplinaId
+        ? prev.disciplinas.map((item) =>
+            String(item.id) === String(editingDisciplinaId)
+              ? { ...item, nome, area_id: String(disciplinaForm.area_id) }
+              : item,
+          )
+        : [...prev.disciplinas, { id: newId('disc'), nome, area_id: String(disciplinaForm.area_id) }],
+    }));
+    closeDisciplinaModal();
   };
 
   const removeDisciplina = (id) => setCurrentConfig((prev) => ({
@@ -449,15 +486,56 @@ export const Horarios = () => {
     professorTurmas: prev.professorTurmas.filter((item) => String(item.disciplina_id) !== String(id)),
   }));
 
-  const addLink = () => setCurrentConfig((prev) => ({
-    ...prev,
-    professorTurmas: [...prev.professorTurmas, { id: newId('link'), professor_id: '', turma_id: '', disciplina_id: '', aulas_semana: 2, max_aulas_consecutivas: 2 }],
-  }));
+  const openLinkModal = (link = null) => {
+    setEditingLinkId(link?.id || null);
+    setLinkDraft({
+      professor_id: link?.professor_id || '',
+      turma_id: link?.turma_id || '',
+      disciplina_id: link?.disciplina_id || '',
+      aulas_semana: link?.aulas_semana || 2,
+      max_aulas_consecutivas: link?.max_aulas_consecutivas || 2,
+    });
+    setVinculoModalOpen(true);
+  };
 
-  const updateLink = (id, field, value) => setCurrentConfig((prev) => ({
-    ...prev,
-    professorTurmas: prev.professorTurmas.map((item) => String(item.id) === String(id) ? { ...item, [field]: value } : item),
-  }));
+  const closeLinkModal = () => {
+    setVinculoModalOpen(false);
+    setEditingLinkId(null);
+    setLinkDraft({
+      professor_id: '',
+      turma_id: '',
+      disciplina_id: '',
+      aulas_semana: 2,
+      max_aulas_consecutivas: 2,
+    });
+  };
+
+  const saveLinkFromModal = () => {
+    const aulas = Number(linkDraft.aulas_semana);
+    const maxConsecutivas = Number(linkDraft.max_aulas_consecutivas);
+    if (!linkDraft.professor_id || !currentConfig.turmas.includes(String(linkDraft.turma_id)) || !byId(currentConfig.disciplinas, linkDraft.disciplina_id) || !Number.isFinite(aulas) || aulas <= 0 || !Number.isFinite(maxConsecutivas) || maxConsecutivas <= 0) {
+      return notify.error('Preencha professor, turma, disciplina e as quantidades corretamente.');
+    }
+
+    const nextLink = {
+      id: editingLinkId || newId('link'),
+      professor_id: String(linkDraft.professor_id),
+      turma_id: String(linkDraft.turma_id),
+      disciplina_id: String(linkDraft.disciplina_id),
+      aulas_semana: aulas,
+      max_aulas_consecutivas: maxConsecutivas,
+    };
+
+    setCurrentConfig((prev) => ({
+      ...prev,
+      professorTurmas: editingLinkId
+        ? prev.professorTurmas.map((item) =>
+            String(item.id) === String(editingLinkId) ? nextLink : item,
+          )
+        : [...prev.professorTurmas, nextLink],
+    }));
+    closeLinkModal();
+  };
 
   const removeLink = (id) => setCurrentConfig((prev) => ({
     ...prev,
@@ -487,7 +565,9 @@ export const Horarios = () => {
 
   const toggleAllTurmas = () => setCurrentConfig((prev) => ({
     ...prev,
-    turmas: allTurmasSelected ? prev.turmas.filter((id) => !schoolTurmas.some((turma) => String(turma.id) === String(id))) : Array.from(new Set([...prev.turmas, ...schoolTurmas.map((turma) => String(turma.id))])),
+    turmas: allTurmasSelected
+      ? prev.turmas.filter((id) => !schoolTurmas.some((turma) => String(turma.id) === String(id)))
+      : Array.from(new Set([...prev.turmas, ...schoolTurmas.map((turma) => String(turma.id))])),
   }));
 
   const saveConfiguration = async (complete = false) => {
@@ -567,6 +647,8 @@ export const Horarios = () => {
     setGeneratedSchedule(emptyGrade);
     setStatusMessage('');
     closeProfessorModal();
+    closeDisciplinaModal();
+    closeLinkModal();
   };
 
   const generate = async () => {
@@ -805,30 +887,86 @@ export const Horarios = () => {
 
         {currentStep === 4 && (
           <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto]">
-              <FormInput label="Nome da disciplina" value={disciplinaForm.nome} onChange={(event) => setDisciplinaForm((prev) => ({ ...prev, nome: event.target.value }))} />
-              <CustomSelect label="Área" value={disciplinaForm.area_id} onChange={(value) => setDisciplinaForm((prev) => ({ ...prev, area_id: value }))} options={areaOptions} placeholder="Selecione a área" />
-              <div className="flex items-end"><Button type="button" variant="secondary" onClick={addDisciplina}>Adicionar</Button></div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {currentConfig.disciplinas.map((discipline) => (
-                <span key={discipline.id} className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  {discipline.nome} · {byId(currentConfig.areas, discipline.area_id)?.nome || 'Área inválida'}
-                  <button type="button" className="font-bold text-slate-400 hover:text-red-600" onClick={() => removeDisciplina(discipline.id)}>×</button>
-                </span>
-              ))}
-            </div>
-            <div className="flex items-center justify-between"><h3 className="font-semibold text-slate-900 dark:text-white">Atribuições</h3><Button type="button" variant="secondary" onClick={addLink}>Adicionar vínculo</Button></div>
-            {currentConfig.professorTurmas.map((link) => (
-              <div key={link.id} className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 md:grid-cols-6 dark:border-slate-700 dark:bg-slate-950">
-                <CustomSelect label="Professor" value={link.professor_id} onChange={(value) => updateLink(link.id, 'professor_id', value)} options={professorOptions} placeholder="Professor" />
-                <CustomSelect label="Turma" value={link.turma_id} onChange={(value) => updateLink(link.id, 'turma_id', value)} options={turmaOptions.filter((option) => currentConfig.turmas.includes(String(option.value)))} placeholder="Turma" />
-                <CustomSelect label="Disciplina" value={link.disciplina_id} onChange={(value) => updateLink(link.id, 'disciplina_id', value)} options={disciplinaOptions} placeholder="Disciplina" />
-                <FormInput label="Aulas/semana" type="number" value={link.aulas_semana} onChange={(event) => updateLink(link.id, 'aulas_semana', Number(event.target.value) || 0)} />
-                <FormInput label="Máx. consecutivas" type="number" value={link.max_aulas_consecutivas} onChange={(event) => updateLink(link.id, 'max_aulas_consecutivas', Number(event.target.value) || 0)} />
-                <div className="flex items-end"><button type="button" className="rounded-xl p-3 text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950" onClick={() => removeLink(link.id)}><FaTrash /></button></div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-semibold text-slate-900 dark:text-white">Disciplinas e atribuições</h3>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Cadastre as disciplinas e associe professor, turma e carga semanal usando os mesmos modais do restante do sistema.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="secondary" onClick={() => openDisciplinaModal()}><FaPlus className="mr-2" /> Nova disciplina</Button>
+                  <Button type="button" onClick={() => openLinkModal()}><FaPlus className="mr-2" /> Nova atribuição</Button>
+                </div>
               </div>
-            ))}
+            </div>
+
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="font-semibold text-slate-900 dark:text-white">Disciplinas cadastradas</h3>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{currentConfig.disciplinas.length} disciplina(s)</span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {currentConfig.disciplinas.map((discipline) => (
+                  <div key={discipline.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-900 dark:text-white">{discipline.nome}</p>
+                        <span className="mt-2 inline-flex rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-bold text-green-800 dark:bg-green-950 dark:text-green-300">
+                          {byId(currentConfig.areas, discipline.area_id)?.nome || 'Área inválida'}
+                        </span>
+                      </div>
+                      <div className="flex gap-1">
+                        <button type="button" onClick={() => openDisciplinaModal(discipline)} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-white">Editar</button>
+                        <button type="button" onClick={() => removeDisciplina(discipline.id)} className="rounded-lg px-2 py-1 text-xs font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950">Excluir</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {!currentConfig.disciplinas.length && <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Nenhuma disciplina cadastrada.</div>}
+            </div>
+
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="font-semibold text-slate-900 dark:text-white">Atribuições</h3>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{currentConfig.professorTurmas.length} vínculo(s)</span>
+              </div>
+              <div className="space-y-3">
+                {currentConfig.professorTurmas.map((link) => (
+                  <div key={link.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="grid flex-1 gap-3 sm:grid-cols-3">
+                        <div>
+                          <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Professor</span>
+                          <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200">{byId(currentConfig.professores, link.professor_id)?.nome || 'Professor'}</p>
+                        </div>
+                        <div>
+                          <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Turma</span>
+                          <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200">{byId(turmas, link.turma_id)?.nome || 'Turma'}</p>
+                        </div>
+                        <div>
+                          <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Disciplina</span>
+                          <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200">{byId(currentConfig.disciplinas, link.disciplina_id)?.nome || 'Disciplina'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-xl bg-slate-50 px-3 py-2 text-center dark:bg-slate-900">
+                          <div className="text-sm font-bold text-slate-900 dark:text-white">{link.aulas_semana}</div>
+                          <div className="text-[10px] uppercase tracking-wide text-slate-400">aulas/sem.</div>
+                        </div>
+                        <div className="rounded-xl bg-slate-50 px-3 py-2 text-center dark:bg-slate-900">
+                          <div className="text-sm font-bold text-slate-900 dark:text-white">{link.max_aulas_consecutivas}</div>
+                          <div className="text-[10px] uppercase tracking-wide text-slate-400">máx.</div>
+                        </div>
+                        <Button type="button" variant="secondary" onClick={() => openLinkModal(link)}>Editar</Button>
+                        <button type="button" onClick={() => removeLink(link.id)} className="rounded-xl p-2 text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950"><FaTrash /></button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {!currentConfig.professorTurmas.length && <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Nenhuma atribuição cadastrada.</div>}
+            </div>
           </div>
         )}
 
@@ -885,6 +1023,33 @@ export const Horarios = () => {
           <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
             <Button type="button" variant="secondary" onClick={closeProfessorModal}>Cancelar</Button>
             <Button type="button" onClick={saveProfessorFromModal}>{editingProfessorId ? 'Salvar alterações' : 'Adicionar professor'}</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={disciplinaModalOpen} onClose={closeDisciplinaModal} title={editingDisciplinaId ? 'Editar disciplina' : 'Nova disciplina'}>
+        <div className="space-y-5">
+          <FormInput label="Nome da disciplina" value={disciplinaForm.nome} onChange={(event) => setDisciplinaForm((prev) => ({ ...prev, nome: event.target.value }))} placeholder="Ex.: Matemática" />
+          <CustomSelect label="Área" value={disciplinaForm.area_id} onChange={(value) => setDisciplinaForm((prev) => ({ ...prev, area_id: value }))} options={areaOptions} placeholder="Selecione a área" />
+          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+            <Button type="button" variant="secondary" onClick={closeDisciplinaModal}>Cancelar</Button>
+            <Button type="button" onClick={saveDisciplinaFromModal}>{editingDisciplinaId ? 'Salvar alterações' : 'Adicionar disciplina'}</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={vinculoModalOpen} onClose={closeLinkModal} title={editingLinkId ? 'Editar atribuição' : 'Nova atribuição'}>
+        <div className="space-y-5">
+          <CustomSelect label="Professor" value={linkDraft.professor_id} onChange={(value) => setLinkDraft((prev) => ({ ...prev, professor_id: value }))} options={professorOptions} placeholder="Selecione o professor" showSearch emptyLabel="Nenhum professor adicionado" />
+          <CustomSelect label="Turma" value={linkDraft.turma_id} onChange={(value) => setLinkDraft((prev) => ({ ...prev, turma_id: value }))} options={turmaOptions.filter((option) => currentConfig.turmas.includes(String(option.value)))} placeholder="Selecione a turma" emptyLabel="Selecione turmas na Etapa 2" />
+          <CustomSelect label="Disciplina" value={linkDraft.disciplina_id} onChange={(value) => setLinkDraft((prev) => ({ ...prev, disciplina_id: value }))} options={disciplinaOptions} placeholder="Selecione a disciplina" emptyLabel="Cadastre uma disciplina primeiro" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormInput label="Aulas por semana" type="number" min="1" value={linkDraft.aulas_semana} onChange={(event) => setLinkDraft((prev) => ({ ...prev, aulas_semana: Number(event.target.value) || 0 }))} />
+            <FormInput label="Máx. de aulas consecutivas" type="number" min="1" value={linkDraft.max_aulas_consecutivas} onChange={(event) => setLinkDraft((prev) => ({ ...prev, max_aulas_consecutivas: Number(event.target.value) || 0 }))} />
+          </div>
+          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+            <Button type="button" variant="secondary" onClick={closeLinkModal}>Cancelar</Button>
+            <Button type="button" onClick={saveLinkFromModal}>{editingLinkId ? 'Salvar alterações' : 'Adicionar atribuição'}</Button>
           </div>
         </div>
       </Modal>
