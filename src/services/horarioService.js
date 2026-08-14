@@ -50,14 +50,22 @@ export const normalizeAgenda = (value) => {
   return value.map((item) => (typeof item === 'string' ? item : item?.id || item));
 };
 
-const buildSlotKey = (dia, slot) => `${dia}:${slot}`;
+const normalizeDay = (day) => {
+  if (typeof day === 'number' || /^\d+$/.test(String(day))) {
+    return WEEK_DAYS[Number(day) - 1] || String(day);
+  }
+  return String(day || '');
+};
+
+const buildSlotKey = (dia, slot) => `${normalizeDay(dia)}:${Number(slot)}`;
 const getProfessorById = (professores, id) => professores.find((item) => String(item.id) === String(id));
 const getMaxConsecutives = (professor, vinculo) => Number(vinculo?.max_aulas_consecutivas || professor?.max_aulas_consecutivas_default || 2);
 
 const getConsecutiveLengthIfPlaced = (schedule = {}, day, slot) => {
-  const slots = Object.entries(schedule)
-    .filter(([, value]) => value?.dia === day)
-    .map(([, value]) => Number(value.slot));
+  const normalizedDay = normalizeDay(day);
+  const slots = Object.values(schedule)
+    .filter((value) => normalizeDay(value?.dia) === normalizedDay)
+    .map((value) => Number(value.slot));
   slots.push(Number(slot));
   const unique = [...new Set(slots)].sort((a, b) => a - b);
   let longest = 0;
@@ -72,8 +80,11 @@ const getConsecutiveLengthIfPlaced = (schedule = {}, day, slot) => {
 };
 
 const getAdjacentCount = (schedule = {}, day, slot) => {
-  const values = Object.values(schedule).filter((item) => item?.dia === day).map((item) => Number(item.slot));
-  return values.filter((value) => value === slot - 1 || value === slot + 1).length;
+  const normalizedDay = normalizeDay(day);
+  const values = Object.values(schedule)
+    .filter((item) => normalizeDay(item?.dia) === normalizedDay)
+    .map((item) => Number(item.slot));
+  return values.filter((value) => value === Number(slot) - 1 || value === Number(slot) + 1).length;
 };
 
 export const generateHorario = ({
@@ -91,7 +102,7 @@ export const generateHorario = ({
     if (!professor_id) return;
     const key = String(professor_id);
     folgaMap[key] ||= [];
-    folgaMap[key].push(dia_semana);
+    folgaMap[key].push(normalizeDay(dia_semana));
   });
 
   const indisponibilidadeMap = {};
@@ -114,8 +125,11 @@ export const generateHorario = ({
   const professorSchedule = {};
   const generated = [];
   const validation = [];
+  const selectedTurmaIds = new Set(turmas.map((turma) => String(turma.id)));
 
-  const rules = fcRules.length ? fcRules : (fcRules && Object.keys(fcRules).length ? fcRules : FC_RULES[Number(configuracao.semestre) || 1]);
+  const rules = Array.isArray(fcRules)
+    ? FC_RULES[Number(configuracao.semestre) || 1]
+    : (fcRules && Object.keys(fcRules).length ? fcRules : FC_RULES[Number(configuracao.semestre) || 1]);
 
   // FC é inserida primeiro e bloqueia somente a turma e o PDT correspondentes.
   turmas.forEach((turma) => {
@@ -142,8 +156,8 @@ export const generateHorario = ({
     const professor = professorMap[String(vinculo.professor_id)];
     const turma = turmaMap[String(vinculo.turma_id)];
     const disciplina = disciplinaMap[String(vinculo.disciplina_id)];
-    const aulas = Number(vinculo.aulas_semana || 0);
-    if (!professor || !turma || !disciplina || aulas <= 0) return null;
+    const aulas = Number(vinculo.aulas_semana ?? vinculo.aulas_semanais ?? 0);
+    if (!selectedTurmaIds.has(String(vinculo.turma_id)) || !professor || !turma || !disciplina || aulas <= 0) return null;
     const area = areaMap[String(disciplina.area_id)] || areaMap[String(professor.area_id)] || null;
     return { ...vinculo, professor, turma, disciplina, area, aulas, maxConsecutivo: getMaxConsecutives(professor, vinculo) };
   }).filter(Boolean).sort((a, b) => {
@@ -171,8 +185,8 @@ export const generateHorario = ({
           const consecutiveLength = getConsecutiveLengthIfPlaced(professorSchedule[professorId] || {}, day, slot);
           if (consecutiveLength > task.maxConsecutivo) continue;
           const adjacent = getAdjacentCount(professorSchedule[professorId] || {}, day, slot);
-          const turmaLoad = Object.values(turmaSchedule[turmaId] || {}).filter((item) => item.dia === day).length;
-          const professorLoad = Object.values(professorSchedule[professorId] || {}).filter((item) => item.dia === day).length;
+          const turmaLoad = Object.values(turmaSchedule[turmaId] || {}).filter((item) => normalizeDay(item.dia) === day).length;
+          const professorLoad = Object.values(professorSchedule[professorId] || {}).filter((item) => normalizeDay(item.dia) === day).length;
           const score = adjacent * 20 - turmaLoad * 2 - professorLoad + (remaining === 1 ? 1 : 0);
           candidates.push({ day, slot, score });
         }
