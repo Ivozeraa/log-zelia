@@ -18,6 +18,8 @@ export const SLOT_DEFINITIONS = [
   { slot: 9, label: '9ª', time: '15:50 - 16:40' },
 ];
 
+// Áreas oficiais da EEEP. Elas fazem parte da regra do módulo e não devem
+// ser cadastradas novamente a cada configuração.
 export const FIXED_AREAS = [
   { nome: 'Exatas', base: 'comum' },
   { nome: 'Natureza', base: 'comum' },
@@ -25,6 +27,14 @@ export const FIXED_AREAS = [
   { nome: 'Linguagens', base: 'comum' },
   { nome: 'Técnica', base: 'tecnica' },
 ];
+
+export const normalizeFixedAreas = (areas = []) => {
+  const current = Array.isArray(areas) ? areas : [];
+  return FIXED_AREAS.map((fixed) => {
+    const existing = current.find((area) => String(area?.nome || '').trim().toLowerCase() === fixed.nome.toLowerCase());
+    return existing ? { ...existing, nome: fixed.nome, base: fixed.base } : { ...fixed };
+  });
+};
 
 export const FC_RULES = {
   1: {
@@ -87,24 +97,19 @@ const getAdjacentCount = (schedule = {}, day, slot) => {
   return values.filter((value) => value === Number(slot) - 1 || value === Number(slot) + 1).length;
 };
 
-const normalizeConfigCollection = (configValue, fallbackValue) => {
-  return Array.isArray(configValue) && configValue.length > 0 ? configValue : fallbackValue;
-};
-
 export const generateHorario = ({
   configuracao = {}, turmas = [], professores = [], vinculos = [], pdtMap = {},
   areas = [], disciplinas = [], folgas = [], indisponibilidades = [],
   formacoesArea = [], fcRules = [],
 }) => {
-  // A configuração atual é sempre a fonte de verdade. Os arrays recebidos
-  // externamente existem apenas como fallback para configurações antigas.
-  const effectiveAreas = normalizeConfigCollection(configuracao.areas, areas);
-  const effectiveDisciplinas = normalizeConfigCollection(configuracao.disciplinas, disciplinas);
-  const effectiveProfessores = normalizeConfigCollection(configuracao.professores, professores);
-  const effectiveTurmas = normalizeConfigCollection(
-    configuracao.turmas?.map?.((id) => turmas.find((turma) => String(turma.id) === String(id))).filter(Boolean),
-    turmas,
-  );
+  // A configuração atual é a fonte de verdade. Os argumentos externos continuam
+  // como fallback para manter compatibilidade com versões antigas da tela.
+  const effectiveAreas = normalizeFixedAreas(configuracao?.areas?.length ? configuracao.areas : areas);
+  const effectiveDisciplinas = configuracao?.disciplinas?.length ? configuracao.disciplinas : disciplinas;
+  const effectiveProfessores = configuracao?.professores?.length ? configuracao.professores : professores;
+  const effectiveTurmas = configuracao?.turmas?.length
+    ? turmas.filter((turma) => configuracao.turmas.map(String).includes(String(turma.id)))
+    : turmas;
 
   const professorMap = Object.fromEntries(effectiveProfessores.map((item) => [String(item.id), item]));
   const disciplinaMap = Object.fromEntries(effectiveDisciplinas.map((item) => [String(item.id), item]));
@@ -174,8 +179,14 @@ export const generateHorario = ({
     if (!selectedTurmaIds.has(String(vinculo.turma_id)) || !professor || !turma || !disciplina || aulas <= 0) return null;
 
     const area = areaMap[String(disciplina.area_id)] || areaMap[String(professor.area_id)] || null;
+    if (!area) {
+      validation.push({ professor: professor.nome, turma: turma.nome, disciplina: disciplina.nome, mensagem: `A disciplina "${disciplina.nome}" não possui uma área válida nesta configuração.` });
+      return null;
+    }
+
     return { ...vinculo, professor, turma, disciplina, area, aulas, maxConsecutivo: getMaxConsecutives(professor, vinculo) };
   }).filter(Boolean).sort((a, b) => {
+    // Técnica sempre entra primeiro; depois vêm as disciplinas com maior carga.
     const baseA = String(a.area?.base || '').toLowerCase() === 'tecnica' ? 1 : 0;
     const baseB = String(b.area?.base || '').toLowerCase() === 'tecnica' ? 1 : 0;
     if (baseA !== baseB) return baseB - baseA;
@@ -233,7 +244,14 @@ export const generateHorario = ({
     return acc;
   }, {});
 
-  return { grid, schedule: generated, validation, fcMap: {} };
+  return {
+    grid,
+    schedule: generated,
+    validation,
+    fcMap: {},
+    areas: effectiveAreas,
+    disciplinas: effectiveDisciplinas,
+  };
 };
 
 export const exportarGradePdf = (grade, nomeEscola = 'EEEP Irmã Ana Zélia da Fonseca') => {
