@@ -13,6 +13,7 @@ import { Loading } from "./components/ui/Loading";
 import { ToastProvider } from "./components/ui/ToastProvide";
 import { Suporte } from "./pages/Suport";
 import { Feedback } from "./pages/Feedback";
+import { Horarios } from "./pages/Horarios";
 
 function App() {
   const { loading } = useAuth();
@@ -51,6 +52,7 @@ function App() {
               }
             />
             <Route path="configuracoes" element={<Settings />} />
+            <Route path="horarios" element={<Horarios />} />
             <Route path="editar-perfil" element={<EditProfile />} />
             <Route path="suporte" element={<Suporte />} />
             <Route path="feedback" element={<Feedback />} />
