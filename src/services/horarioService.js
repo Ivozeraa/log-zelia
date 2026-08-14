@@ -87,15 +87,29 @@ const getAdjacentCount = (schedule = {}, day, slot) => {
   return values.filter((value) => value === Number(slot) - 1 || value === Number(slot) + 1).length;
 };
 
+const normalizeConfigCollection = (configValue, fallbackValue) => {
+  return Array.isArray(configValue) && configValue.length > 0 ? configValue : fallbackValue;
+};
+
 export const generateHorario = ({
   configuracao = {}, turmas = [], professores = [], vinculos = [], pdtMap = {},
   areas = [], disciplinas = [], folgas = [], indisponibilidades = [],
   formacoesArea = [], fcRules = [],
 }) => {
-  const professorMap = Object.fromEntries(professores.map((item) => [String(item.id), item]));
-  const disciplinaMap = Object.fromEntries(disciplinas.map((item) => [String(item.id), item]));
-  const areaMap = Object.fromEntries(areas.map((item) => [String(item.id), item]));
-  const turmaMap = Object.fromEntries(turmas.map((item) => [String(item.id), item]));
+  // A configuração atual é sempre a fonte de verdade. Os arrays recebidos
+  // externamente existem apenas como fallback para configurações antigas.
+  const effectiveAreas = normalizeConfigCollection(configuracao.areas, areas);
+  const effectiveDisciplinas = normalizeConfigCollection(configuracao.disciplinas, disciplinas);
+  const effectiveProfessores = normalizeConfigCollection(configuracao.professores, professores);
+  const effectiveTurmas = normalizeConfigCollection(
+    configuracao.turmas?.map?.((id) => turmas.find((turma) => String(turma.id) === String(id))).filter(Boolean),
+    turmas,
+  );
+
+  const professorMap = Object.fromEntries(effectiveProfessores.map((item) => [String(item.id), item]));
+  const disciplinaMap = Object.fromEntries(effectiveDisciplinas.map((item) => [String(item.id), item]));
+  const areaMap = Object.fromEntries(effectiveAreas.map((item) => [String(item.id), item]));
+  const turmaMap = Object.fromEntries(effectiveTurmas.map((item) => [String(item.id), item]));
 
   const folgaMap = {};
   folgas.forEach(({ professor_id, dia_semana }) => {
@@ -125,14 +139,14 @@ export const generateHorario = ({
   const professorSchedule = {};
   const generated = [];
   const validation = [];
-  const selectedTurmaIds = new Set(turmas.map((turma) => String(turma.id)));
+  const selectedTurmaIds = new Set(effectiveTurmas.map((turma) => String(turma.id)));
 
   const rules = Array.isArray(fcRules)
     ? FC_RULES[Number(configuracao.semestre) || 1]
     : (fcRules && Object.keys(fcRules).length ? fcRules : FC_RULES[Number(configuracao.semestre) || 1]);
 
   // FC é inserida primeiro e bloqueia somente a turma e o PDT correspondentes.
-  turmas.forEach((turma) => {
+  effectiveTurmas.forEach((turma) => {
     const rule = rules?.[getTurmaSerie(turma.nome || turma.turma_nome || '')];
     const professorId = pdtMap[String(turma.id)] || pdtMap[turma.id];
     if (!rule || !professorId) {
@@ -140,7 +154,7 @@ export const generateHorario = ({
       return;
     }
     const key = buildSlotKey(rule.dia, rule.slot);
-    const item = { turma_id: String(turma.id), turma_nome: turma.nome || 'Turma', professor_id: String(professorId), professor_nome: getProfessorById(professores, professorId)?.nome || 'PDT', disciplina: 'Formação para a Cidadania', dia: rule.dia, slot: rule.slot, tipo: 'FC' };
+    const item = { turma_id: String(turma.id), turma_nome: turma.nome || 'Turma', professor_id: String(professorId), professor_nome: getProfessorById(effectiveProfessores, professorId)?.nome || 'PDT', disciplina: 'Formação para a Cidadania', dia: rule.dia, slot: rule.slot, tipo: 'FC' };
     turmaSchedule[String(turma.id)] ||= {};
     professorSchedule[String(professorId)] ||= {};
     if (turmaSchedule[String(turma.id)][key] || professorSchedule[String(professorId)][key]) {
@@ -158,6 +172,7 @@ export const generateHorario = ({
     const disciplina = disciplinaMap[String(vinculo.disciplina_id)];
     const aulas = Number(vinculo.aulas_semana ?? vinculo.aulas_semanais ?? 0);
     if (!selectedTurmaIds.has(String(vinculo.turma_id)) || !professor || !turma || !disciplina || aulas <= 0) return null;
+
     const area = areaMap[String(disciplina.area_id)] || areaMap[String(professor.area_id)] || null;
     return { ...vinculo, professor, turma, disciplina, area, aulas, maxConsecutivo: getMaxConsecutives(professor, vinculo) };
   }).filter(Boolean).sort((a, b) => {
@@ -171,6 +186,7 @@ export const generateHorario = ({
     let remaining = task.aulas;
     const professorId = String(task.professor_id);
     const turmaId = String(task.turma_id);
+
     while (remaining > 0) {
       const candidates = [];
       for (const day of WEEK_DAYS) {
@@ -191,12 +207,14 @@ export const generateHorario = ({
           candidates.push({ day, slot, score });
         }
       }
+
       candidates.sort((a, b) => b.score - a.score || a.slot - b.slot || WEEK_DAYS.indexOf(a.day) - WEEK_DAYS.indexOf(b.day));
       const candidate = candidates[0];
       if (!candidate) {
         validation.push({ professor: task.professor.nome, turma: task.turma.nome, disciplina: task.disciplina.nome, mensagem: `Não foi possível distribuir todas as ${task.aulas} aulas dentro das restrições.` });
         break;
       }
+
       const key = buildSlotKey(candidate.day, candidate.slot);
       const record = { turma_id: turmaId, turma_nome: task.turma.nome || 'Turma', professor_id: professorId, professor_nome: task.professor.nome || 'Professor', disciplina: task.disciplina.nome || 'Disciplina', dia: candidate.day, slot: candidate.slot, tipo: 'Regular', ordem: taskIndex };
       turmaSchedule[turmaId] ||= {};
