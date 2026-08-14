@@ -1,0 +1,336 @@
+name: Adjust Horarios Professors
+
+on:
+  push:
+    branches:
+      - agent/fix-horarios-core
+    paths:
+      - .github/workflows/adjust-horarios-professores.yml
+
+permissions:
+  contents: write
+
+jobs:
+  adjust:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Apply professor modal and PDF changes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/pages/Horarios.jsx')
+          text = path.read_text(encoding='utf-8')
+
+          text = text.replace(
+              "import { Card } from '../components/ui/Card';",
+              "import { Card } from '../components/ui/Card';\nimport { Modal } from '../components/ui/Modal';",
+              1,
+          )
+
+          marker = "  const [statusMessage, setStatusMessage] = useState('');"
+          replacement = marker + "\n  const [isProfessorModalOpen, setIsProfessorModalOpen] = useState(false);\n  const [professorModalType, setProfessorModalType] = useState('base');\n  const [selectedBaseProfessorId, setSelectedBaseProfessorId] = useState('');\n  const [professorModalAreaId, setProfessorModalAreaId] = useState('');"
+          text = text.replace(marker, replacement, 1)
+
+          marker = "  const addBaseProfessor = (usuarioId) => {"
+          insert = """  const openProfessorModal = () => {
+    setProfessorModalType('base');
+    setSelectedBaseProfessorId('');
+    setProfessorModalAreaId('');
+    setManualProfessor({
+      nome: '',
+      area_id: '',
+      max_aulas_consecutivas_default: 2,
+      observacao: '',
+    });
+    setIsProfessorModalOpen(true);
+  };
+
+  const addProfessorFromModal = () => {
+    if (professorModalType === 'base') {
+      const usuario = byId(usuarios, selectedBaseProfessorId);
+
+      if (!usuario) {
+        return notify.error('Selecione um professor da base.');
+      }
+
+      if (!professorModalAreaId || !byId(currentConfig.areas, professorModalAreaId)) {
+        return notify.error('Selecione a área do professor.');
+      }
+
+      if (currentConfig.professores.some((professor) => String(professor.usuario_id) === String(usuario.id))) {
+        return notify.error('Esse professor já foi adicionado à configuração.');
+      }
+
+      setCurrentConfig((prev) => ({
+        ...prev,
+        professores: [
+          ...prev.professores,
+          {
+            id: newId('prof'),
+            usuario_id: String(usuario.id),
+            nome: usuario.nome,
+            area_id: String(professorModalAreaId),
+            max_aulas_consecutivas_default: 2,
+            observacao: '',
+            origem: 'banco',
+            manual: false,
+          },
+        ],
+      }));
+    } else {
+      if (!manualProfessor.nome.trim() || !manualProfessor.area_id) {
+        return notify.error('Professor manual exige nome e área.');
+      }
+
+      setCurrentConfig((prev) => ({
+        ...prev,
+        professores: [
+          ...prev.professores,
+          {
+            id: newId('prof'),
+            usuario_id: null,
+            nome: manualProfessor.nome.trim(),
+            area_id: String(manualProfessor.area_id),
+            max_aulas_consecutivas_default: Number(manualProfessor.max_aulas_consecutivas_default || 2),
+            observacao: manualProfessor.observacao.trim(),
+            origem: 'manual',
+            manual: true,
+          },
+        ],
+      }));
+    }
+
+    setIsProfessorModalOpen(false);
+    setSelectedBaseProfessorId('');
+    setProfessorModalAreaId('');
+    setManualProfessor({
+      nome: '',
+      area_id: '',
+      max_aulas_consecutivas_default: 2,
+      observacao: '',
+    });
+  };
+
+"""
+          text = text.replace(marker, insert + marker, 1)
+
+          old = '''            <div className="grid gap-4 md:grid-cols-2">
+              <select
+                className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                value=""
+                onChange={(event) =>
+                  addBaseProfessor(event.target.value)
+                }
+              >
+                <option value="">Adicionar professor da base...</option>
+                {usuarios.map((usuario) => (
+                  <option key={usuario.id} value={usuario.id}>
+                    {usuario.nome}
+                    {usuario.pdt ? ' · PDT' : ''}
+                  </option>
+                ))}
+              </select>
+
+              <div className="grid gap-3 md:grid-cols-4">
+                <FormInput
+                  label="Professor manual"
+                  value={manualProfessor.nome}
+                  onChange={(event) =>
+                    setManualProfessor((prev) => ({
+                      ...prev,
+                      nome: event.target.value,
+                    }))
+                  }
+                />
+                <select
+                  className="h-12 rounded-xl border border-slate-300 bg-slate-50 px-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                  value={manualProfessor.area_id}
+                  onChange={(event) =>
+                    setManualProfessor((prev) => ({
+                      ...prev,
+                      area_id: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Área manual</option>
+                  {areaOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <FormInput
+                  label="Máx. consecutivas"
+                  type="number"
+                  value={manualProfessor.max_aulas_consecutivas_default}
+                  onChange={(event) =>
+                    setManualProfessor((prev) => ({
+                      ...prev,
+                      max_aulas_consecutivas_default:
+                        Number(event.target.value) || 2,
+                    }))
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={addManualProfessor}
+                >
+                  Adicionar
+                </Button>
+              </div>
+            </div>'''
+
+          new = '''            <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-white">Professores da configuração</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Adicione professores da base ou cadastre um professor manual.</p>
+              </div>
+              <Button type="button" variant="secondary" onClick={openProfessorModal}>
+                <FaPlus className="mr-2" />
+                Adicionar professor
+              </Button>
+            </div>'''
+
+          if old not in text:
+              raise SystemExit('Bloco atual de professores não encontrado')
+          text = text.replace(old, new, 1)
+
+          pdf_old = "`${aula.dia} · ${aula.slot}ª · ${aula.disciplina}${aula.tipo === 'FC' ? ' [FC]' : ''} · ${aula.professor_nome}`"
+          pdf_new = "`Turma: ${aula.turma_nome} · ${aula.dia} · ${aula.slot}ª · ${aula.disciplina}${aula.tipo === 'FC' ? ' [FC]' : ''} · ${aula.professor_nome}`"
+          if pdf_old not in text:
+              raise SystemExit('Linha do PDF não encontrada')
+          text = text.replace(pdf_old, pdf_new, 1)
+
+          marker = "      <div className=\"mt-6 flex items-center justify-between border-t border-slate-200 pt-4 dark:border-slate-700\">"
+          modal = r'''      <Modal
+        isOpen={isProfessorModalOpen}
+        onClose={() => setIsProfessorModalOpen(false)}
+        title="Adicionar professor"
+      >
+        <div className="space-y-5">
+          <div className="flex rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
+            <button
+              type="button"
+              onClick={() => setProfessorModalType('base')}
+              className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                professorModalType === 'base'
+                  ? 'bg-white text-green-700 shadow-sm dark:bg-slate-800 dark:text-green-400'
+                  : 'text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              Professor da base
+            </button>
+            <button
+              type="button"
+              onClick={() => setProfessorModalType('manual')}
+              className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                professorModalType === 'manual'
+                  ? 'bg-white text-green-700 shadow-sm dark:bg-slate-800 dark:text-green-400'
+                  : 'text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              Professor manual
+            </button>
+          </div>
+
+          {professorModalType === 'base' ? (
+            <div className="space-y-4">
+              <SelectField
+                label="Professor"
+                value={selectedBaseProfessorId}
+                onChange={(event) => setSelectedBaseProfessorId(event.target.value)}
+              >
+                <option value="">Selecione um professor</option>
+                {usuarios.map((usuario) => (
+                  <option key={usuario.id} value={usuario.id}>
+                    {usuario.nome}{usuario.pdt ? ' · PDT' : ''}
+                  </option>
+                ))}
+              </SelectField>
+
+              <SelectField
+                label="Área"
+                value={professorModalAreaId}
+                onChange={(event) => setProfessorModalAreaId(event.target.value)}
+              >
+                <option value="">Selecione a área</option>
+                {areaOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormInput
+                label="Nome"
+                value={manualProfessor.nome}
+                onChange={(event) => setManualProfessor((prev) => ({ ...prev, nome: event.target.value }))}
+                placeholder="Nome do professor"
+              />
+              <SelectField
+                label="Área"
+                value={manualProfessor.area_id}
+                onChange={(event) => setManualProfessor((prev) => ({ ...prev, area_id: event.target.value }))}
+              >
+                <option value="">Selecione a área</option>
+                {areaOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </SelectField>
+              <FormInput
+                label="Máximo de aulas consecutivas"
+                type="number"
+                min="1"
+                value={manualProfessor.max_aulas_consecutivas_default}
+                onChange={(event) => setManualProfessor((prev) => ({ ...prev, max_aulas_consecutivas_default: Number(event.target.value) || 2 }))}
+              />
+              <FormInput
+                label="Observação"
+                value={manualProfessor.observacao}
+                onChange={(event) => setManualProfessor((prev) => ({ ...prev, observacao: event.target.value }))}
+                placeholder="Opcional"
+              />
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+            <Button type="button" variant="secondary" onClick={() => setIsProfessorModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={addProfessorFromModal}>
+              <FaCheck className="mr-2" />
+              Adicionar professor
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+'''
+          if marker not in text:
+              raise SystemExit('Rodapé da página não encontrado')
+          text = text.replace(marker, modal + marker, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit changes and remove workflow
+        run: |
+          rm .github/workflows/adjust-horarios-professores.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Horarios.jsx .github/workflows/adjust-horarios-professores.yml
+          git commit -m "feat(horarios): use modal for professor management and label PDF turmas"
+          git push origin HEAD:${GITHUB_REF_NAME}
