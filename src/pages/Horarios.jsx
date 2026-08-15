@@ -12,6 +12,7 @@ import {
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import ExcelJS from 'exceljs';
+import { addPdfFooter } from '../utils/pdfFooterPatch';
 
 import { supabase } from '../utils/supabase';
 import { notify } from '../utils/notify';
@@ -890,6 +891,7 @@ export const Horarios = () => {
         });
       }
       for (let page = 1; page <= doc.getNumberOfPages(); page += 1) { doc.setPage(page); drawPdfFooter(doc); }
+      await addPdfFooter(doc);
       doc.save(`horario_${currentConfig.nome || 'gerado'}.pdf`);
     } catch (error) {
       console.error(error);

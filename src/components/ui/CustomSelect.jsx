@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { FormInput } from "./FormInput";
-import "../../utils/pdfFooterPatch";
 
 export const CustomSelect = ({
   label,
