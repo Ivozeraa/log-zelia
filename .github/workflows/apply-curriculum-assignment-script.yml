@@ -1,0 +1,31 @@
+name: Apply curriculum assignment script
+
+on:
+  push:
+    branches: [agent/fix-horarios-core]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fix-horarios-core
+          fetch-depth: 0
+
+      - name: Apply patch
+        run: python3 scripts/simplify_curriculum_assignments.py
+
+      - name: Validate and publish
+        run: |
+          npm ci
+          npm run build
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f scripts/simplify_curriculum_assignments.py .github/workflows/apply-curriculum-assignment-script.yml .github/workflows/simplify-curriculum-assignments.yml .github/workflows/simplify-curriculum-assignments-v2.yml .github/workflows/simplify-curriculum-assignments-v3.yml 2>/dev/null || true
+          git add src/pages/Horarios.jsx
+          git commit -m "feat(horarios): simplify curriculum assignments"
+          git push origin agent/fix-horarios-core
