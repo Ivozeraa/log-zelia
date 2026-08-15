@@ -1,0 +1,42 @@
+name: Fix PDT duplicates v2
+on:
+  push:
+    branches: [agent/fix-horarios-core]
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch PDT options by regex
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('src/pages/Horarios.jsx')
+          s = p.read_text(encoding='utf-8')
+          marker = "  const availablePdtTurmaOptions = useMemo(() => {"
+          if marker not in s:
+              raise SystemExit('PDT options marker not found')
+          if 'const pdtOptionsForTurma = (turmaId) =>' not in s:
+              insert_at = s.index('\n  const professorAssignmentGroups', s.index(marker))
+              helper = """\n  const pdtOptionsForTurma = (turmaId) => {\n    const currentProfessorId = currentConfig.pdt?.[turmaId];\n    const assignedElsewhere = new Set(\n      Object.entries(currentConfig.pdt || {})\n        .filter(([otherTurmaId]) => String(otherTurmaId) !== String(turmaId))\n        .map(([, professorId]) => String(professorId)),\n    );\n    return professorOptions.filter((option) =>\n      String(option.value) === String(currentProfessorId) || !assignedElsewhere.has(String(option.value)),\n    );\n  };\n"""
+              s = s[:insert_at] + helper + s[insert_at:]
+          pattern = r'(label="Professor PDT"[\s\S]*?value=\{currentConfig\.pdt\?\.\[turmaId\] \|\| \'\'\}[\s\S]*?options=)availablePdtTurmaOptions'
+          s, count = re.subn(pattern, r'\\1pdtOptionsForTurma(turmaId)', s, count=1)
+          if count != 1:
+              raise SystemExit(f'Etapa 6 PDT select not patched (matches={count})')
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Validate build
+        run: |
+          npm ci
+          npm run build
+      - name: Commit and remove workflows
+        run: |
+          rm -f .github/workflows/fix-pdt-duplicates.yml .github/workflows/fix-pdt-duplicates-v2.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Horarios.jsx .github/workflows/fix-pdt-duplicates.yml .github/workflows/fix-pdt-duplicates-v2.yml
+          git commit -m "fix(horarios): prevent duplicate PDT assignments"
+          git push origin HEAD:agent/fix-horarios-core
