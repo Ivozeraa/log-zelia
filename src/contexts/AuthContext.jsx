@@ -2,6 +2,16 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../utils/supabase";
 import { AuthContext } from "./AuthContextImpl";
 
+const AUTH_INIT_TIMEOUT_MS = 10000;
+
+const withTimeout = (promise, timeoutMs, message) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    }),
+  ]);
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -13,11 +23,17 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      const { data: perfil, error: perfilError } = await supabase
-        .from("usuarios")
-        .select("id, nome, role_id, escola_id, pdt")
-        .eq("id", authUser.id)
-        .maybeSingle();
+      const result = await withTimeout(
+        supabase
+          .from("usuarios")
+          .select("id, nome, role_id, escola_id, pdt")
+          .eq("id", authUser.id)
+          .maybeSingle(),
+        AUTH_INIT_TIMEOUT_MS,
+        "Tempo limite ao carregar perfil do usuário.",
+      );
+
+      const { data: perfil, error: perfilError } = result;
 
       if (perfilError) {
         console.error("Erro buscando perfil:", perfilError);
@@ -34,7 +50,17 @@ export function AuthProvider({ children }) {
       });
     } catch (err) {
       console.error("Erro em loadUser:", err);
-      setUser(null);
+
+      // Mantém a sessão disponível mesmo que a consulta ao perfil falhe.
+      setUser({
+        id: authUser.id,
+        nome: authUser.user_metadata?.name || "Usuário",
+        role_id: null,
+        escola_id: null,
+        pdt: false,
+        email: authUser.email,
+        avatar_url: authUser.user_metadata?.avatar_url || null,
+      });
     }
   }, []);
 
@@ -44,7 +70,12 @@ export function AuthProvider({ children }) {
 
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const result = await withTimeout(
+          supabase.auth.getSession(),
+          AUTH_INIT_TIMEOUT_MS,
+          "Tempo limite ao inicializar a sessão.",
+        );
+        const { data: { session }, error } = result;
 
         if (error) {
           console.error("Erro obtendo sessão:", error);
@@ -81,8 +112,6 @@ export function AuthProvider({ children }) {
 
         if (!session?.user) return;
 
-        // A sessão inicial já foi resolvida acima. Eventos posteriores
-        // atualizam o perfil sem bloquear a aplicação inteira novamente.
         if (initialized || event !== "INITIAL_SESSION") {
           void loadUser(session.user);
         }
@@ -96,9 +125,12 @@ export function AuthProvider({ children }) {
   }, [loadUser]);
 
   async function logout() {
-    await supabase.auth.signOut();
-    setUser(null);
-    setLoading(false);
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      setUser(null);
+      setLoading(false);
+    }
   }
 
   const refreshUser = useCallback(async () => {
