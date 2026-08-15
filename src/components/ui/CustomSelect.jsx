@@ -67,11 +67,12 @@ export const CustomSelect = ({
         380,
         Math.max(48, optionCount * 44 + (showSearch ? 60 : 0) + (multiple ? 58 : 0)),
       );
-      const openAbove = spaceBelow < estimatedContentHeight && spaceAbove > spaceBelow;
-      const maxHeight = Math.max(
-        120,
-        Math.min(380, openAbove ? spaceAbove : Math.max(spaceBelow, 120)),
-      );
+      const minimumSpaceBelow = 120;
+      const canOpenBelow = spaceBelow >= minimumSpaceBelow;
+      const openAbove = !canOpenBelow && spaceAbove > spaceBelow;
+      const maxHeight = openAbove
+        ? Math.max(120, Math.min(380, spaceAbove))
+        : Math.max(120, Math.min(380, spaceBelow));
       const top = openAbove
         ? Math.max(viewportPadding, rect.top - maxHeight - gap)
         : rect.bottom + gap;
