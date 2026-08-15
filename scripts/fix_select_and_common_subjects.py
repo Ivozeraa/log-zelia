@@ -3,13 +3,10 @@ import re
 
 horarios = Path('src/pages/Horarios.jsx')
 s = horarios.read_text(encoding='utf-8')
-
-# Replace the curriculum filter function while preserving the surrounding file.
 pattern = re.compile(r"  const catalogOptionsForTurmas = \(turmaIds = \[\]\) => \{.*?\n  \};", re.S)
 replacement = '''  const catalogOptionsForTurmas = (turmaIds = []) => {
     const curriculum = curriculumForTurmas(turmaIds);
     if (!curriculum) return [];
-
     const selectedCount = turmaIds.length;
     const isTechnical = (row) => {
       const category = String(row?.categoria || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();
@@ -17,7 +14,6 @@ replacement = '''  const catalogOptionsForTurmas = (turmaIds = []) => {
       return category.includes('tecn') || category.includes('formacao tecnica') || category.includes('itinerario tecnico')
         || name.includes('estagio') || name.includes('pratica profissional') || name.includes('projeto integrador');
     };
-
     return disciplinaCatalogo
       .filter((row) =>
         row.curso === curriculum.curso
@@ -32,7 +28,6 @@ if not pattern.search(s):
     raise SystemExit('catalogOptionsForTurmas block not found')
 s = pattern.sub(replacement, s, count=1)
 
-# CustomSelect: calculate menu height from the amount of content, and only open above when necessary.
 select = Path('src/components/ui/CustomSelect.jsx')
 t = select.read_text(encoding='utf-8')
 old = '''      const spaceBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
