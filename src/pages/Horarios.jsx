@@ -308,7 +308,7 @@ export const Horarios = () => {
       || GENERAL_DISCIPLINE_NAMES.has(name);
   };
 
-  const catalogOptionsForTurmas = (turmaIds = []) => {
+  const catalogOptionsForTurmas = (turmaIds = [], professorId = linkDraft.professor_id) => {
     const ids = Array.from(new Set((turmaIds || []).map(String)));
     if (!ids.length) return [];
 
@@ -342,16 +342,28 @@ export const Horarios = () => {
         || category === 'geral'
         || GENERAL_DISCIPLINE_NAMES.has(name);
     };
+    const isTechnical = (row) => {
+      const category = normalize(row?.categoria);
+      const area = normalize(row?.area_nome);
+      return category.includes('base tecnica')
+        || category.includes('tecnica')
+        || area.includes('tecnic');
+    };
+    const professor = byId(currentConfig.professores, professorId);
+    const professorArea = professor ? byId(currentConfig.areas, professor.area_id) : null;
+    const professorIsTechnical = professorArea?.base === 'tecnica';
+    const subjectFilter = professorIsTechnical ? isTechnical : isGeneral;
 
     if (ids.length === 1) {
       return rowsFor(curricula[0])
+        .filter(subjectFilter)
         .sort((a, b) => Number(a.ordem || 0) - Number(b.ordem || 0) || String(a.nome).localeCompare(String(b.nome)))
         .map((row) => ({ value: String(row.id), label: row.nome }));
     }
 
     const commonMaps = curricula.map((curriculum) => {
       const map = new Map();
-      rowsFor(curriculum).filter(isGeneral).forEach((row) => map.set(normalize(row.nome), row));
+      rowsFor(curriculum).filter(subjectFilter).forEach((row) => map.set(normalize(row.nome), row));
       return map;
     });
 
@@ -700,7 +712,7 @@ export const Horarios = () => {
         if (String(item.id) !== String(itemId)) return item;
         if (field === 'turma_ids') {
           const turmaIds = Array.from(new Set((Array.isArray(value) ? value : []).map(String)));
-          const available = new Set(catalogOptionsForTurmas(turmaIds).map((option) => String(option.value)));
+          const available = new Set(catalogOptionsForTurmas(turmaIds, linkDraft.professor_id).map((option) => String(option.value)));
           const nextIds = item.disciplina_catalog_ids.filter((id) => available.has(String(id)));
           const nextSettings = Object.fromEntries(nextIds.map((id) => [String(id), item.materia_settings?.[id] || { aulas_semana: 2, max_aulas_consecutivas: 2 }]));
           return { ...item, turma_ids: turmaIds, disciplina_catalog_ids: nextIds, materia_settings: nextSettings };
@@ -1445,7 +1457,7 @@ export const Horarios = () => {
             </div>
             <div className="mt-4 space-y-4">
               {linkDraft.items.map((item, index) => {
-                const materiaOptions = catalogOptionsForTurmas(item.turma_ids);
+                const materiaOptions = catalogOptionsForTurmas(item.turma_ids, linkDraft.professor_id);
                 return <div key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-950">
                   <div className="mb-3 flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-slate-500">Grupo {index + 1}</span>{linkDraft.items.length > 1 && <button type="button" onClick={() => removeAssignmentItem(item.id)} className="rounded-lg p-2 text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950"><FaTrash /></button>}</div>
                   <div className="grid gap-4">
