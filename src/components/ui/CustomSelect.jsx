@@ -29,18 +29,19 @@ export const CustomSelect = ({
   }, [options, placeholder]);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
+    const handlePointerDown = (event) => {
       if (
-        rootRef.current &&
-        !rootRef.current.contains(event.target) &&
-        !(menuRef.current && menuRef.current.contains(event.target))
+        rootRef.current?.contains(event.target) ||
+        menuRef.current?.contains(event.target)
       ) {
-        setOpen(false);
-        setSearchTerm("");
+        return;
       }
+      setOpen(false);
+      setSearchTerm("");
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
 
   useEffect(() => {
@@ -58,12 +59,13 @@ export const CustomSelect = ({
         viewportPadding,
         Math.min(rect.left, window.innerWidth - width - viewportPadding),
       );
+
       const spaceBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
       const spaceAbove = rect.top - viewportPadding - gap;
-      const openAbove = spaceBelow < 220 && spaceAbove > spaceBelow;
+      const openAbove = spaceBelow < 240 && spaceAbove > spaceBelow;
       const maxHeight = Math.max(
         180,
-        Math.min(360, openAbove ? spaceAbove : spaceBelow),
+        Math.min(380, openAbove ? spaceAbove : spaceBelow),
       );
       const top = openAbove
         ? Math.max(viewportPadding, rect.top - maxHeight - gap)
@@ -75,6 +77,7 @@ export const CustomSelect = ({
     updatePosition();
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition, true);
+
     return () => {
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
@@ -87,11 +90,11 @@ export const CustomSelect = ({
     if (multiple) {
       if (!selectedValues?.length) return placeholder;
       if (selectedValues.length === 1) {
-        return options.find((o) => o.value === selectedValues[0])?.label ?? placeholder;
+        return options.find((option) => option.value === selectedValues[0])?.label ?? placeholder;
       }
       return `${selectedValues.length} itens selecionados`;
     }
-    return options.find((o) => o.value === value)?.label ?? placeholder;
+    return options.find((option) => option.value === value)?.label ?? placeholder;
   };
 
   const handleOptionClick = (optionValue) => {
@@ -100,14 +103,15 @@ export const CustomSelect = ({
       const current = Array.isArray(value) ? value : [];
       onChange(
         current.includes(optionValue)
-          ? current.filter((v) => v !== optionValue)
+          ? current.filter((item) => item !== optionValue)
           : [...current, optionValue],
       );
-    } else {
-      onChange(optionValue);
-      setOpen(false);
-      setSearchTerm("");
+      return;
     }
+
+    onChange(optionValue);
+    setOpen(false);
+    setSearchTerm("");
   };
 
   const filteredOptions = showSearch
@@ -117,6 +121,7 @@ export const CustomSelect = ({
           option.label.toLowerCase().includes(searchTerm.toLowerCase()),
       )
     : options;
+
   const displayedOptions = multiple
     ? filteredOptions.filter((option) => option.value !== "")
     : filteredOptions;
@@ -135,12 +140,10 @@ export const CustomSelect = ({
         disabled={disabled}
         onClick={() => {
           if (!open) setSearchTerm("");
-          setOpen((prev) => !prev);
+          setOpen((previous) => !previous);
         }}
         className={`flex h-12 w-full items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white ${
-          disabled
-            ? "cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-slate-800"
-            : ""
+          disabled ? "cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-slate-800" : ""
         }`}
       >
         <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
@@ -151,19 +154,19 @@ export const CustomSelect = ({
 
       {multiple && showSelectedValues && selectedValues?.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {selectedValues.map((v) => {
-            const opt = options.find((o) => o.value === v);
+          {selectedValues.map((valueItem) => {
+            const option = options.find((item) => item.value === valueItem);
             return (
               <span
-                key={v}
+                key={valueItem}
                 className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800"
               >
-                {opt?.label ?? v}
+                {option?.label ?? valueItem}
                 <button
                   type="button"
-                  onClick={() => handleOptionClick(v)}
+                  onClick={() => handleOptionClick(valueItem)}
                   className="ml-0.5 text-green-600 hover:text-green-900"
-                  aria-label={`Remover ${opt?.label}`}
+                  aria-label={`Remover ${option?.label}`}
                 >
                   ×
                 </button>
@@ -181,77 +184,82 @@ export const CustomSelect = ({
             top: menuPosition.top,
             left: menuPosition.left,
             width: menuPosition.width,
+            height: menuPosition.maxHeight,
             maxHeight: menuPosition.maxHeight,
-            touchAction: "pan-y",
           }}
-          onWheel={(event) => event.stopPropagation()}
           onMouseDown={(event) => event.stopPropagation()}
+          onWheel={(event) => event.stopPropagation()}
         >
-          <div className="flex h-full max-h-full min-h-0 flex-col overflow-hidden">
-            {showSearch && (
-              <div className="shrink-0 border-b border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="Pesquisar..."
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                />
-              </div>
-            )}
-
-            <div
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
-              style={{ WebkitOverflowScrolling: "touch" }}
-            >
-              {displayedOptions.length > 0 ? (
-                displayedOptions.map((option) => {
-                  const isSelected = multiple && selectedValues?.includes(option.value);
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => handleOptionClick(option.value)}
-                      className={`flex w-full items-center gap-2 px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100 dark:text-white dark:hover:bg-slate-800 ${
-                        isSelected ? "bg-green-50 dark:bg-green-950" : ""
-                      }`}
-                    >
-                      {multiple && (
-                        <span
-                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                            isSelected
-                              ? "border-green-600 bg-green-600 text-white"
-                              : "border-slate-300"
-                          }`}
-                        >
-                          {isSelected && "✓"}
-                        </span>
-                      )}
-                      <span className="min-w-0 truncate">{option.label}</span>
-                    </button>
-                  );
-                })
-              ) : (
-                <div className="px-3 py-3 text-sm text-slate-500">{emptyLabel}</div>
-              )}
+          {showSearch && (
+            <div className="border-b border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
+              <input
+                autoFocus
+                type="text"
+                placeholder="Pesquisar..."
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              />
             </div>
+          )}
 
-            {multiple && (
-              <div className="shrink-0 border-t border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpen(false);
-                    setSearchTerm("");
-                  }}
-                  className="w-full rounded-xl bg-green-700 py-2 text-sm font-semibold text-white transition hover:bg-green-800"
-                >
-                  Confirmar
-                </button>
-              </div>
+          <div
+            className="overflow-y-scroll overscroll-contain"
+            style={{
+              height: multiple
+                ? `calc(100% - ${showSearch ? 112 : 52}px)`
+                : `calc(100% - ${showSearch ? 60 : 0}px)`,
+              WebkitOverflowScrolling: "touch",
+              scrollbarGutter: "stable",
+              touchAction: "pan-y",
+            }}
+          >
+            {displayedOptions.length > 0 ? (
+              displayedOptions.map((option) => {
+                const isSelected = multiple && selectedValues?.includes(option.value);
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleOptionClick(option.value)}
+                    className={`flex w-full items-center gap-2 px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100 dark:text-white dark:hover:bg-slate-800 ${
+                      isSelected ? "bg-green-50 dark:bg-green-950" : ""
+                    }`}
+                  >
+                    {multiple && (
+                      <span
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                          isSelected
+                            ? "border-green-600 bg-green-600 text-white"
+                            : "border-slate-300"
+                        }`}
+                      >
+                        {isSelected && "✓"}
+                      </span>
+                    )}
+                    <span className="min-w-0 truncate">{option.label}</span>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="px-3 py-3 text-sm text-slate-500">{emptyLabel}</div>
             )}
           </div>
+
+          {multiple && (
+            <div className="absolute inset-x-0 bottom-0 border-t border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  setSearchTerm("");
+                }}
+                className="w-full rounded-xl bg-green-700 py-2 text-sm font-semibold text-white transition hover:bg-green-800"
+              >
+                Confirmar
+              </button>
+            </div>
+          )}
         </div>,
         document.body,
       )}
