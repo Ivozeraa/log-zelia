@@ -30,11 +30,13 @@ import {
 } from '../services/horarioService';
 
 const emptyGrade = { grid: {}, schedule: [], validation: [], unscheduled: [] };
+const PROFESSOR_ROLE_ID = 4;
+
 const steps = [
   'Configuração',
   'Turmas',
-  'Professores e Áreas',
-  'Disciplinas e Atribuições',
+  'Professores, Áreas e Disciplinas',
+  'Atribuições',
   'Disponibilidades',
   'PDT',
   'Revisão e Geração',
@@ -119,13 +121,10 @@ export const Horarios = () => {
   const [editingDisciplinaId, setEditingDisciplinaId] = useState(null);
   const [disciplinaForm, setDisciplinaForm] = useState({ nome: '', area_id: '' });
   const [vinculoModalOpen, setVinculoModalOpen] = useState(false);
-  const [editingLinkId, setEditingLinkId] = useState(null);
+  const [editingLinkProfessorId, setEditingLinkProfessorId] = useState(null);
   const [linkDraft, setLinkDraft] = useState({
     professor_id: '',
-    turma_id: '',
-    disciplina_id: '',
-    aulas_semana: 2,
-    max_aulas_consecutivas: 2,
+    items: [{ id: newId('assignment-item'), turma_id: '', disciplina_id: '', aulas_semana: 2, max_aulas_consecutivas: 2 }],
   });
   const [generatedSchedule, setGeneratedSchedule] = useState(emptyGrade);
   const [statusMessage, setStatusMessage] = useState('');
@@ -173,10 +172,21 @@ export const Horarios = () => {
 
   const professorUsers = useMemo(
     () => usuarios
+      .filter((usuario) => Number(usuario.role_id) === PROFESSOR_ROLE_ID)
       .filter((usuario) => !currentConfig.professores.some((professor) => String(professor.usuario_id) === String(usuario.id)))
       .map((usuario) => ({ value: String(usuario.id), label: `${usuario.nome}${usuario.pdt ? ' · PDT' : ''}` })),
     [usuarios, currentConfig.professores],
   );
+
+  const professorAssignmentGroups = useMemo(() => {
+    const groups = new Map();
+    currentConfig.professorTurmas.forEach((link) => {
+      const key = String(link.professor_id);
+      if (!groups.has(key)) groups.set(key, { professor_id: key, items: [] });
+      groups.get(key).items.push(link);
+    });
+    return Array.from(groups.values());
+  }, [currentConfig.professorTurmas]);
 
   const selectedModalUser = byId(usuarios, professorDraft.usuario_id);
   const selectedModalProfessor = byId(currentConfig.professores, editingProfessorId);
@@ -402,6 +412,7 @@ export const Horarios = () => {
     }
     const usuario = byId(usuarios, professorDraft.usuario_id);
     if (!usuario) return notify.error('Professor selecionado não foi encontrado.');
+    if (Number(usuario.role_id) !== PROFESSOR_ROLE_ID) return notify.error('Somente usuários com cargo de professor podem ser adicionados.');
     const existing = currentConfig.professores.find((professor) => String(professor.usuario_id) === String(professorDraft.usuario_id));
     const targetId = editingProfessorId || newId('prof');
     if (existing && String(existing.id) !== String(editingProfessorId)) {
@@ -486,60 +497,98 @@ export const Horarios = () => {
     professorTurmas: prev.professorTurmas.filter((item) => String(item.disciplina_id) !== String(id)),
   }));
 
-  const openLinkModal = (link = null) => {
-    setEditingLinkId(link?.id || null);
+  const newAssignmentItem = () => ({
+    id: newId('assignment-item'),
+    turma_id: '',
+    disciplina_id: '',
+    aulas_semana: 2,
+    max_aulas_consecutivas: 2,
+  });
+
+  const openLinkModal = (assignment = null) => {
+    setEditingLinkProfessorId(assignment?.professor_id || null);
     setLinkDraft({
-      professor_id: link?.professor_id || '',
-      turma_id: link?.turma_id || '',
-      disciplina_id: link?.disciplina_id || '',
-      aulas_semana: link?.aulas_semana || 2,
-      max_aulas_consecutivas: link?.max_aulas_consecutivas || 2,
+      professor_id: assignment?.professor_id || '',
+      items: assignment?.items?.length
+        ? assignment.items.map((item) => ({
+            id: item.id || newId('assignment-item'),
+            turma_id: String(item.turma_id || ''),
+            disciplina_id: String(item.disciplina_id || ''),
+            aulas_semana: Number(item.aulas_semana || 2),
+            max_aulas_consecutivas: Number(item.max_aulas_consecutivas || 2),
+          }))
+        : [newAssignmentItem()],
     });
     setVinculoModalOpen(true);
   };
 
   const closeLinkModal = () => {
     setVinculoModalOpen(false);
-    setEditingLinkId(null);
-    setLinkDraft({
-      professor_id: '',
-      turma_id: '',
-      disciplina_id: '',
-      aulas_semana: 2,
-      max_aulas_consecutivas: 2,
-    });
+    setEditingLinkProfessorId(null);
+    setLinkDraft({ professor_id: '', items: [newAssignmentItem()] });
+  };
+
+  const updateAssignmentItem = (itemId, field, value) => {
+    setLinkDraft((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => String(item.id) === String(itemId) ? { ...item, [field]: value } : item),
+    }));
+  };
+
+  const addAssignmentItem = () => {
+    setLinkDraft((prev) => ({ ...prev, items: [...prev.items, newAssignmentItem()] }));
+  };
+
+  const removeAssignmentItem = (itemId) => {
+    setLinkDraft((prev) => ({
+      ...prev,
+      items: prev.items.length > 1 ? prev.items.filter((item) => String(item.id) !== String(itemId)) : prev.items,
+    }));
   };
 
   const saveLinkFromModal = () => {
-    const aulas = Number(linkDraft.aulas_semana);
-    const maxConsecutivas = Number(linkDraft.max_aulas_consecutivas);
-    if (!linkDraft.professor_id || !currentConfig.turmas.includes(String(linkDraft.turma_id)) || !byId(currentConfig.disciplinas, linkDraft.disciplina_id) || !Number.isFinite(aulas) || aulas <= 0 || !Number.isFinite(maxConsecutivas) || maxConsecutivas <= 0) {
-      return notify.error('Preencha professor, turma, disciplina e as quantidades corretamente.');
+    if (!linkDraft.professor_id || !byId(currentConfig.professores, linkDraft.professor_id)) {
+      return notify.error('Selecione um professor válido.');
     }
 
-    const nextLink = {
-      id: editingLinkId || newId('link'),
-      professor_id: String(linkDraft.professor_id),
-      turma_id: String(linkDraft.turma_id),
-      disciplina_id: String(linkDraft.disciplina_id),
-      aulas_semana: aulas,
-      max_aulas_consecutivas: maxConsecutivas,
-    };
+    const seenTurmas = new Set();
+    const items = linkDraft.items.map((item) => ({
+      ...item,
+      turma_id: String(item.turma_id || ''),
+      disciplina_id: String(item.disciplina_id || ''),
+      aulas_semana: Number(item.aulas_semana),
+      max_aulas_consecutivas: Number(item.max_aulas_consecutivas),
+    }));
 
+    for (const item of items) {
+      if (!currentConfig.turmas.map(String).includes(item.turma_id) || !byId(currentConfig.disciplinas, item.disciplina_id) || !Number.isFinite(item.aulas_semana) || item.aulas_semana <= 0 || !Number.isFinite(item.max_aulas_consecutivas) || item.max_aulas_consecutivas <= 0) {
+        return notify.error('Cada linha precisa de turma, matéria, aulas por semana e máximo de consecutivas válidos.');
+      }
+      if (seenTurmas.has(item.turma_id)) return notify.error('Cada turma pode aparecer apenas uma vez na mesma atribuição.');
+      seenTurmas.add(item.turma_id);
+    }
+
+    const professorId = String(linkDraft.professor_id);
     setCurrentConfig((prev) => ({
       ...prev,
-      professorTurmas: editingLinkId
-        ? prev.professorTurmas.map((item) =>
-            String(item.id) === String(editingLinkId) ? nextLink : item,
-          )
-        : [...prev.professorTurmas, nextLink],
+      professorTurmas: [
+        ...prev.professorTurmas.filter((item) => String(item.professor_id) !== professorId),
+        ...items.map((item) => ({
+          id: newId('link'),
+          professor_id: professorId,
+          turma_id: item.turma_id,
+          disciplina_id: item.disciplina_id,
+          aulas_semana: item.aulas_semana,
+          max_aulas_consecutivas: item.max_aulas_consecutivas,
+        })),
+      ],
     }));
     closeLinkModal();
   };
 
-  const removeLink = (id) => setCurrentConfig((prev) => ({
+  const removeAssignment = (professorId) => setCurrentConfig((prev) => ({
     ...prev,
-    professorTurmas: prev.professorTurmas.filter((item) => String(item.id) !== String(id)),
+    professorTurmas: prev.professorTurmas.filter((item) => String(item.professor_id) !== String(professorId)),
   }));
 
   const toggleFolga = (professorId, day) => setCurrentConfig((prev) => ({
@@ -628,6 +677,7 @@ export const Horarios = () => {
     if (currentStep === 1 && !(await saveConfiguration(false))) return;
     if (currentStep === 2 && !currentConfig.turmas.length) return notify.error('Selecione ao menos uma turma.');
     if (currentStep === 3 && currentConfig.professores.some((professor) => !byId(currentConfig.areas, professor.area_id))) return notify.error('Todos os professores precisam de uma área válida.');
+    if (currentStep === 3 && !currentConfig.disciplinas.length) return notify.error('Cadastre pelo menos uma disciplina antes de avançar.');
     if (currentStep === 4) {
       const invalid = validateConfig(false);
       if (invalid.length) return notify.error(invalid[0].mensagem);
@@ -843,130 +893,34 @@ export const Horarios = () => {
           <div className="space-y-6">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <h3 className="font-semibold text-slate-900 dark:text-white">Professores e áreas</h3>
-                  <p className="mt-1 max-w-2xl text-sm text-slate-500 dark:text-slate-400">Adicione professores cadastrados na escola e defina a área diretamente no cadastro desta configuração.</p>
-                </div>
+                <div><h3 className="font-semibold text-slate-900 dark:text-white">Professores e áreas</h3><p className="mt-1 max-w-2xl text-sm text-slate-500 dark:text-slate-400">Adicione somente usuários com cargo de professor e defina a área de cada um.</p></div>
                 <Button type="button" onClick={() => openProfessorModal()}><FaUserPlus className="mr-2" /> Adicionar professor</Button>
               </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {currentConfig.areas.map((area) => <span key={area.id} className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800 dark:bg-green-950 dark:text-green-300">{area.nome}</span>)}
-              </div>
+              <div className="mt-4 flex flex-wrap gap-2">{currentConfig.areas.map((area) => <span key={area.id} className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800 dark:bg-green-950 dark:text-green-300">{area.nome}</span>)}</div>
             </div>
 
             <div className="space-y-3">
               {currentConfig.professores.map((professor) => {
                 const usuario = byId(usuarios, professor.usuario_id);
                 const pdtTurma = Object.entries(currentConfig.pdt || {}).find(([, professorId]) => String(professorId) === String(professor.id))?.[0];
-                return (
-                  <div key={professor.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-semibold text-slate-900 dark:text-white">{professor.nome}</p>
-                          {usuario?.pdt && <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-200">PDT</span>}
-                        </div>
-                        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                          <span>{byId(currentConfig.areas, professor.area_id)?.nome || 'Área pendente'}</span>
-                          <span>Máx. {professor.max_aulas_consecutivas_default || 2} consecutivas</span>
-                          {pdtTurma && <span>PDT: {byId(turmas, pdtTurma)?.nome || 'Turma'}</span>}
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Button type="button" variant="secondary" onClick={() => openProfessorModal(professor)}>Editar</Button>
-                        <button type="button" onClick={() => removeProfessor(professor.id)} className="rounded-xl px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950"><FaTrash /></button>
-                      </div>
-                    </div>
-                  </div>
-                );
+                return <div key={professor.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950"><div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-slate-900 dark:text-white">{professor.nome}</p>{usuario?.pdt && <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-200">PDT</span>}</div><div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400"><span>{byId(currentConfig.areas, professor.area_id)?.nome || 'Área pendente'}</span><span>Máx. {professor.max_aulas_consecutivas_default || 2} consecutivas</span>{pdtTurma && <span>PDT: {byId(turmas, pdtTurma)?.nome || 'Turma'}</span>}</div></div><div className="flex flex-wrap gap-2"><Button type="button" variant="secondary" onClick={() => openProfessorModal(professor)}>Editar</Button><button type="button" onClick={() => removeProfessor(professor.id)} className="rounded-xl px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950"><FaTrash /></button></div></div></div>;
               })}
-              {!currentConfig.professores.length && <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center dark:border-slate-700"><p className="font-semibold text-slate-700 dark:text-slate-200">Nenhum professor adicionado</p><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Use o botão acima para adicionar professores da base escolar.</p></div>}
+              {!currentConfig.professores.length && <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center dark:border-slate-700"><p className="font-semibold text-slate-700 dark:text-slate-200">Nenhum professor adicionado</p><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Use o botão acima para adicionar professores com cargo de professor.</p></div>}
             </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-semibold text-slate-900 dark:text-white">Disciplinas</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Cadastre aqui as matérias que serão usadas nas atribuições da Etapa 4.</p></div><Button type="button" variant="secondary" onClick={() => openDisciplinaModal()}><FaPlus className="mr-2" /> Nova disciplina</Button></div></div>
+
+            <div><div className="mb-3 flex items-center justify-between"><h3 className="font-semibold text-slate-900 dark:text-white">Disciplinas cadastradas</h3><span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{currentConfig.disciplinas.length} disciplina(s)</span></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{currentConfig.disciplinas.map((discipline) => <div key={discipline.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-slate-900 dark:text-white">{discipline.nome}</p><span className="mt-2 inline-flex rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-bold text-green-800 dark:bg-green-950 dark:text-green-300">{byId(currentConfig.areas, discipline.area_id)?.nome || 'Área inválida'}</span></div><div className="flex gap-1"><button type="button" onClick={() => openDisciplinaModal(discipline)} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-white">Editar</button><button type="button" onClick={() => removeDisciplina(discipline.id)} className="rounded-lg px-2 py-1 text-xs font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950">Excluir</button></div></div></div>)}</div>{!currentConfig.disciplinas.length && <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Nenhuma disciplina cadastrada.</div>}</div>
           </div>
         )}
 
         {currentStep === 4 && (
           <div className="space-y-6">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h3 className="font-semibold text-slate-900 dark:text-white">Disciplinas e atribuições</h3>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Cadastre as disciplinas e associe professor, turma e carga semanal usando os mesmos modais do restante do sistema.</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="secondary" onClick={() => openDisciplinaModal()}><FaPlus className="mr-2" /> Nova disciplina</Button>
-                  <Button type="button" onClick={() => openLinkModal()}><FaPlus className="mr-2" /> Nova atribuição</Button>
-                </div>
-              </div>
-            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-semibold text-slate-900 dark:text-white">Atribuições por professor</h3><p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-slate-400">Uma atribuição reúne várias turmas do mesmo professor. Em cada turma você escolhe a matéria e a quantidade de aulas separadamente.</p></div><Button type="button" onClick={() => openLinkModal()}><FaPlus className="mr-2" /> Nova atribuição</Button></div></div>
 
-            <div>
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="font-semibold text-slate-900 dark:text-white">Disciplinas cadastradas</h3>
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{currentConfig.disciplinas.length} disciplina(s)</span>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {currentConfig.disciplinas.map((discipline) => (
-                  <div key={discipline.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-semibold text-slate-900 dark:text-white">{discipline.nome}</p>
-                        <span className="mt-2 inline-flex rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-bold text-green-800 dark:bg-green-950 dark:text-green-300">
-                          {byId(currentConfig.areas, discipline.area_id)?.nome || 'Área inválida'}
-                        </span>
-                      </div>
-                      <div className="flex gap-1">
-                        <button type="button" onClick={() => openDisciplinaModal(discipline)} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-white">Editar</button>
-                        <button type="button" onClick={() => removeDisciplina(discipline.id)} className="rounded-lg px-2 py-1 text-xs font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950">Excluir</button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {!currentConfig.disciplinas.length && <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Nenhuma disciplina cadastrada.</div>}
-            </div>
+            <div className="space-y-4">{professorAssignmentGroups.map((assignment) => { const professor = byId(currentConfig.professores, assignment.professor_id); return <div key={assignment.professor_id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950"><div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold text-slate-900 dark:text-white">{professor?.nome || 'Professor'}</h3><span className="rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-bold text-green-800 dark:bg-green-950 dark:text-green-300">{assignment.items.length} turma(s)</span></div><div className="mt-4 space-y-2">{assignment.items.map((item) => <div key={item.id} className="grid gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-center dark:border-slate-800 dark:bg-slate-900"><div><span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Turma</span><p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{byId(turmas, item.turma_id)?.nome || 'Turma'}</p></div><div><span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Matéria</span><p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{byId(currentConfig.disciplinas, item.disciplina_id)?.nome || 'Disciplina'}</p></div><div className="rounded-lg bg-white px-3 py-2 text-center dark:bg-slate-950"><div className="text-sm font-bold text-slate-900 dark:text-white">{item.aulas_semana}</div><div className="text-[10px] uppercase tracking-wide text-slate-400">aulas/sem.</div></div><div className="rounded-lg bg-white px-3 py-2 text-center dark:bg-slate-950"><div className="text-sm font-bold text-slate-900 dark:text-white">{item.max_aulas_consecutivas}</div><div className="text-[10px] uppercase tracking-wide text-slate-400">máx.</div></div></div>)}</div></div><div className="flex shrink-0 gap-2"><Button type="button" variant="secondary" onClick={() => openLinkModal(assignment)}>Editar</Button><button type="button" onClick={() => removeAssignment(assignment.professor_id)} className="rounded-xl p-2 text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950"><FaTrash /></button></div></div></div>; })}</div>
 
-            <div>
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="font-semibold text-slate-900 dark:text-white">Atribuições</h3>
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{currentConfig.professorTurmas.length} vínculo(s)</span>
-              </div>
-              <div className="space-y-3">
-                {currentConfig.professorTurmas.map((link) => (
-                  <div key={link.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="grid flex-1 gap-3 sm:grid-cols-3">
-                        <div>
-                          <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Professor</span>
-                          <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200">{byId(currentConfig.professores, link.professor_id)?.nome || 'Professor'}</p>
-                        </div>
-                        <div>
-                          <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Turma</span>
-                          <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200">{byId(turmas, link.turma_id)?.nome || 'Turma'}</p>
-                        </div>
-                        <div>
-                          <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Disciplina</span>
-                          <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200">{byId(currentConfig.disciplinas, link.disciplina_id)?.nome || 'Disciplina'}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="rounded-xl bg-slate-50 px-3 py-2 text-center dark:bg-slate-900">
-                          <div className="text-sm font-bold text-slate-900 dark:text-white">{link.aulas_semana}</div>
-                          <div className="text-[10px] uppercase tracking-wide text-slate-400">aulas/sem.</div>
-                        </div>
-                        <div className="rounded-xl bg-slate-50 px-3 py-2 text-center dark:bg-slate-900">
-                          <div className="text-sm font-bold text-slate-900 dark:text-white">{link.max_aulas_consecutivas}</div>
-                          <div className="text-[10px] uppercase tracking-wide text-slate-400">máx.</div>
-                        </div>
-                        <Button type="button" variant="secondary" onClick={() => openLinkModal(link)}>Editar</Button>
-                        <button type="button" onClick={() => removeLink(link.id)} className="rounded-xl p-2 text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950"><FaTrash /></button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {!currentConfig.professorTurmas.length && <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Nenhuma atribuição cadastrada.</div>}
-            </div>
+            {!professorAssignmentGroups.length && <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Nenhuma atribuição cadastrada. Crie uma para cada professor que tenha turmas e matérias vinculadas.</div>}
           </div>
         )}
 
@@ -1009,7 +963,7 @@ export const Horarios = () => {
 
       <Modal isOpen={professorModalOpen} onClose={closeProfessorModal} title={editingProfessorId ? 'Editar professor' : 'Adicionar professor'}>
         <div className="space-y-5">
-          <CustomSelect label="Professor da base" value={professorDraft.usuario_id} onChange={(value) => setProfessorDraft((prev) => ({ ...prev, usuario_id: value, pdt_turma_id: '' }))} options={editingProfessorId ? usuarios.map((usuario) => ({ value: String(usuario.id), label: `${usuario.nome}${usuario.pdt ? ' · PDT' : ''}` })) : professorUsers} placeholder="Selecione o professor" showSearch emptyLabel="Nenhum professor disponível" disabled={Boolean(editingProfessorId)} />
+          <CustomSelect label="Professor da base" value={professorDraft.usuario_id} onChange={(value) => setProfessorDraft((prev) => ({ ...prev, usuario_id: value, pdt_turma_id: '' }))} options={usuarios.filter((usuario) => Number(usuario.role_id) === PROFESSOR_ROLE_ID).map((usuario) => ({ value: String(usuario.id), label: `${usuario.nome}${usuario.pdt ? ' · PDT' : ''}` }))} placeholder="Selecione o professor" showSearch emptyLabel="Nenhum professor disponível" disabled={Boolean(editingProfessorId)} />
           <CustomSelect label="Área" value={professorDraft.area_id} onChange={(value) => setProfessorDraft((prev) => ({ ...prev, area_id: value }))} options={areaOptions} placeholder="Selecione a área" />
           <FormInput label="Máximo de aulas consecutivas" type="number" min="1" value={professorDraft.max_aulas_consecutivas_default} onChange={(event) => setProfessorDraft((prev) => ({ ...prev, max_aulas_consecutivas_default: Number(event.target.value) || 1 }))} />
 
@@ -1038,19 +992,13 @@ export const Horarios = () => {
         </div>
       </Modal>
 
-      <Modal isOpen={vinculoModalOpen} onClose={closeLinkModal} title={editingLinkId ? 'Editar atribuição' : 'Nova atribuição'}>
+      <Modal isOpen={vinculoModalOpen} onClose={closeLinkModal} title={editingLinkProfessorId ? 'Editar atribuição' : 'Nova atribuição'}>
         <div className="space-y-5">
-          <CustomSelect label="Professor" value={linkDraft.professor_id} onChange={(value) => setLinkDraft((prev) => ({ ...prev, professor_id: value }))} options={professorOptions} placeholder="Selecione o professor" showSearch emptyLabel="Nenhum professor adicionado" />
-          <CustomSelect label="Turma" value={linkDraft.turma_id} onChange={(value) => setLinkDraft((prev) => ({ ...prev, turma_id: value }))} options={turmaOptions.filter((option) => currentConfig.turmas.includes(String(option.value)))} placeholder="Selecione a turma" emptyLabel="Selecione turmas na Etapa 2" />
-          <CustomSelect label="Disciplina" value={linkDraft.disciplina_id} onChange={(value) => setLinkDraft((prev) => ({ ...prev, disciplina_id: value }))} options={disciplinaOptions} placeholder="Selecione a disciplina" emptyLabel="Cadastre uma disciplina primeiro" />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormInput label="Aulas por semana" type="number" min="1" value={linkDraft.aulas_semana} onChange={(event) => setLinkDraft((prev) => ({ ...prev, aulas_semana: Number(event.target.value) || 0 }))} />
-            <FormInput label="Máx. de aulas consecutivas" type="number" min="1" value={linkDraft.max_aulas_consecutivas} onChange={(event) => setLinkDraft((prev) => ({ ...prev, max_aulas_consecutivas: Number(event.target.value) || 0 }))} />
+          <CustomSelect label="Professor" value={linkDraft.professor_id} onChange={(value) => setLinkDraft((prev) => ({ ...prev, professor_id: value }))} options={editingLinkProfessorId ? professorOptions : professorOptions.filter((option) => !professorAssignmentGroups.some((assignment) => String(assignment.professor_id) === String(option.value)))} placeholder="Selecione o professor" showSearch emptyLabel="Nenhum professor disponível" disabled={Boolean(editingLinkProfessorId)} />
+          <div className="space-y-3"><div className="flex items-center justify-between gap-3"><div><h4 className="font-semibold text-slate-900 dark:text-white">Turmas e matérias</h4><p className="text-xs text-slate-500 dark:text-slate-400">Uma matéria diferente pode ser escolhida para cada turma da mesma atribuição.</p></div><Button type="button" variant="secondary" onClick={addAssignmentItem}><FaPlus className="mr-2" /> Adicionar turma</Button></div>
+            {linkDraft.items.map((item, index) => <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900"><div className="mb-3 flex items-center justify-between gap-3"><span className="text-xs font-bold uppercase tracking-wide text-slate-500">Turma {index + 1}</span>{linkDraft.items.length > 1 && <button type="button" onClick={() => removeAssignmentItem(item.id)} className="rounded-lg p-2 text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950"><FaTrash /></button>}</div><div className="grid gap-4 sm:grid-cols-2"><CustomSelect label="Turma" value={item.turma_id} onChange={(value) => updateAssignmentItem(item.id, 'turma_id', value)} options={turmaOptions.filter((option) => currentConfig.turmas.includes(String(option.value)))} placeholder="Selecione a turma" emptyLabel="Selecione turmas na Etapa 2" /><CustomSelect label="Matéria" value={item.disciplina_id} onChange={(value) => updateAssignmentItem(item.id, 'disciplina_id', value)} options={disciplinaOptions} placeholder="Selecione a matéria" emptyLabel="Cadastre disciplinas na Etapa 3" /><FormInput label="Aulas por semana" type="number" min="1" value={item.aulas_semana} onChange={(event) => updateAssignmentItem(item.id, 'aulas_semana', Number(event.target.value) || 0)} /><FormInput label="Máx. de aulas consecutivas" type="number" min="1" value={item.max_aulas_consecutivas} onChange={(event) => updateAssignmentItem(item.id, 'max_aulas_consecutivas', Number(event.target.value) || 0)} /></div></div>)}
           </div>
-          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
-            <Button type="button" variant="secondary" onClick={closeLinkModal}>Cancelar</Button>
-            <Button type="button" onClick={saveLinkFromModal}>{editingLinkId ? 'Salvar alterações' : 'Adicionar atribuição'}</Button>
-          </div>
+          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700"><Button type="button" variant="secondary" onClick={closeLinkModal}>Cancelar</Button><Button type="button" onClick={saveLinkFromModal}>{editingLinkProfessorId ? 'Salvar atribuição' : 'Criar atribuição'}</Button></div>
         </div>
       </Modal>
     </div>

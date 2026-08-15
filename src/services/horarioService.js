@@ -118,26 +118,81 @@ export const generateHorario = ({ configuracao = {}, turmas = [], professores = 
   }).filter(Boolean).sort((a, b) => (b.area.base === 'tecnica' ? 1 : 0) - (a.area.base === 'tecnica' ? 1 : 0) || b.aulas - a.aulas);
 
   tasks.forEach((task, order) => {
-    let remaining = task.aulas; let distributed = 0; const professorId = String(task.professor_id); const turmaId = String(task.turma_id);
+    let remaining = task.aulas;
+    let distributed = 0;
+    const professorId = String(task.professor_id);
+    const turmaId = String(task.turma_id);
+
+    const canUseSlot = (day, slot) => {
+      const key = slotKey(day, slot);
+      return !((folgaMap[professorId] || []).includes(day) || (indisponibilidadeMap[professorId] || []).includes(key) || (formacaoMap[String(task.disciplina.area_id)] || []).includes(key) || professorSchedule[professorId]?.[key] || turmaSchedule[turmaId]?.[key]);
+    };
+
+    const placeLesson = (day, slot) => {
+      const key = slotKey(day, slot);
+      const record = { turma_id: turmaId, turma_nome: task.turma.nome || 'Turma', professor_id: professorId, professor_nome: task.professor.nome || 'Professor', disciplina_id: task.disciplina.id, disciplina: task.disciplina.nome || 'Disciplina', dia: day, slot, tipo: 'Regular', ordem: order };
+      turmaSchedule[turmaId] ||= {};
+      professorSchedule[professorId] ||= {};
+      turmaSchedule[turmaId][key] = record;
+      professorSchedule[professorId][key] = record;
+      generated.push(record);
+      distributed += 1;
+      remaining -= 1;
+    };
+
+    if (task.aulas === 2) {
+      const pairCandidates = [];
+      WEEK_DAYS.forEach((day) => {
+        SLOT_DEFINITIONS.forEach(({ slot: firstSlot }, index) => {
+          const secondSlot = SLOT_DEFINITIONS[index + 1]?.slot;
+          if (secondSlot == null) return;
+          const firstDefinition = SLOT_DEFINITIONS[index];
+          const secondDefinition = SLOT_DEFINITIONS[index + 1];
+          if (firstDefinition.time.split(' - ')[1] !== secondDefinition.time.split(' - ')[0]) return;
+          if (!canUseSlot(day, firstSlot) || !canUseSlot(day, secondSlot)) return;
+          const projected = { ...(professorSchedule[professorId] || {}) };
+          projected[slotKey(day, firstSlot)] = { dia: day, slot: firstSlot };
+          projected[slotKey(day, secondSlot)] = { dia: day, slot: secondSlot };
+          if (consecutiveIfPlaced(projected, day, secondSlot) > task.maxConsecutivo) return;
+          const turmaLoad = daySlots(turmaSchedule[turmaId], day).length;
+          const professorLoad = daySlots(professorSchedule[professorId], day).length;
+          const adjacent = adjacentCount(professorSchedule[professorId] || {}, day, firstSlot) + adjacentCount(professorSchedule[professorId] || {}, day, secondSlot);
+          pairCandidates.push({ day, firstSlot, secondSlot, score: adjacent * 20 - turmaLoad * 3 - professorLoad * 2 });
+        });
+      });
+      pairCandidates.sort((a, b) => b.score - a.score || a.firstSlot - b.firstSlot || WEEK_DAYS.indexOf(a.day) - WEEK_DAYS.indexOf(b.day));
+      const pair = pairCandidates[0];
+      if (pair) {
+        placeLesson(pair.day, pair.firstSlot);
+        placeLesson(pair.day, pair.secondSlot);
+        return;
+      }
+      const problem = { professor: task.professor.nome, professor_id: task.professor_id, turma: task.turma.nome, turma_id: task.turma_id, disciplina: task.disciplina.nome, disciplina_id: task.disciplina.id, solicitadas: 2, distribuídas: 0, restantes: 2, mensagem: 'As 2 aulas semanais desta disciplina precisam ficar em dois horários consecutivos no mesmo período, mas nenhuma dupla compatível foi encontrada.' };
+      addProblem(validation, problem);
+      unscheduled.push(problem);
+      return;
+    }
+
     while (remaining > 0) {
       const candidates = [];
       WEEK_DAYS.forEach((day) => SLOT_DEFINITIONS.forEach(({ slot }) => {
-        const key = slotKey(day, slot);
-        if ((folgaMap[professorId] || []).includes(day) || (indisponibilidadeMap[professorId] || []).includes(key) || (formacaoMap[String(task.disciplina.area_id)] || []).includes(key) || professorSchedule[professorId]?.[key] || turmaSchedule[turmaId]?.[key]) return;
+        if (!canUseSlot(day, slot)) return;
         if (consecutiveIfPlaced(professorSchedule[professorId] || {}, day, slot) > task.maxConsecutivo) return;
-        const adjacent = adjacentCount(professorSchedule[professorId] || {}, day, slot); const turmaLoad = daySlots(turmaSchedule[turmaId], day).length; const professorLoad = daySlots(professorSchedule[professorId], day).length;
+        const adjacent = adjacentCount(professorSchedule[professorId] || {}, day, slot);
+        const turmaLoad = daySlots(turmaSchedule[turmaId], day).length;
+        const professorLoad = daySlots(professorSchedule[professorId], day).length;
         candidates.push({ day, slot, score: adjacent * 20 - turmaLoad * 3 - professorLoad * 2 + (remaining === 1 ? 1 : 0) });
       }));
       candidates.sort((a, b) => b.score - a.score || a.slot - b.slot || WEEK_DAYS.indexOf(a.day) - WEEK_DAYS.indexOf(b.day));
       const candidate = candidates[0];
       if (!candidate) break;
-      const key = slotKey(candidate.day, candidate.slot);
-      const record = { turma_id: turmaId, turma_nome: task.turma.nome || 'Turma', professor_id: professorId, professor_nome: task.professor.nome || 'Professor', disciplina_id: task.disciplina.id, disciplina: task.disciplina.nome || 'Disciplina', dia: candidate.day, slot: candidate.slot, tipo: 'Regular', ordem: order };
-      turmaSchedule[turmaId] ||= {}; professorSchedule[professorId] ||= {}; turmaSchedule[turmaId][key] = record; professorSchedule[professorId][key] = record; generated.push(record); distributed += 1; remaining -= 1;
+      placeLesson(candidate.day, candidate.slot);
     }
+
     if (remaining > 0) {
       const problem = { professor: task.professor.nome, professor_id: task.professor_id, turma: task.turma.nome, turma_id: task.turma_id, disciplina: task.disciplina.nome, disciplina_id: task.disciplina.id, solicitadas: task.aulas, distribuídas: distributed, restantes: remaining, mensagem: 'Não foi possível distribuir todas as aulas dentro das restrições de disponibilidade, formação, conflitos e consecutivas.' };
-      addProblem(validation, problem); unscheduled.push(problem);
+      addProblem(validation, problem);
+      unscheduled.push(problem);
     }
   });
 
