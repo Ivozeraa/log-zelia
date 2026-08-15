@@ -78,7 +78,7 @@ const cellLabelPdf = (aula) => !aula ? '—' : aula.tipo === 'FC' ? 'FC' : [aula
 const steps = [
   'Configuração',
   'Turmas',
-  'Professores, Áreas e Disciplinas',
+  'Professores e Áreas',
   'Atribuições',
   'Disponibilidades',
   'PDT',
@@ -161,19 +161,12 @@ export const Horarios = () => {
     max_aulas_consecutivas_default: 2,
     pdt_turma_id: '',
   });
-  const [disciplinaModalOpen, setDisciplinaModalOpen] = useState(false);
-  const [editingDisciplinaId, setEditingDisciplinaId] = useState(null);
-  const [disciplinaForm, setDisciplinaForm] = useState({ nome: '', area_id: '' });
   const [disciplinaCatalogo, setDisciplinaCatalogo] = useState([]);
-  const [catalogModalOpen, setCatalogModalOpen] = useState(false);
-  const [catalogCourse, setCatalogCourse] = useState('');
-  const [catalogSerie, setCatalogSerie] = useState('1');
-  const [catalogSelected, setCatalogSelected] = useState([]);
   const [vinculoModalOpen, setVinculoModalOpen] = useState(false);
   const [editingLinkProfessorId, setEditingLinkProfessorId] = useState(null);
   const [linkDraft, setLinkDraft] = useState({
     professor_id: '',
-    items: [{ id: newId('assignment-item'), turma_id: '', disciplina_id: '', aulas_semana: 2, max_aulas_consecutivas: 2 }],
+    items: [{ id: newId('assignment-item'), course_series: '', turma_ids: [], disciplina_catalog_id: '', aulas_semana: 2, max_aulas_consecutivas: 2 }],
   });
   const [generatedSchedule, setGeneratedSchedule] = useState(emptyGrade);
   const [statusMessage, setStatusMessage] = useState('');
@@ -266,6 +259,43 @@ export const Horarios = () => {
     return professorOptions.filter((option) =>
       String(option.value) === String(currentProfessorId) || !assignedElsewhere.has(String(option.value)),
     );
+  };
+
+  const getTurmaCurriculum = (turmaId) => {
+    const turma = byId(turmas, turmaId);
+    const curso = catalogCourseFromTurma(turma?.nome);
+    const match = String(turma?.nome || '').match(/(\d+)\s*º|\b(\d+)\b/);
+    const serie = match ? Number(match[1] || match[2]) : null;
+    return { curso, serie };
+  };
+
+  const curriculumCourseSeriesOptions = useMemo(() => {
+    const map = new Map();
+    currentConfig.turmas.forEach((turmaId) => {
+      const curriculum = getTurmaCurriculum(turmaId);
+      if (!curriculum.curso || !curriculum.serie) return;
+      const value = `${curriculum.curso}|${curriculum.serie}`;
+      if (!map.has(value)) map.set(value, { value, label: `${curriculum.curso} · ${curriculum.serie}ª série` });
+    });
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [currentConfig.turmas, turmas]);
+
+  const catalogOptionsForGroup = (courseSeries) => {
+    if (!courseSeries) return [];
+    const [curso, serie] = String(courseSeries).split('|');
+    return disciplinaCatalogo
+      .filter((row) => row.curso === curso && Number(row.serie) === Number(serie) && Number(row.semestre) === Number(currentConfig.semestre))
+      .sort((a, b) => a.categoria.localeCompare(b.categoria) || a.nome.localeCompare(b.nome))
+      .map((row) => ({ value: String(row.id), label: row.nome }));
+  };
+
+  const turmaOptionsForGroup = (courseSeries) => {
+    if (!courseSeries) return [];
+    const [curso, serie] = String(courseSeries).split('|');
+    return currentConfig.turmas.map((turmaId) => byId(turmas, turmaId)).filter((turma) => {
+      const curriculum = getTurmaCurriculum(turma?.id);
+      return curriculum.curso === curso && Number(curriculum.serie) === Number(serie);
+    }).map((turma) => ({ value: String(turma.id), label: turma.nome }));
   };
 
   const professorAssignmentGroups = useMemo(() => {
@@ -542,81 +572,11 @@ export const Horarios = () => {
     }));
   };
 
-  const openDisciplinaCatalogModal = () => {
-    const firstTurma = byId(turmas, currentConfig.turmas[0]);
-    setCatalogCourse(catalogCourseFromTurma(firstTurma?.nome) || CURRICULUM_COURSES[0]);
-    setCatalogSerie(String((String(firstTurma?.nome || '').match(/(\d+)\s*º|\b(\d+)\b/) || [,'1'])[1]));
-    setCatalogSelected([]);
-    setCatalogModalOpen(true);
-  };
-  const closeDisciplinaCatalogModal = () => { setCatalogModalOpen(false); setCatalogSelected([]); };
-  const toggleCatalogDiscipline = (id) => setCatalogSelected((prev) => prev.includes(String(id)) ? prev.filter((v) => v !== String(id)) : [...prev, String(id)]);
-  const addCatalogDisciplines = () => {
-    const rows = disciplinaCatalogo.filter((row) => catalogSelected.includes(String(row.id)));
-    if (!rows.length) return notify.error('Selecione pelo menos uma disciplina.');
-    setCurrentConfig((prev) => {
-      const existing = new Set(prev.disciplinas.map((d) => d.nome.trim().toLowerCase()));
-      const additions = rows.filter((row) => !existing.has(row.nome.trim().toLowerCase())).map((row) => {
-        const area = prev.areas.find((a) => a.nome.trim().toLowerCase() === row.area_nome.trim().toLowerCase()) || prev.areas.find((a) => a.nome === 'Técnica');
-        return area ? { id: newId('disc'), nome: row.nome, area_id: String(area.id) } : null;
-      }).filter(Boolean);
-      return { ...prev, disciplinas: [...prev.disciplinas, ...additions] };
-    });
-    closeDisciplinaCatalogModal();
-    notify.success('Disciplinas adicionadas da base curricular.');
-  };
-
-  const openDisciplinaModal = (discipline = null) => {
-    setEditingDisciplinaId(discipline?.id || null);
-    setDisciplinaForm({
-      nome: discipline?.nome || '',
-      area_id: discipline?.area_id || '',
-    });
-    setDisciplinaModalOpen(true);
-  };
-
-  const closeDisciplinaModal = () => {
-    setDisciplinaModalOpen(false);
-    setEditingDisciplinaId(null);
-    setDisciplinaForm({ nome: '', area_id: '' });
-  };
-
-  const saveDisciplinaFromModal = () => {
-    const nome = disciplinaForm.nome.trim();
-    if (!nome || !byId(currentConfig.areas, disciplinaForm.area_id)) {
-      return notify.error('Disciplina exige nome e área válida.');
-    }
-
-    const duplicate = currentConfig.disciplinas.find(
-      (item) =>
-        item.nome.toLowerCase() === nome.toLowerCase() &&
-        String(item.id) !== String(editingDisciplinaId),
-    );
-    if (duplicate) return notify.error('Essa disciplina já existe na configuração.');
-
-    setCurrentConfig((prev) => ({
-      ...prev,
-      disciplinas: editingDisciplinaId
-        ? prev.disciplinas.map((item) =>
-            String(item.id) === String(editingDisciplinaId)
-              ? { ...item, nome, area_id: String(disciplinaForm.area_id) }
-              : item,
-          )
-        : [...prev.disciplinas, { id: newId('disc'), nome, area_id: String(disciplinaForm.area_id) }],
-    }));
-    closeDisciplinaModal();
-  };
-
-  const removeDisciplina = (id) => setCurrentConfig((prev) => ({
-    ...prev,
-    disciplinas: prev.disciplinas.filter((item) => String(item.id) !== String(id)),
-    professorTurmas: prev.professorTurmas.filter((item) => String(item.disciplina_id) !== String(id)),
-  }));
-
   const newAssignmentItem = () => ({
     id: newId('assignment-item'),
+    course_series: '',
     turma_ids: [],
-    disciplina_id: '',
+    disciplina_catalog_id: '',
     aulas_semana: 2,
     max_aulas_consecutivas: 2,
   });
@@ -626,9 +586,13 @@ export const Horarios = () => {
     const groupedItems = [];
     const groupedMap = new Map();
     (assignment?.items || []).forEach((item) => {
-      const key = `${String(item.disciplina_id || '')}|${Number(item.aulas_semana || 2)}|${Number(item.max_aulas_consecutivas || 2)}`;
+      const curriculum = getTurmaCurriculum(item.turma_id);
+      const courseSeries = curriculum.curso && curriculum.serie ? `${curriculum.curso}|${curriculum.serie}` : '';
+      const discipline = byId(currentConfig.disciplinas, item.disciplina_id);
+      const catalogRow = disciplinaCatalogo.find((row) => row.curso === curriculum.curso && Number(row.serie) === Number(curriculum.serie) && Number(row.semestre) === Number(currentConfig.semestre) && row.nome.trim().toLowerCase() === String(discipline?.nome || '').trim().toLowerCase());
+      const key = `${courseSeries}|${catalogRow?.id || discipline?.nome || ''}|${Number(item.aulas_semana || 2)}|${Number(item.max_aulas_consecutivas || 2)}`;
       if (!groupedMap.has(key)) {
-        const grouped = { id: item.id || newId('assignment-item'), turma_ids: [], disciplina_id: String(item.disciplina_id || ''), aulas_semana: Number(item.aulas_semana || 2), max_aulas_consecutivas: Number(item.max_aulas_consecutivas || 2) };
+        const grouped = { id: item.id || newId('assignment-item'), course_series: courseSeries, turma_ids: [], disciplina_catalog_id: catalogRow?.id ? String(catalogRow.id) : '', aulas_semana: Number(item.aulas_semana || 2), max_aulas_consecutivas: Number(item.max_aulas_consecutivas || 2) };
         groupedMap.set(key, grouped);
         groupedItems.push(grouped);
       }
@@ -646,48 +610,46 @@ export const Horarios = () => {
   };
 
   const updateAssignmentItem = (itemId, field, value) => {
-    setLinkDraft((prev) => ({ ...prev, items: prev.items.map((item) => String(item.id) === String(itemId) ? { ...item, [field]: value } : item) }));
+    setLinkDraft((prev) => ({ ...prev, items: prev.items.map((item) => {
+      if (String(item.id) !== String(itemId)) return item;
+      if (field === 'course_series') return { ...item, course_series: value, turma_ids: [], disciplina_catalog_id: '' };
+      return { ...item, [field]: value };
+    }) }));
   };
 
-  const addAssignmentItem = () => {
-    setLinkDraft((prev) => ({ ...prev, items: [...prev.items, newAssignmentItem()] }));
-  };
-
-  const removeAssignmentItem = (itemId) => {
-    setLinkDraft((prev) => ({ ...prev, items: prev.items.length > 1 ? prev.items.filter((item) => String(item.id) !== String(itemId)) : prev.items }));
-  };
+  const addAssignmentItem = () => setLinkDraft((prev) => ({ ...prev, items: [...prev.items, newAssignmentItem()] }));
+  const removeAssignmentItem = (itemId) => setLinkDraft((prev) => ({ ...prev, items: prev.items.length > 1 ? prev.items.filter((item) => String(item.id) !== String(itemId)) : prev.items }));
 
   const saveLinkFromModal = () => {
-    if (!linkDraft.professor_id || !byId(currentConfig.professores, linkDraft.professor_id)) {
-      return notify.error('Selecione um professor válido.');
-    }
-
+    if (!linkDraft.professor_id || !byId(currentConfig.professores, linkDraft.professor_id)) return notify.error('Selecione um professor válido.');
     const seenTurmas = new Set();
-    const items = linkDraft.items.map((item) => ({
-      ...item,
-      turma_ids: Array.from(new Set((Array.isArray(item.turma_ids) ? item.turma_ids : []).map(String))),
-      disciplina_id: String(item.disciplina_id || ''),
-      aulas_semana: Number(item.aulas_semana),
-      max_aulas_consecutivas: Number(item.max_aulas_consecutivas),
-    }));
+    const items = linkDraft.items.map((item) => ({ ...item, turma_ids: Array.from(new Set((Array.isArray(item.turma_ids) ? item.turma_ids : []).map(String))), disciplina_catalog_id: String(item.disciplina_catalog_id || ''), aulas_semana: Number(item.aulas_semana), max_aulas_consecutivas: Number(item.max_aulas_consecutivas) }));
     for (const item of items) {
-      if (!item.turma_ids.length || !byId(currentConfig.disciplinas, item.disciplina_id) || !Number.isFinite(item.aulas_semana) || item.aulas_semana <= 0 || !Number.isFinite(item.max_aulas_consecutivas) || item.max_aulas_consecutivas <= 0) return notify.error('Cada grupo precisa de uma ou mais turmas, matéria, aulas por semana e máximo de consecutivas válidos.');
+      if (!item.course_series) return notify.error('Selecione o curso e a série em cada grupo.');
+      if (!item.disciplina_catalog_id || !byId(disciplinaCatalogo, item.disciplina_catalog_id)) return notify.error('Selecione uma matéria válida em cada grupo.');
+      if (!item.turma_ids.length) return notify.error('Selecione pelo menos uma turma em cada grupo.');
+      if (!Number.isFinite(item.aulas_semana) || item.aulas_semana <= 0 || !Number.isFinite(item.max_aulas_consecutivas) || item.max_aulas_consecutivas <= 0) return notify.error('Informe aulas por semana e máximo de consecutivas válidos.');
+      const allowed = new Set(turmaOptionsForGroup(item.course_series).map((option) => String(option.value)));
       for (const turmaId of item.turma_ids) {
-        if (!currentConfig.turmas.map(String).includes(turmaId)) return notify.error('Existe uma turma selecionada que não pertence à configuração.');
-        if (seenTurmas.has(turmaId)) return notify.error('A mesma turma não pode aparecer em dois grupos da mesma atribuição.');
-        seenTurmas.add(turmaId);
+        if (!allowed.has(String(turmaId))) return notify.error('Existe uma turma fora do curso/série escolhido.');
+        if (seenTurmas.has(String(turmaId))) return notify.error('A mesma turma não pode aparecer em dois grupos desta atribuição.');
+        seenTurmas.add(String(turmaId));
       }
     }
     const professorId = String(linkDraft.professor_id);
-    setCurrentConfig((prev) => ({
-      ...prev,
-      professorTurmas: [
-        ...prev.professorTurmas.filter((item) => String(item.professor_id) !== professorId),
-        ...items.flatMap((item) => item.turma_ids.map((turmaId) => ({ id: newId('link'), professor_id: professorId, turma_id: turmaId, disciplina_id: item.disciplina_id, aulas_semana: item.aulas_semana, max_aulas_consecutivas: item.max_aulas_consecutivas }))),
-      ],
-    }));
+    const nextDisciplines = [...currentConfig.disciplinas];
+    const disciplineByCatalog = new Map();
+    items.forEach((item) => {
+      const row = byId(disciplinaCatalogo, item.disciplina_catalog_id);
+      if (!row) return;
+      const existing = nextDisciplines.find((discipline) => discipline.nome.trim().toLowerCase() === row.nome.trim().toLowerCase());
+      const discipline = existing || { id: newId('disc'), nome: row.nome, area_id: String(currentConfig.areas.find((area) => area.nome.trim().toLowerCase() === row.area_nome.trim().toLowerCase())?.id || currentConfig.areas[0]?.id || '') };
+      if (!existing) nextDisciplines.push(discipline);
+      disciplineByCatalog.set(String(row.id), String(discipline.id));
+    });
+    const links = items.flatMap((item) => item.turma_ids.map((turmaId) => ({ id: newId('link'), professor_id: professorId, turma_id: turmaId, disciplina_id: disciplineByCatalog.get(String(item.disciplina_catalog_id)), aulas_semana: item.aulas_semana, max_aulas_consecutivas: item.max_aulas_consecutivas })));
+    setCurrentConfig((prev) => ({ ...prev, disciplinas: nextDisciplines, professorTurmas: [...prev.professorTurmas.filter((item) => String(item.professor_id) !== professorId), ...links] }));
     closeLinkModal();
-    closeDisciplinaCatalogModal();
   };
 
   const removeAssignment = (professorId) => setCurrentConfig((prev) => ({
@@ -833,7 +795,6 @@ export const Horarios = () => {
   const nextStep = async () => {
   if (currentStep === 2 && !currentConfig.turmas.length) return notify.error('Selecione ao menos uma turma.');
   if (currentStep === 3 && currentConfig.professores.some((professor) => !byId(currentConfig.areas, professor.area_id))) return notify.error('Todos os professores precisam de uma área válida.');
-  if (currentStep === 3 && !currentConfig.disciplinas.length) return notify.error('Cadastre pelo menos uma disciplina antes de avançar.');
   if (currentStep === 4) {
     const invalid = validateConfig(false);
     if (invalid.length) return notify.error(invalid[0].mensagem);
@@ -865,7 +826,6 @@ export const Horarios = () => {
     setGeneratedSchedule(emptyGrade);
     setStatusMessage('');
     closeProfessorModal();
-    closeDisciplinaModal();
     closeLinkModal();
   };
 
@@ -1235,9 +1195,6 @@ export const Horarios = () => {
               {!currentConfig.professores.length && <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center dark:border-slate-700"><p className="font-semibold text-slate-700 dark:text-slate-200">Nenhum professor adicionado</p><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Use o botão acima para adicionar professores com cargo de professor.</p></div>}
             </div>
 
-            <div className="mb-4 rounded-2xl border border-green-200 bg-green-50/70 p-5 dark:border-green-900 dark:bg-green-950/20"><div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div><h3 className="font-semibold text-slate-900 dark:text-white">Base curricular</h3><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Importe disciplinas por curso, série e semestre.</p></div><Button type="button" onClick={openDisciplinaCatalogModal}><FaPlus className="mr-2"/> Importar da base curricular</Button></div></div><div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-semibold text-slate-900 dark:text-white">Disciplinas</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Cadastre aqui as matérias que serão usadas nas atribuições da Etapa 4.</p></div><Button type="button" variant="secondary" onClick={() => openDisciplinaModal()}><FaPlus className="mr-2" /> Nova disciplina</Button></div></div>
-
-            <div><div className="mb-3 flex items-center justify-between"><h3 className="font-semibold text-slate-900 dark:text-white">Disciplinas cadastradas</h3><span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{currentConfig.disciplinas.length} disciplina(s)</span></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{currentConfig.disciplinas.map((discipline) => <div key={discipline.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-slate-900 dark:text-white">{discipline.nome}</p><span className="mt-2 inline-flex rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-bold text-green-800 dark:bg-green-950 dark:text-green-300">{byId(currentConfig.areas, discipline.area_id)?.nome || 'Área inválida'}</span></div><div className="flex gap-1"><button type="button" onClick={() => openDisciplinaModal(discipline)} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-white">Editar</button><button type="button" onClick={() => removeDisciplina(discipline.id)} className="rounded-lg px-2 py-1 text-xs font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950">Excluir</button></div></div></div>)}</div>{!currentConfig.disciplinas.length && <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Nenhuma disciplina cadastrada.</div>}</div>
           </div>
         )}
 
@@ -1347,24 +1304,16 @@ export const Horarios = () => {
         </div>
       </Modal>
 
-      <Modal isOpen={catalogModalOpen} onClose={closeDisciplinaCatalogModal} title="Base curricular de disciplinas"><div className="space-y-5"><div className="grid gap-4 sm:grid-cols-2"><CustomSelect label="Curso" value={catalogCourse} onChange={setCatalogCourse} options={catalogCourseOptions} placeholder="Selecione o curso"/><CustomSelect label="Série" value={catalogSerie} onChange={setCatalogSerie} options={[1,2,3].map((serie)=>({value:String(serie),label:`${serie}ª série`}))} placeholder="Selecione a série"/></div><div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm"><strong>{currentConfig.semestre}º semestre</strong></div><div className="max-h-[48vh] space-y-2 overflow-y-auto pr-1">{catalogFilteredRows.map((row)=>{const checked=catalogSelected.includes(String(row.id)); const alreadyAdded=currentConfig.disciplinas.some((d)=>d.nome.trim().toLowerCase()===row.nome.trim().toLowerCase()); return <button key={row.id} type="button" disabled={alreadyAdded} onClick={()=>toggleCatalogDiscipline(row.id)} className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left ${alreadyAdded?'opacity-50':'hover:border-green-400'} ${checked?'border-green-500 bg-green-50':'border-slate-200 bg-white'}`}><span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${checked?'border-green-600 bg-green-600 text-white':'border-slate-300'}`}>{checked&&<FaCheck className="text-xs"/>}</span><span><span className="block font-semibold">{row.nome}</span><span className="block text-[11px] text-slate-500">{row.categoria} · {row.area_nome}</span></span></button>})}</div><div className="flex justify-end gap-3 border-t border-slate-200 pt-4"><Button type="button" variant="secondary" onClick={closeDisciplinaCatalogModal}>Cancelar</Button><Button type="button" onClick={addCatalogDisciplines} disabled={!catalogSelected.length}>Adicionar selecionadas</Button></div></div></Modal>
 
-      <Modal isOpen={disciplinaModalOpen} onClose={closeDisciplinaModal} title={editingDisciplinaId ? 'Editar disciplina' : 'Nova disciplina'}>
-        <div className="space-y-5">
-          <FormInput label="Nome da disciplina" value={disciplinaForm.nome} onChange={(event) => setDisciplinaForm((prev) => ({ ...prev, nome: event.target.value }))} placeholder="Ex.: Matemática" />
-          <CustomSelect label="Área" value={disciplinaForm.area_id} onChange={(value) => setDisciplinaForm((prev) => ({ ...prev, area_id: value }))} options={areaOptions} placeholder="Selecione a área" />
-          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
-            <Button type="button" variant="secondary" onClick={closeDisciplinaModal}>Cancelar</Button>
-            <Button type="button" onClick={saveDisciplinaFromModal}>{editingDisciplinaId ? 'Salvar alterações' : 'Adicionar disciplina'}</Button>
-          </div>
-        </div>
-      </Modal>
 
       <Modal isOpen={vinculoModalOpen} onClose={closeLinkModal} title={editingLinkProfessorId ? 'Editar atribuição' : 'Nova atribuição'}>
         <div className="space-y-5">
           <CustomSelect label="Professor" value={linkDraft.professor_id} onChange={(value) => setLinkDraft((prev) => ({ ...prev, professor_id: value }))} options={editingLinkProfessorId ? professorOptions : professorOptions.filter((option) => !professorAssignmentGroups.some((assignment) => String(assignment.professor_id) === String(option.value)))} placeholder="Selecione o professor" showSearch emptyLabel="Nenhum professor disponível" disabled={Boolean(editingLinkProfessorId)} />
-          <div className="space-y-3"><div className="flex items-center justify-between gap-3"><div><h4 className="font-semibold text-slate-900 dark:text-white">Turmas, matéria e carga</h4><p className="text-xs text-slate-500 dark:text-slate-400">Selecione várias turmas no mesmo grupo quando a matéria e a carga semanal forem iguais.</p></div><Button type="button" variant="secondary" onClick={addAssignmentItem}><FaPlus className="mr-2" /> Adicionar grupo</Button></div>
-            {linkDraft.items.map((item, index) => <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900"><div className="mb-3 flex items-center justify-between gap-3"><span className="text-xs font-bold uppercase tracking-wide text-slate-500">Grupo {index + 1}</span>{linkDraft.items.length > 1 && <button type="button" onClick={() => removeAssignmentItem(item.id)} className="rounded-lg p-2 text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950"><FaTrash /></button>}</div><div className="grid gap-4 sm:grid-cols-2"><CustomSelect label="Turmas" value={item.turma_ids} multiple onChange={(value) => updateAssignmentItem(item.id, 'turma_ids', value)} options={turmaOptions.filter((option) => currentConfig.turmas.includes(String(option.value)))} placeholder="Selecione uma ou mais turmas" emptyLabel="Selecione turmas na Etapa 2" showSearch showSelectedValues={false} /><CustomSelect label="Matéria" value={item.disciplina_id} onChange={(value) => updateAssignmentItem(item.id, 'disciplina_id', value)} options={disciplinaOptions} placeholder="Selecione a matéria" emptyLabel="Cadastre disciplinas na Etapa 3" /><FormInput label="Aulas por semana" type="number" min="1" value={item.aulas_semana} onChange={(event) => updateAssignmentItem(item.id, 'aulas_semana', Number(event.target.value) || 0)} /><FormInput label="Máx. de aulas consecutivas" type="number" min="1" value={item.max_aulas_consecutivas} onChange={(event) => updateAssignmentItem(item.id, 'max_aulas_consecutivas', Number(event.target.value) || 0)} /></div></div>)}
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h4 className="font-semibold text-slate-900 dark:text-white">Matérias por turma</h4><p className="text-xs text-slate-500 dark:text-slate-400">A matéria é filtrada pelo curso, série e semestre da Etapa 1.</p></div><Button type="button" variant="secondary" onClick={addAssignmentItem}><FaPlus className="mr-2" /> Outra matéria</Button></div>
+            <div className="mt-4 space-y-3">
+              {linkDraft.items.map((item, index) => <div key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-950"><div className="mb-3 flex items-center justify-between gap-3"><span className="text-xs font-bold uppercase tracking-wide text-slate-500">Matéria {index + 1}</span>{linkDraft.items.length > 1 && <button type="button" onClick={() => removeAssignmentItem(item.id)} className="rounded-lg p-2 text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950"><FaTrash /></button>}</div><div className="grid gap-4 sm:grid-cols-2"><CustomSelect label="Curso e série" value={item.course_series} onChange={(value) => updateAssignmentItem(item.id, 'course_series', value)} options={curriculumCourseSeriesOptions} placeholder="Selecione o curso e a série" emptyLabel="Nenhum curso/série disponível" /><CustomSelect label="Matéria" value={item.disciplina_catalog_id} onChange={(value) => updateAssignmentItem(item.id, 'disciplina_catalog_id', value)} options={catalogOptionsForGroup(item.course_series)} placeholder="Selecione a matéria" emptyLabel="Nenhuma matéria para este semestre" showSearch /><CustomSelect label="Turmas" value={item.turma_ids} multiple onChange={(value) => updateAssignmentItem(item.id, 'turma_ids', value)} options={turmaOptionsForGroup(item.course_series)} placeholder="Selecione uma ou mais turmas" emptyLabel="Nenhuma turma para este curso/série" showSearch showSelectedValues={false} /><div className="grid grid-cols-2 gap-3"><FormInput label="Aulas/semana" type="number" min="1" value={item.aulas_semana} onChange={(event) => updateAssignmentItem(item.id, 'aulas_semana', Number(event.target.value) || 0)} /><FormInput label="Máx. consecutivas" type="number" min="1" value={item.max_aulas_consecutivas} onChange={(event) => updateAssignmentItem(item.id, 'max_aulas_consecutivas', Number(event.target.value) || 0)} /></div></div></div>)}
+            </div>
           </div>
           <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700"><Button type="button" variant="secondary" onClick={closeLinkModal}>Cancelar</Button><Button type="button" onClick={saveLinkFromModal}>{editingLinkProfessorId ? 'Salvar atribuição' : 'Criar atribuição'}</Button></div>
         </div>
