@@ -1,0 +1,38 @@
+name: Fix occurrence student select
+on:
+  push:
+    branches:
+      - agent/fix-horarios-core
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch Home
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'src/pages/Home.jsx';
+          let content = fs.readFileSync(path, 'utf8');
+          const target = '            multiple={true}\n          />';
+          const replacement = '            multiple={true}\n            showSelectedValues={false}\n          />';
+          if (!content.includes(target)) {
+            throw new Error('Select de Aluno(s) não encontrado.');
+          }
+          content = content.replace(target, replacement);
+          fs.writeFileSync(path, content);
+          NODE
+      - name: Validate build
+        run: |
+          npm ci
+          npm run build
+      - name: Commit and cleanup
+        run: |
+          rm -f .github/workflows/fix-occurrence-student-select.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Home.jsx .github/workflows/fix-occurrence-student-select.yml
+          git commit -m "fix(home): hide selected students below occurrence select"
+          git push origin HEAD:agent/fix-horarios-core
