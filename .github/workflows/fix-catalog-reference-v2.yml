@@ -1,0 +1,47 @@
+name: Fix catalog reference v2
+
+on:
+  push:
+    branches: [agent/fix-horarios-core]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: ${{ !contains(github.event.head_commit.message, 'fix(horarios): remove stale catalog memos') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fix-horarios-core
+          fetch-depth: 0
+
+      - name: Remove stale memos
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/Horarios.jsx')
+          lines = p.read_text(encoding='utf-8').splitlines()
+          filtered = [
+              line for line in lines
+              if 'const catalogCourseOptions = useMemo' not in line
+              and 'const catalogFilteredRows = useMemo' not in line
+          ]
+          if len(filtered) == len(lines):
+              raise SystemExit('No stale catalog lines found')
+          p.write_text('\n'.join(filtered) + '\n', encoding='utf-8')
+          PY
+
+      - name: Build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Horarios.jsx
+          git commit -m "fix(horarios): remove stale catalog memos"
+          git push origin agent/fix-horarios-core
