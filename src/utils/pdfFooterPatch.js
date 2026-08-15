@@ -1,34 +1,28 @@
 import { jsPDF } from 'jspdf';
 
 const PDF_FOOTER_HEIGHT = 18;
-const TOPO_MINI_URL = 'https://raw.githubusercontent.com/Ivozeraa/log-zelia/0aa51dc2d81ae99261ea980de707f785cdc55f70/src/assets/images/topo_mini.png';
-let patched = false;
+const TOPO_MINI_URL = 'https://raw.githubusercontent.com/Ivozeraa/log-zelia/main/src/assets/images/topo_mini.png';
 
 const loadImageAsDataUrl = async (url) => {
   if (!url || typeof window === 'undefined') return null;
 
-  try {
-    const response = await fetch(url, { cache: 'force-cache' });
-    if (!response.ok) throw new Error(`Falha ao carregar footer: HTTP ${response.status}`);
-
-    const blob = await response.blob();
-    return await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    console.error('Não foi possível carregar o footer do PDF:', error);
-    return null;
+  const response = await fetch(url, { mode: 'cors', cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error(`Falha ao carregar footer: HTTP ${response.status}`);
   }
+
+  const blob = await response.blob();
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 };
 
-const footerDataUrlPromise = loadImageAsDataUrl(TOPO_MINI_URL);
-
-const addFooterToPdf = async (doc) => {
-  const footerDataUrl = await footerDataUrlPromise;
-  if (!footerDataUrl) return false;
+export const addPdfFooter = async (doc) => {
+  const footerDataUrl = await loadImageAsDataUrl(TOPO_MINI_URL);
+  if (!footerDataUrl) throw new Error('Imagem topo_mini.png não foi carregada.');
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -44,29 +38,6 @@ const addFooterToPdf = async (doc) => {
       PDF_FOOTER_HEIGHT,
     );
   }
-
-  return true;
 };
 
-if (!patched && typeof jsPDF?.prototype?.save === 'function') {
-  patched = true;
-  const originalSave = jsPDF.prototype.save;
-
-  jsPDF.prototype.save = function patchedSave(...args) {
-    const filename = String(args[0] || '');
-
-    if (!filename.startsWith('horario_')) {
-      return originalSave.apply(this, args);
-    }
-
-    void addFooterToPdf(this)
-      .catch((error) => {
-        console.error('Não foi possível adicionar o footer ao PDF:', error);
-      })
-      .finally(() => {
-        originalSave.apply(this, args);
-      });
-
-    return this;
-  };
-}
+export { PDF_FOOTER_HEIGHT };
