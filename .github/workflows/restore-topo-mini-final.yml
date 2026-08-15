@@ -1,0 +1,38 @@
+name: Restore topo mini footer
+
+on:
+  push:
+    branches:
+      - agent/fix-horarios-core
+    paths:
+      - .github/workflows/restore-topo-mini-final.yml
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fix-horarios-core
+          fetch-depth: 0
+
+      - name: Restore asset from main
+        run: |
+          mkdir -p src/assets/images
+          curl -fsSL https://raw.githubusercontent.com/Ivozeraa/log-zelia/main/src/assets/images/topo_mini.png -o src/assets/images/topo_mini.png
+          file src/assets/images/topo_mini.png
+          test -s src/assets/images/topo_mini.png
+
+      - name: Remove temporary workflow
+        run: rm -f .github/workflows/restore-topo-mini-final.yml
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/assets/images/topo_mini.png .github/workflows/restore-topo-mini-final.yml
+          git commit -m "fix(horarios): restore pdf footer asset"
+          git push origin HEAD:agent/fix-horarios-core
