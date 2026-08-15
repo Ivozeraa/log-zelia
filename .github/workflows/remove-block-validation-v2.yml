@@ -1,0 +1,23 @@
+name: Remove mixed block restriction
+on:
+  push:
+    branches: [agent/fix-horarios-core]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fix-horarios-core
+          fetch-depth: 0
+      - run: python3 scripts/remove-block-validation-v2.py
+      - run: npm ci && npm run build
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Horarios.jsx
+          git rm -f scripts/remove-block-validation-v2.py .github/workflows/remove-block-validation-v2.yml
+          git commit -m "fix(horarios): allow mixed assignment blocks"
+          git push origin agent/fix-horarios-core
