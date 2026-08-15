@@ -50,10 +50,16 @@ const Avatar = ({ nome, avatarUrl, size = 44 }) => {
   return (
     <div
       style={{
-        width: size, height: size, borderRadius: '50%',
+        width: size,
+        height: size,
+        borderRadius: '50%',
         background: 'linear-gradient(135deg, #e2e8f0, #cbd5e1)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: size * 0.33, fontWeight: 600, color: '#475569',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: size * 0.33,
+        fontWeight: 600,
+        color: '#475569',
         flexShrink: 0,
       }}
     >
@@ -65,18 +71,24 @@ const Avatar = ({ nome, avatarUrl, size = 44 }) => {
 const TurmaAvatar = ({ label, size = 44 }) => (
   <div
     style={{
-      width: size, height: size, borderRadius: '50%',
+      width: size,
+      height: size,
+      borderRadius: '50%',
       background: 'linear-gradient(135deg, #e2e8f0, #cbd5e1)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.28, fontWeight: 700, color: '#475569',
-      flexShrink: 0, letterSpacing: '-0.5px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: size * 0.28,
+      fontWeight: 700,
+      color: '#475569',
+      flexShrink: 0,
+      letterSpacing: '-0.5px',
     }}
   >
     {label}
   </div>
 )
 
-// ─── Skeleton ────────────────────────────────────────────────────────────
 const RankingSkeleton = () => (
   <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-600 dark:bg-slate-950">
     <div className="mb-4 h-5 w-40 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
@@ -88,7 +100,14 @@ const RankingSkeleton = () => (
   </div>
 )
 
-// ─── Ranking de professores ───────────────────────────────────────────────
+const getAvatarUrl = (userId) => {
+  if (!userId) return null
+  const { data } = supabase.storage
+    .from('avatars')
+    .getPublicUrl(`${userId}/avatar.png`)
+  return data?.publicUrl || null
+}
+
 const RankingProfessores = ({ escolaId, mesLabel, userId, userName }) => {
   const [ranking, setRanking] = useState([])
   const [avatars, setAvatars] = useState({})
@@ -96,8 +115,13 @@ const RankingProfessores = ({ escolaId, mesLabel, userId, userName }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let active = true
+
     const load = async () => {
-      if (!escolaId) return
+      if (!escolaId) {
+        if (active) setLoading(false)
+        return
+      }
       setLoading(true)
 
       const hoje = new Date()
@@ -109,50 +133,63 @@ const RankingProfessores = ({ escolaId, mesLabel, userId, userName }) => {
         .eq('escola_id', escolaId)
         .gte('data_ocorrido', inicioMes)
 
-      if (error) { console.error(error); setLoading(false); return }
+      if (error) {
+        console.error(error)
+        if (active) setLoading(false)
+        return
+      }
 
       const contagem = {}
-      data.forEach(({ professor_id, professor_nome }) => {
+      ;(data || []).forEach(({ professor_id, professor_nome }) => {
         if (!professor_id) return
-        if (!contagem[professor_id]) contagem[professor_id] = { id: professor_id, nome: professor_nome || 'Professor', total: 0 }
+        if (!contagem[professor_id]) {
+          contagem[professor_id] = {
+            id: professor_id,
+            nome: professor_nome || 'Professor',
+            total: 0,
+          }
+        }
         contagem[professor_id].total += 1
       })
 
       const sorted = Object.values(contagem).sort((a, b) => b.total - a.total)
       const top3 = sorted.slice(0, 3)
-      setRanking(top3)
 
-      if (top3.length > 0) {
-        const { data: usuariosData } = await supabase
-          .from('usuarios')
-          .select('id, avatar_url')
-          .in('id', top3.map((p) => p.id))
-        if (usuariosData) {
-          const map = {}
-          usuariosData.forEach((u) => { map[u.id] = u.avatar_url || null })
-          setAvatars(map)
-        }
-      }
+      const avatarMap = Object.fromEntries(
+        top3.map((professor) => [professor.id, getAvatarUrl(professor.id)]),
+      )
 
       const myPos = sorted.findIndex((p) => p.id === userId)
-      if (myPos !== -1 && myPos >= 3) setMyEntry({ ...sorted[myPos], position: myPos + 1 })
-      else if (myPos === -1) setMyEntry({ id: userId, nome: userName, total: 0, position: null })
-      else setMyEntry(null)
+      const nextMyEntry = myPos !== -1 && myPos >= 3
+        ? { ...sorted[myPos], position: myPos + 1 }
+        : myPos === -1
+          ? { id: userId, nome: userName, total: 0, position: null }
+          : null
 
+      if (!active) return
+      setRanking(top3)
+      setAvatars(avatarMap)
+      setMyEntry(nextMyEntry)
       setLoading(false)
     }
-    load()
+
+    void load()
+    return () => {
+      active = false
+    }
   }, [escolaId, userId, userName])
 
   const maxTotal = ranking[0]?.total || 1
 
   if (loading) return <RankingSkeleton />
 
-  if (ranking.length === 0) return (
-    <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-600 dark:bg-slate-950">
-      <p className="text-sm text-slate-500 dark:text-slate-400">Nenhuma ocorrência registrada este mês.</p>
-    </div>
-  )
+  if (ranking.length === 0) {
+    return (
+      <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-600 dark:bg-slate-950">
+        <p className="text-sm text-slate-500 dark:text-slate-400">Nenhuma ocorrência registrada este mês.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-600 dark:bg-slate-950">
@@ -176,7 +213,7 @@ const RankingProfessores = ({ escolaId, mesLabel, userId, userName }) => {
                 <div className="flex items-center gap-3">
                   <Avatar nome={professor.nome} avatarUrl={avatars[professor.id] ?? null} size={44} />
                   <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white flex items-center gap-1">
+                    <p className="flex items-center gap-1 text-sm font-semibold text-slate-800 dark:text-white">
                       <span>{MEDALS[index]}</span>
                       <span>{professor.nome}</span>
                       {isYou && (
@@ -223,14 +260,18 @@ const RankingProfessores = ({ escolaId, mesLabel, userId, userName }) => {
   )
 }
 
-// ─── Ranking de turmas ────────────────────────────────────────────────────
 const RankingTurmas = ({ escolaId, mesLabel }) => {
   const [ranking, setRanking] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let active = true
+
     const load = async () => {
-      if (!escolaId) return
+      if (!escolaId) {
+        if (active) setLoading(false)
+        return
+      }
       setLoading(true)
 
       const hoje = new Date()
@@ -242,10 +283,14 @@ const RankingTurmas = ({ escolaId, mesLabel }) => {
         .eq('escola_id', escolaId)
         .gte('data_ocorrido', inicioMes)
 
-      if (error) { console.error(error); setLoading(false); return }
+      if (error) {
+        console.error(error)
+        if (active) setLoading(false)
+        return
+      }
 
       const contagem = {}
-      data.forEach(({ turma_id, turmas }) => {
+      ;(data || []).forEach(({ turma_id, turmas }) => {
         if (!turma_id) return
         const nome = turmas?.nome || 'Turma'
         if (!contagem[turma_id]) contagem[turma_id] = { id: turma_id, nome, total: 0 }
@@ -253,10 +298,16 @@ const RankingTurmas = ({ escolaId, mesLabel }) => {
       })
 
       const sorted = Object.values(contagem).sort((a, b) => b.total - a.total)
-      setRanking(sorted.slice(0, 3))
-      setLoading(false)
+      if (active) {
+        setRanking(sorted.slice(0, 3))
+        setLoading(false)
+      }
     }
-    load()
+
+    void load()
+    return () => {
+      active = false
+    }
   }, [escolaId])
 
   const maxTotal = ranking[0]?.total || 1
@@ -270,11 +321,13 @@ const RankingTurmas = ({ escolaId, mesLabel }) => {
 
   if (loading) return <RankingSkeleton />
 
-  if (ranking.length === 0) return (
-    <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-600 dark:bg-slate-950">
-      <p className="text-sm text-slate-500 dark:text-slate-400">Nenhuma turma com ocorrências este mês.</p>
-    </div>
-  )
+  if (ranking.length === 0) {
+    return (
+      <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-600 dark:bg-slate-950">
+        <p className="text-sm text-slate-500 dark:text-slate-400">Nenhuma turma com ocorrências este mês.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-600 dark:bg-slate-950">
@@ -297,7 +350,7 @@ const RankingTurmas = ({ escolaId, mesLabel }) => {
                 <div className="flex items-center gap-3">
                   <TurmaAvatar label={getTurmaLabel(turma.nome)} size={44} />
                   <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white flex items-center gap-1">
+                    <p className="flex items-center gap-1 text-sm font-semibold text-slate-800 dark:text-white">
                       <span>{MEDALS[index]}</span>
                       <span>{turma.nome}</span>
                     </p>
@@ -317,7 +370,6 @@ const RankingTurmas = ({ escolaId, mesLabel }) => {
   )
 }
 
-// ─── Exportação principal ─────────────────────────────────────────────────
 export const RankingOcorrencias = ({ escolaId }) => {
   const { user } = useAuth()
   const [mesLabel, setMesLabel] = useState('')
