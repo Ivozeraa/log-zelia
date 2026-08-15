@@ -1,0 +1,46 @@
+name: Fix CustomSelect portal
+on:
+  push:
+    branches:
+      - agent/fix-horarios-core
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch CustomSelect
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'src/components/ui/CustomSelect.jsx';
+          let file = fs.readFileSync(path, 'utf8');
+
+          file = file.replace('import { useEffect, useRef, useState } from "react";\n', 'import { useEffect, useRef, useState } from "react";\nimport { createPortal } from "react-dom";\n');
+          file = file.replace('  const rootRef = useRef(null);\n  const triggerRef = useRef(null);', '  const rootRef = useRef(null);\n  const triggerRef = useRef(null);\n  const menuRef = useRef(null);');
+          file = file.replace('      if (rootRef.current && !rootRef.current.contains(event.target)) {', '      if (\n        rootRef.current &&\n        !rootRef.current.contains(event.target) &&\n        !(menuRef.current && menuRef.current.contains(event.target))\n      ) {');
+
+          const oldBlock = `      {open && !disabled && menuPosition && (\n        <div\n          className="fixed z-[10050] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"\n          style={{ top: menuPosition.top, left: menuPosition.left, width: menuPosition.width, maxHeight: menuPosition.maxHeight }}\n        >\n          <div className="flex max-h-full flex-col overflow-hidden">`;
+          const newBlock = `      {open && !disabled && menuPosition && typeof document !== "undefined" && createPortal(\n        <div\n          ref={menuRef}\n          className="fixed z-[10050] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"\n          style={{ top: menuPosition.top, left: menuPosition.left, width: menuPosition.width, maxHeight: menuPosition.maxHeight }}\n        >\n          <div className="flex max-h-full flex-col overflow-hidden">`;
+          if (!file.includes(oldBlock)) throw new Error('dropdown block not found');
+          file = file.replace(oldBlock, newBlock);
+          const oldClose = `            )}\n          </div>\n        </div>\n      )}`;
+          const newClose = `            )}\n          </div>\n        </div>,\n        document.body,\n      )}`;
+          if (!file.includes(oldClose)) throw new Error('dropdown closing block not found');
+          file = file.replace(oldClose, newClose);
+
+          fs.writeFileSync(path, file);
+          NODE
+      - name: Validate build
+        run: |
+          npm ci
+          npm run build
+      - name: Commit and cleanup
+        run: |
+          rm -f .github/workflows/fix-custom-select-portal.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/ui/CustomSelect.jsx .github/workflows/fix-custom-select-portal.yml
+          git commit -m "fix(ui): render custom select dropdown through portal"
+          git push origin HEAD:agent/fix-horarios-core
