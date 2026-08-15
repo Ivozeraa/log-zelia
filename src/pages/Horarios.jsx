@@ -13,6 +13,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import ExcelJS from 'exceljs';
 import { addPdfFooter } from '../utils/pdfFooterPatch';
+import logoImg from '../assets/images/logoEEEP.png';
 
 import { supabase } from '../utils/supabase';
 import { notify } from '../utils/notify';
@@ -796,10 +797,18 @@ export const Horarios = () => {
 
   const drawPdfHeader = (doc, { schoolName, semesterLabel }) => {
     const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Adiciona a logo importada (logoImg)
+    // Parâmetros: (imagem, formato, x, y, largura, altura)
+    doc.addImage(logoImg, 'PNG', 12, 4, 12, 12);
+
+    // Nome da escola (deslocado para x = 28 para dar espaço à logo)
     doc.setFontSize(11);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(60);
-    doc.text(schoolName, 12, 11);
+    doc.text(schoolName, 28, 11);
+
+    // Rótulo do semestre (alinhado à direita)
     doc.setFont(undefined, 'normal');
     doc.setFontSize(9);
     doc.setTextColor(120);
@@ -894,7 +903,7 @@ export const Horarios = () => {
       }
       for (let page = 1; page <= doc.getNumberOfPages(); page += 1) { doc.setPage(page); drawPdfFooter(doc); }
       await addPdfFooter(doc);
-      doc.save(`horario_${currentConfig.nome || 'gerado'}.pdf`);
+      doc.save(`${currentConfig.nome || 'gerado'}.pdf`);
     } catch (error) {
       console.error(error);
       notify.error(`Não foi possível gerar o PDF: ${error.message || 'erro desconhecido'}.`);
@@ -969,7 +978,7 @@ export const Horarios = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `horario_${currentConfig.nome || 'gerado'}.xlsx`;
+      link.download = `HORÁRIO ${currentConfig.nome || 'gerado'}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
