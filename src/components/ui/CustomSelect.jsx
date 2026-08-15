@@ -12,6 +12,7 @@ export const CustomSelect = ({
   emptyLabel = "Nenhum item encontrado",
   showSearch = false,
   multiple = false,
+  showSelectedValues = true,
 }) => {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -106,7 +107,7 @@ export const CustomSelect = ({
         <span className="text-slate-500">▾</span>
       </button>
 
-      {multiple && selectedValues && selectedValues.length > 0 && (
+      {multiple && showSelectedValues && selectedValues && selectedValues.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {selectedValues.map((v) => {
             const opt = options.find((o) => o.value === v);
