@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { supabase } from "../utils/supabase"
 import { useNavigate } from "react-router-dom"
 import { FaEye, FaEyeSlash } from "react-icons/fa"
 import { Button } from '../components/ui/Button'
@@ -8,29 +7,39 @@ import bgImg from "../assets/images/escola-frente.jpg"
 import logo from "../assets/images/logo-login.png"
 import { notify } from '../utils/notify'
 import { FormInput } from "../components/ui/FormInput"
+import { useAuth } from "../hooks/useAuth"
 
 export const Login = () => {
   const [email, setEmail] = useState("")
   const [senha, setSenha] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const navigate = useNavigate()
+  const { signIn } = useAuth()
 
   async function handleLogin(e) {
     e.preventDefault()
+    if (submitting) return
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: senha
-    })
+    setSubmitting(true)
 
-    if (error) {
-      notify.error("Erro no login")
-      return
+    try {
+      const { error } = await signIn(email, senha)
+
+      if (error) {
+        notify.error("Erro no login")
+        return
+      }
+
+      notify.success("Login realizado com sucesso!")
+      navigate("/", { replace: true })
+    } catch (error) {
+      console.error("Erro no login:", error)
+      notify.error("Não foi possível realizar o login")
+    } finally {
+      setSubmitting(false)
     }
-
-    notify.success("Login realizado com sucesso!")
-    navigate("/", { replace: true })
   }
 
   return (
@@ -70,6 +79,7 @@ export const Login = () => {
               placeholder="E-mail"
               onChange={(e) => setEmail(e.target.value)}
               className="w-full"
+              disabled={submitting}
             />
 
             <div className="relative">
@@ -78,11 +88,13 @@ export const Login = () => {
                 placeholder="Senha"
                 onChange={(e) => setSenha(e.target.value)}
                 className="w-full pr-11"
+                disabled={submitting}
               />
               <button
                 type="button"
+                disabled={submitting}
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors disabled:cursor-not-allowed"
               >
                 {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
               </button>
@@ -94,8 +106,8 @@ export const Login = () => {
               </a>
             </div>
 
-            <Button className="w-full mt-2" type="submit">
-              Entrar
+            <Button className="w-full mt-2" type="submit" disabled={submitting}>
+              {submitting ? "Entrando..." : "Entrar"}
             </Button>
           </form>
 
