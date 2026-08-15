@@ -1,0 +1,35 @@
+name: Restore topo mini footer image
+
+on:
+  push:
+    branches:
+      - agent/fix-horarios-core
+    paths:
+      - .github/workflows/restore-topo-mini.yml
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/fix-horarios-core
+          fetch-depth: 0
+
+      - name: Restore image from historical commit
+        run: |
+          git show 0aa51dc2d81ae99261ea980de707f785cdc55f70:src/assets/images/topo_mini.png > src/assets/images/topo_mini.png
+          test -s src/assets/images/topo_mini.png
+
+      - name: Commit and cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/assets/images/topo_mini.png
+          git rm -f .github/workflows/restore-topo-mini.yml
+          git commit -m "fix(horarios): restore pdf footer image"
+          git push origin HEAD:agent/fix-horarios-core
