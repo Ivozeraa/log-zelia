@@ -173,6 +173,8 @@ export const Horarios = () => {
   const [pdfMode, setPdfMode] = useState('separated');
   const [pdfCourseKey, setPdfCourseKey] = useState('');
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [deleteConfigModalOpen, setDeleteConfigModalOpen] = useState(false);
+  const [deletingConfig, setDeletingConfig] = useState(false);
 
   const schoolTurmas = useMemo(
     () =>
@@ -726,6 +728,59 @@ export const Horarios = () => {
     }
   };
 
+  const deleteConfiguration = async () => {
+    if (!selectedConfigId) return;
+    setDeletingConfig(true);
+    try {
+      const relatedTables = [
+        'horario_grade_gerada',
+        'horario_pdt',
+        'horario_professor_turma',
+        'horario_professor_folgas',
+        'horario_professor_indisponibilidades',
+        'horario_formacao_area',
+        'horario_professores',
+        'horario_disciplinas',
+        'horario_config_turmas',
+        'horario_areas',
+      ];
+
+      for (const table of relatedTables) {
+        const result = await supabase.from(table).delete().eq('configuracao_id', selectedConfigId);
+        if (result.error) throw new Error(`Falha ao excluir ${table}: ${result.error.message}`);
+      }
+
+      const configResult = await supabase
+        .from('horario_configuracoes')
+        .delete()
+        .eq('id', selectedConfigId);
+      if (configResult.error) throw configResult.error;
+
+      const nextConfigs = configs.filter((config) => String(config.id) !== String(selectedConfigId));
+      const nextConfigId = nextConfigs[0]?.id ? String(nextConfigs[0].id) : '';
+
+      setConfigs(nextConfigs);
+      setDeleteConfigModalOpen(false);
+      setGeneratedSchedule(emptyGrade);
+      setStatusMessage('');
+
+      if (nextConfigId) {
+        setSelectedConfigId(nextConfigId);
+      } else {
+        setSelectedConfigId('');
+        setCurrentConfig(emptyConfig(user?.escola_id || schools[0]?.id || ''));
+        setCurrentStep(1);
+      }
+
+      notify.success('Configuração excluída com sucesso.');
+    } catch (error) {
+      console.error(error);
+      notify.error(`Não foi possível excluir a configuração: ${error.message || 'erro desconhecido'}.`);
+    } finally {
+      setDeletingConfig(false);
+    }
+  };
+
   const nextStep = async () => {
     if (currentStep === 1 && !(await saveConfiguration(false))) return;
     if (currentStep === 2 && !currentConfig.turmas.length) return notify.error('Selecione ao menos uma turma.');
@@ -1056,7 +1111,14 @@ export const Horarios = () => {
               <option value="1">1º semestre</option>
               <option value="2">2º semestre</option>
             </SelectField>
-            <div className="md:col-span-2"><Button type="button" onClick={() => saveConfiguration(false)} disabled={saving}>{saving ? 'Salvando...' : 'Salvar configuração'}</Button></div>
+            <div className="flex flex-wrap gap-3 md:col-span-2">
+              <Button type="button" onClick={() => saveConfiguration(false)} disabled={saving}>{saving ? 'Salvando...' : 'Salvar configuração'}</Button>
+              {selectedConfigId && (
+                <Button type="button" variant="destructive" onClick={() => setDeleteConfigModalOpen(true)} disabled={saving || deletingConfig}>
+                  <FaTrash className="mr-2" /> Excluir configuração
+                </Button>
+              )}
+            </div>
           </div>
         )}
 
@@ -1163,6 +1225,21 @@ export const Horarios = () => {
 
         <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-4 dark:border-slate-700"><Button type="button" variant="secondary" onClick={previousStep} disabled={currentStep === 1}>Voltar</Button><div className="text-xs text-slate-500">Etapa {currentStep} de {steps.length}</div><Button type="button" onClick={nextStep} disabled={currentStep === 7 || saving}>{currentStep === 7 ? 'Concluído' : 'Continuar'}</Button></div>
       </div>
+
+      <Modal isOpen={deleteConfigModalOpen} onClose={() => setDeleteConfigModalOpen(false)} title="Excluir configuração">
+        <div className="space-y-4">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+            Esta ação excluirá a configuração e todas as informações relacionadas, incluindo turmas, professores, disciplinas, atribuições, PDT, disponibilidades e a grade gerada.
+          </div>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Tem certeza de que deseja excluir <strong>{currentConfig.nome || 'esta configuração'}</strong>? Essa ação não pode ser desfeita.</p>
+          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+            <Button type="button" variant="secondary" onClick={() => setDeleteConfigModalOpen(false)} disabled={deletingConfig}>Cancelar</Button>
+            <Button type="button" variant="destructive" onClick={deleteConfiguration} disabled={deletingConfig}>
+              {deletingConfig ? 'Excluindo...' : 'Excluir definitivamente'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal isOpen={pdfModalOpen} onClose={() => setPdfModalOpen(false)} title="Exportar PDF do Horário">
         <div className="space-y-4">
