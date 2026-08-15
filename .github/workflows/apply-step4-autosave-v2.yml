@@ -1,0 +1,49 @@
+name: Apply step 4 autosave v2
+on:
+  push:
+    branches:
+      - agent/fix-horarios-core
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch files
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          const selectPath = 'src/components/ui/CustomSelect.jsx';
+          let select = fs.readFileSync(selectPath, 'utf8');
+          select = select.replace('  multiple = false,\n}) => {', '  multiple = false,\n  showSelectedValues = true,\n}) => {');
+          select = select.replace('{multiple && selectedValues && selectedValues.length > 0 && (', '{multiple && showSelectedValues && selectedValues && selectedValues.length > 0 && (');
+          fs.writeFileSync(selectPath, select);
+
+          const horarioPath = 'src/pages/Horarios.jsx';
+          let horario = fs.readFileSync(horarioPath, 'utf8');
+          const turmaOld = 'options={turmaOptions.filter((option) => currentConfig.turmas.includes(String(option.value)))} placeholder="Selecione uma ou mais turmas" emptyLabel="Selecione turmas na Etapa 2" showSearch />';
+          const turmaNew = 'options={turmaOptions.filter((option) => currentConfig.turmas.includes(String(option.value)))} placeholder="Selecione uma ou mais turmas" emptyLabel="Selecione turmas na Etapa 2" showSearch showSelectedValues={false} />';
+          if (!horario.includes(turmaOld)) throw new Error('Turma select do modal não encontrado');
+          horario = horario.replace(turmaOld, turmaNew);
+
+          const nextStart = horario.indexOf('  const nextStep = async () => {');
+          const nextEnd = horario.indexOf('\n  const previousStep = () =>', nextStart);
+          if (nextStart < 0 || nextEnd < 0) throw new Error('nextStep não encontrado');
+          const nextBlock = `  const nextStep = async () => {\n    if (currentStep === 1 && !currentConfig.nome.trim()) return notify.error('Informe o nome da configuração.');\n    if (currentStep === 1 && !currentConfig.escola_id) return notify.error('Selecione a escola.');\n    if (currentStep === 2 && !currentConfig.turmas.length) return notify.error('Selecione ao menos uma turma.');\n    if (currentStep === 3 && currentConfig.professores.some((professor) => !byId(currentConfig.areas, professor.area_id))) return notify.error('Todos os professores precisam de uma área válida.');\n    if (currentStep === 3 && !currentConfig.disciplinas.length) return notify.error('Cadastre pelo menos uma disciplina antes de avançar.');\n    if (currentStep === 4) {\n      const invalid = validateConfig(false);\n      if (invalid.length) return notify.error(invalid[0].mensagem);\n    }\n    if (currentStep === 6) {\n      const invalid = validateConfig(true);\n      if (invalid.length) return notify.error(invalid[0].mensagem);\n    }\n    if (currentStep < 7) {\n      const saved = await saveConfiguration(false);\n      if (!saved) return;\n    }\n    setCurrentStep((step) => Math.min(7, step + 1));\n  };\n`;
+          horario = horario.slice(0, nextStart) + nextBlock + horario.slice(nextEnd);
+          fs.writeFileSync(horarioPath, horario);
+          NODE
+      - name: Validate build
+        run: |
+          npm ci
+          npm run build
+      - name: Commit and cleanup
+        run: |
+          rm -f .github/workflows/apply-step4-autosave-v2.yml .github/workflows/fix-step4-autosave.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/ui/CustomSelect.jsx src/pages/Horarios.jsx .github/workflows/apply-step4-autosave-v2.yml .github/workflows/fix-step4-autosave.yml
+          git commit -m "feat(horarios): autosave steps and keep selected turmas inside select"
+          git push origin HEAD:agent/fix-horarios-core
