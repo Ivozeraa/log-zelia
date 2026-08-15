@@ -143,6 +143,7 @@ export const Horarios = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] = useState('');
   const [configs, setConfigs] = useState([]);
   const [selectedConfigId, setSelectedConfigId] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
@@ -706,7 +707,7 @@ export const Horarios = () => {
     try {
       const configResult = await supabase.from('horario_configuracoes').upsert(payload, { onConflict: 'id' });
       if (configResult.error) throw configResult.error;
-      for (const table of ['horario_grade_gerada', 'horario_pdt', 'horario_professor_turma', 'horario_professor_folgas', 'horario_professor_indisponibilidades', 'horario_formacao_area', 'horario_professores', 'horario_disciplinas', 'horario_config_turmas', 'horario_areas']) {
+      for (const table of ['horario_pdt', 'horario_professor_turma', 'horario_professor_folgas', 'horario_professor_indisponibilidades', 'horario_formacao_area', 'horario_professores', 'horario_disciplinas', 'horario_config_turmas', 'horario_areas']) {
         const result = await supabase.from(table).delete().eq('configuracao_id', configId);
         if (result.error) throw new Error(`Falha ao limpar ${table}: ${result.error.message}`);
       }
@@ -794,25 +795,31 @@ export const Horarios = () => {
   };
 
   const nextStep = async () => {
-    if (currentStep === 1 && !currentConfig.nome.trim()) return notify.error('Informe o nome da configuração.');
-    if (currentStep === 1 && !currentConfig.escola_id) return notify.error('Selecione a escola.');
-    if (currentStep === 2 && !currentConfig.turmas.length) return notify.error('Selecione ao menos uma turma.');
-    if (currentStep === 3 && currentConfig.professores.some((professor) => !byId(currentConfig.areas, professor.area_id))) return notify.error('Todos os professores precisam de uma área válida.');
-    if (currentStep === 3 && !currentConfig.disciplinas.length) return notify.error('Cadastre pelo menos uma disciplina antes de avançar.');
-    if (currentStep === 4) {
-      const invalid = validateConfig(false);
-      if (invalid.length) return notify.error(invalid[0].mensagem);
+  if (currentStep === 2 && !currentConfig.turmas.length) return notify.error('Selecione ao menos uma turma.');
+  if (currentStep === 3 && currentConfig.professores.some((professor) => !byId(currentConfig.areas, professor.area_id))) return notify.error('Todos os professores precisam de uma área válida.');
+  if (currentStep === 3 && !currentConfig.disciplinas.length) return notify.error('Cadastre pelo menos uma disciplina antes de avançar.');
+  if (currentStep === 4) {
+    const invalid = validateConfig(false);
+    if (invalid.length) return notify.error(invalid[0].mensagem);
+  }
+  if (currentStep === 6) {
+    const invalid = validateConfig(true);
+    if (invalid.length) return notify.error(invalid[0].mensagem);
+  }
+
+  if (currentStep < 7) {
+    setAutosaveStatus('Salvando alterações...');
+    const saved = await saveConfiguration(currentStep === 6);
+    if (!saved) {
+      setAutosaveStatus('Falha ao salvar');
+      return;
     }
-    if (currentStep === 6) {
-      const invalid = validateConfig(true);
-      if (invalid.length) return notify.error(invalid[0].mensagem);
-    }
-    if (currentStep < 7) {
-      const saved = await saveConfiguration(false);
-      if (!saved) return;
-    }
-    setCurrentStep((step) => Math.min(7, step + 1));
-  };
+    setAutosaveStatus('Salvo automaticamente');
+    window.setTimeout(() => setAutosaveStatus(''), 1800);
+  }
+
+  setCurrentStep((step) => Math.min(7, step + 1));
+};
 
   const previousStep = () => setCurrentStep((step) => Math.max(1, step - 1));
   const newConfiguration = () => {
@@ -1107,6 +1114,8 @@ export const Horarios = () => {
           </div>
           <Button type="button" variant="secondary" onClick={newConfiguration}><FaPlus className="mr-2" /> Nova configuração</Button>
         </div>
+
+        {autosaveStatus && <div className="mb-3 rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-xs font-semibold text-green-800 dark:border-green-900 dark:bg-green-950/30 dark:text-green-300">{autosaveStatus}</div>}
 
         <div className="mb-6 grid gap-2 md:grid-cols-7">
           {steps.map((step, index) => (
