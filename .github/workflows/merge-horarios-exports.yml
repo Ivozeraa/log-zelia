@@ -1,0 +1,420 @@
+name: Merge Horarios Exports
+
+on:
+  push:
+    branches:
+      - agent/fix-horarios-core
+    paths:
+      - .github/workflows/merge-horarios-exports.yml
+
+permissions:
+  contents: write
+
+jobs:
+  merge-exports:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fix-horarios-core
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install ExcelJS and update lockfile
+        run: npm install exceljs@^4.4.0 --save
+
+      - name: Merge PDF and Excel export features
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('src/pages/Horarios.jsx')
+          text = path.read_text(encoding='utf-8')
+
+          text = text.replace(
+              "import { jsPDF } from 'jspdf';\nimport * as XLSX from 'xlsx';",
+              "import { jsPDF } from 'jspdf';\nimport autoTable from 'jspdf-autotable';\nimport ExcelJS from 'exceljs';",
+              1,
+          )
+
+          constants = r'''const COURSE_STYLES = [
+  { key: 'adm', label: 'Adm', match: /adm/i, hex: '60A5FA', rgb: [96, 165, 250] },
+  { key: 'enfermagem', label: 'Enfermagem', match: /enferm/i, hex: '22C55E', rgb: [34, 197, 94] },
+  { key: 'eletro', label: 'Eletro', match: /eletro/i, hex: 'F97316', rgb: [249, 115, 22] },
+  { key: 'informatica', label: 'Informática', match: /inform[aá]tica/i, hex: 'DC2626', rgb: [220, 38, 38] },
+];
+const DEFAULT_COURSE_STYLE = { key: 'outros', label: 'Outros', hex: '475569', rgb: [71, 85, 105] };
+const getCourseStyle = (turmaNome = '') =>
+  COURSE_STYLES.find((course) => course.match.test(turmaNome)) || DEFAULT_COURSE_STYLE;
+
+const SCHEDULE_EXPORT_ROWS = [
+  { type: 'slot', slot: 1 },
+  { type: 'slot', slot: 2 },
+  { type: 'break', label: 'LANCHE DA MANHÃ' },
+  { type: 'slot', slot: 3 },
+  { type: 'slot', slot: 4 },
+  { type: 'slot', slot: 5 },
+  { type: 'break', label: 'ALMOÇO' },
+  { type: 'slot', slot: 6 },
+  { type: 'slot', slot: 7 },
+  { type: 'break', label: 'LANCHE DA TARDE' },
+  { type: 'slot', slot: 8 },
+  { type: 'slot', slot: 9 },
+];
+
+const SCHEDULE_LEGEND_LEFT = [
+  '7h20 - 1º TEMPO',
+  '8h10 - 2º TEMPO',
+  '9h00 - LANCHE',
+  '9h30 - 3º TEMPO',
+  '10h20 - 4º TEMPO',
+  '11h10 - 5º TEMPO',
+  '12h - ALMOÇO',
+];
+const SCHEDULE_LEGEND_RIGHT = [
+  '13h00 - 6º TEMPO',
+  '13h50 - 7º TEMPO',
+  '14h40 - LANCHE',
+  '15h - 8º TEMPO',
+  '15h50 - 9º TEMPO',
+  '16h40 - ENCERRAMENTO',
+];
+
+const PDF_EXPORT_MODES = [
+  { value: 'separated', title: 'Todos separados', description: 'Uma página por turma.' },
+  { value: 'course', title: 'Somente por curso', description: 'Escolha um curso e gere somente as turmas dele.' },
+  { value: 'unified', title: 'Todos em uma única página', description: 'Junta todas as turmas, respeitando o espaço disponível.' },
+];
+
+const PDF_FOOTER_HEIGHT = 7;
+const PDF_TOP_MARGIN = 22;
+
+const firstName = (nome = '') => String(nome).trim().split(/\s+/)[0] || '';
+const cellLabel = (aula) => {
+  if (!aula) return '—';
+  if (aula.tipo === 'FC') return 'FC';
+  return [aula.disciplina, aula.professor_nome].filter(Boolean).join(' - ').toUpperCase();
+};
+const cellLabelPdf = (aula) => {
+  if (!aula) return '—';
+  if (aula.tipo === 'FC') return 'FC';
+  return [aula.disciplina, firstName(aula.professor_nome)].filter(Boolean).join(' - ').toUpperCase();
+};
+'''
+          marker = "const PROFESSOR_ROLE_ID = 4;\n"
+          if constants not in text:
+              text = text.replace(marker, marker + "\n" + constants + "\n", 1)
+
+          old_state = "  const [statusMessage, setStatusMessage] = useState('');"
+          new_state = old_state + "\n  const [pdfModalOpen, setPdfModalOpen] = useState(false);\n  const [pdfMode, setPdfMode] = useState('separated');\n  const [pdfCourseKey, setPdfCourseKey] = useState('');\n  const [exportingPdf, setExportingPdf] = useState(false);"
+          if "const [pdfModalOpen" not in text:
+              text = text.replace(old_state, new_state, 1)
+
+          old_turma_options = "  const turmaOptions = useMemo(\n    () => schoolTurmas.map((turma) => ({ value: String(turma.id), label: turma.nome })),\n    [schoolTurmas],\n  );"
+          new_turma_options = old_turma_options + "\n\n  const availablePdfCourses = useMemo(() => {\n    const map = new Map();\n    currentConfig.turmas.forEach((turmaId) => {\n      const turma = byId(turmas, turmaId);\n      const course = getCourseStyle(turma?.nome);\n      if (!map.has(course.key)) map.set(course.key, course);\n    });\n    return Array.from(map.values());\n  }, [currentConfig.turmas, turmas]);"
+          if "const availablePdfCourses" not in text:
+              if old_turma_options not in text:
+                  raise SystemExit('turmaOptions block not found')
+              text = text.replace(old_turma_options, new_turma_options, 1)
+
+          export_pattern = re.compile(r"  const exportPdf = \(\) => \{.*?\n  const exportExcel = \(\) => \{.*?\n  \};\n", re.S)
+          export_code = r'''  const drawPdfHeader = (doc, { schoolName, semesterLabel }) => {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(60);
+    doc.text(schoolName, 12, 11);
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text(semesterLabel, pageWidth - 12, 11, { align: 'right' });
+  };
+
+  const drawPdfFooter = (doc) => {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setDrawColor(203, 213, 225);
+    doc.line(12, pageHeight - PDF_FOOTER_HEIGHT, pageWidth - 12, pageHeight - PDF_FOOTER_HEIGHT);
+    doc.setFontSize(7);
+    doc.setTextColor(100);
+    doc.text(`LogZélia · ${currentConfig.nome || 'Horário'}`, 12, pageHeight - 2.5);
+  };
+
+  const renderTurmaTable = (doc, turmaId, startY, { compact = false } = {}) => {
+    const turma = byId(turmas, turmaId);
+    const turmaNome = turma?.nome || 'Turma';
+    const course = getCourseStyle(turmaNome);
+    const aulas = generatedSchedule.grid[String(turmaId)] || [];
+    const body = SCHEDULE_EXPORT_ROWS.map((row) => {
+      if (row.type === 'break') {
+        return [{ content: row.label, colSpan: 6, styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249], textColor: [51, 65, 85] } }];
+      }
+      const cells = WEEK_DAYS.map((day) => cellLabelPdf(aulas.find((aula) => aula.dia === day && Number(aula.slot) === row.slot)));
+      return [{ content: `${row.slot}°`, styles: { fontStyle: 'bold', halign: 'center' } }, ...cells];
+    });
+
+    doc.setFontSize(compact ? 11 : 15);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(25);
+    doc.text(turmaNome.toUpperCase(), doc.internal.pageSize.getWidth() / 2, startY, { align: 'center' });
+    doc.setFont(undefined, 'normal');
+
+    autoTable(doc, {
+      startY: startY + 5,
+      head: [['', ...WEEK_DAYS.map((day) => day.replace('-feira', '').toUpperCase())]],
+      body,
+      theme: 'grid',
+      styles: {
+        fontSize: compact ? 6.2 : 7.4,
+        cellPadding: compact ? 1.25 : 1.8,
+        lineColor: [203, 213, 225],
+        lineWidth: 0.15,
+        valign: 'middle',
+        textColor: [20, 20, 20],
+        fontStyle: 'bold',
+      },
+      headStyles: {
+        fillColor: course.rgb,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        halign: 'center',
+        fontSize: compact ? 6.6 : 8,
+      },
+      columnStyles: { 0: { cellWidth: compact ? 8 : 10, fillColor: [248, 250, 252] } },
+      margin: { left: 10, right: 10, bottom: PDF_FOOTER_HEIGHT + 2 },
+    });
+    return doc.lastAutoTable.finalY;
+  };
+
+  const renderSchedulesLegend = (doc, startY, course) => {
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(course.rgb[0], course.rgb[1], course.rgb[2]);
+    doc.text('HORÁRIOS', 14, startY);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(55);
+    const lineHeight = 4.2;
+    SCHEDULE_LEGEND_LEFT.forEach((line, i) => doc.text(line, 14, startY + lineHeight * (i + 1)));
+    SCHEDULE_LEGEND_RIGHT.forEach((line, i) => doc.text(line, 85, startY + lineHeight * (i + 1)));
+  };
+
+  const exportPdf = async ({ mode = 'separated', courseKey = '' } = {}) => {
+    if (!generatedSchedule.schedule.length) return notify.error('Não há grade para exportar.');
+    let turmaIds = currentConfig.turmas;
+    if (mode === 'course') {
+      if (!courseKey) return notify.error('Selecione um curso para gerar o PDF.');
+      turmaIds = turmaIds.filter((turmaId) => getCourseStyle(byId(turmas, turmaId)?.nome).key === courseKey);
+      if (!turmaIds.length) return notify.error('Nenhuma turma desse curso foi encontrada.');
+    }
+
+    setExportingPdf(true);
+    try {
+      const school = schools.find((item) => String(item.id) === String(currentConfig.escola_id));
+      const schoolName = school?.nome || 'Escola';
+      const semesterLabel = `${currentConfig.ano_letivo} · ${currentConfig.semestre}º semestre`;
+      const doc = new jsPDF('l', 'mm', 'a4');
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      if (mode === 'unified') {
+        let cursorY = PDF_TOP_MARGIN;
+        drawPdfHeader(doc, { schoolName, semesterLabel });
+        turmaIds.forEach((turmaId, index) => {
+          const estimatedBlockHeight = 90;
+          if (index > 0 && cursorY + estimatedBlockHeight > pageHeight - PDF_FOOTER_HEIGHT) {
+            drawPdfFooter(doc);
+            doc.addPage();
+            drawPdfHeader(doc, { schoolName, semesterLabel });
+            cursorY = PDF_TOP_MARGIN;
+          }
+          const finalY = renderTurmaTable(doc, turmaId, cursorY, { compact: true });
+          cursorY = finalY + 8;
+        });
+        if (cursorY + 40 > pageHeight - PDF_FOOTER_HEIGHT) {
+          drawPdfFooter(doc);
+          doc.addPage();
+          drawPdfHeader(doc, { schoolName, semesterLabel });
+          cursorY = PDF_TOP_MARGIN;
+        }
+        renderSchedulesLegend(doc, cursorY + 3, DEFAULT_COURSE_STYLE);
+      } else {
+        turmaIds.forEach((turmaId, index) => {
+          if (index > 0) {
+            drawPdfFooter(doc);
+            doc.addPage();
+          }
+          drawPdfHeader(doc, { schoolName, semesterLabel });
+          const finalY = renderTurmaTable(doc, turmaId, PDF_TOP_MARGIN);
+          renderSchedulesLegend(doc, finalY + 8, getCourseStyle(byId(turmas, turmaId)?.nome));
+        });
+      }
+
+      const totalPages = doc.getNumberOfPages();
+      for (let page = 1; page <= totalPages; page += 1) {
+        doc.setPage(page);
+        drawPdfFooter(doc);
+      }
+      doc.save(`horario_${currentConfig.nome || 'gerado'}.pdf`);
+    } catch (error) {
+      console.error(error);
+      notify.error(`Não foi possível gerar o PDF: ${error.message || 'erro desconhecido'}.`);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const openPdfModal = () => {
+    if (!generatedSchedule.schedule.length) return notify.error('Não há grade para exportar.');
+    setPdfMode('separated');
+    setPdfCourseKey(availablePdfCourses[0]?.key || '');
+    setPdfModalOpen(true);
+  };
+
+  const confirmPdfExport = async () => {
+    await exportPdf({ mode: pdfMode, courseKey: pdfCourseKey });
+    setPdfModalOpen(false);
+  };
+
+  const exportExcel = async () => {
+    if (!generatedSchedule.schedule.length) return notify.error('Não há grade para exportar.');
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const usedSheetNames = new Set();
+      currentConfig.turmas.forEach((turmaId) => {
+        const turma = byId(turmas, turmaId);
+        const turmaNome = turma?.nome || 'Turma';
+        const course = getCourseStyle(turmaNome);
+        const aulas = generatedSchedule.grid[String(turmaId)] || [];
+        let sheetName = turmaNome.replace(/[\\/*?:[\]]/g, ' ').trim().slice(0, 31) || 'Turma';
+        let suffix = 2;
+        while (usedSheetNames.has(sheetName.toLowerCase())) {
+          sheetName = `${turmaNome.slice(0, 28)} ${suffix}`;
+          suffix += 1;
+        }
+        usedSheetNames.add(sheetName.toLowerCase());
+
+        const sheet = workbook.addWorksheet(sheetName, { views: [{ showGridLines: false }] });
+        sheet.columns = [{ width: 9 }, ...WEEK_DAYS.map(() => ({ width: 22 }))];
+        const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${course.hex}` } };
+        const thinBorder = { style: 'thin', color: { argb: 'FFCBD5E1' } };
+        const borders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+
+        const titleRow = sheet.addRow([turmaNome.toUpperCase()]);
+        sheet.mergeCells(titleRow.number, 1, titleRow.number, 6);
+        titleRow.getCell(1).font = { bold: true, size: 16 };
+        titleRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+        titleRow.height = 24;
+
+        const headerRow = sheet.addRow(['', ...WEEK_DAYS.map((day) => day.replace('-feira', '').toUpperCase())]);
+        headerRow.eachCell((cell) => {
+          cell.fill = headerFill;
+          cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = borders;
+        });
+        headerRow.height = 20;
+
+        SCHEDULE_EXPORT_ROWS.forEach((row) => {
+          if (row.type === 'break') {
+            const breakRow = sheet.addRow([row.label]);
+            sheet.mergeCells(breakRow.number, 1, breakRow.number, 6);
+            breakRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+            breakRow.getCell(1).font = { bold: true, color: { argb: 'FF334155' } };
+            breakRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+            breakRow.eachCell({ includeEmpty: true }, (cell) => { cell.border = borders; });
+            return;
+          }
+          const cells = WEEK_DAYS.map((day) => cellLabel(aulas.find((aula) => aula.dia === day && Number(aula.slot) === row.slot)));
+          const dataRow = sheet.addRow([`${row.slot}°`, ...cells]);
+          dataRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            cell.border = borders;
+            cell.alignment = { vertical: 'middle', horizontal: colNumber === 1 ? 'center' : 'left', wrapText: true };
+            if (colNumber === 1) cell.font = { bold: true };
+          });
+        });
+
+        sheet.addRow([]);
+        const legendTitle = sheet.addRow(['HORÁRIOS']);
+        legendTitle.getCell(1).font = { bold: true, color: { argb: `FF${course.hex}` } };
+        const legendRows = Math.max(SCHEDULE_LEGEND_LEFT.length, SCHEDULE_LEGEND_RIGHT.length);
+        for (let i = 0; i < legendRows; i += 1) {
+          const legendRow = sheet.addRow(['', SCHEDULE_LEGEND_LEFT[i] || '', '', '', SCHEDULE_LEGEND_RIGHT[i] || '']);
+          sheet.mergeCells(legendRow.number, 2, legendRow.number, 3);
+          sheet.mergeCells(legendRow.number, 5, legendRow.number, 6);
+        }
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `horario_${currentConfig.nome || 'gerado'}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      notify.error(`Não foi possível exportar o Excel: ${error.message || 'erro desconhecido'}.`);
+    }
+  };
+'''
+          if not export_pattern.search(text):
+              raise SystemExit('export block not found')
+          text = export_pattern.sub(export_code, text, count=1)
+
+          text = text.replace('onClick={exportPdf}', 'onClick={openPdfModal}', 1)
+
+          modal_marker = '      <Modal isOpen={professorModalOpen}'
+          pdf_modal = r'''      <Modal isOpen={pdfModalOpen} onClose={() => setPdfModalOpen(false)} title="Exportar PDF do Horário">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Modo de exportação</label>
+            <div className="space-y-2">
+              {PDF_EXPORT_MODES.map((mode) => (
+                <label key={mode.value} className={`flex cursor-pointer flex-col rounded-xl border p-3 transition ${pdfMode === mode.value ? 'border-green-600 bg-green-50/50 dark:bg-green-950/20' : 'border-slate-200 dark:border-slate-800'}`}>
+                  <div className="flex items-center gap-2">
+                    <input type="radio" name="pdfMode" value={mode.value} checked={pdfMode === mode.value} onChange={(event) => setPdfMode(event.target.value)} className="text-green-600 focus:ring-green-500" />
+                    <span className="font-semibold text-slate-900 dark:text-white">{mode.title}</span>
+                  </div>
+                  <span className="ml-6 text-xs text-slate-500 dark:text-slate-400">{mode.description}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          {pdfMode === 'course' && (
+            <CustomSelect label="Curso" value={pdfCourseKey} onChange={(value) => setPdfCourseKey(value)} options={availablePdfCourses.map((course) => ({ value: course.key, label: course.label }))} placeholder="Selecione o curso" emptyLabel="Nenhum curso encontrado" />
+          )}
+          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+            <Button type="button" variant="secondary" onClick={() => setPdfModalOpen(false)}>Cancelar</Button>
+            <Button type="button" onClick={confirmPdfExport} disabled={exportingPdf}>{exportingPdf ? 'Gerando...' : 'Exportar PDF'}</Button>
+          </div>
+        </div>
+      </Modal>
+
+'''
+          if 'isOpen={pdfModalOpen}' not in text:
+              if modal_marker not in text:
+                  raise SystemExit('professor modal marker not found')
+              text = text.replace(modal_marker, pdf_modal + modal_marker, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validate build
+        run: npm run build
+
+      - name: Remove migration workflow and commit merged export code
+        run: |
+          rm .github/workflows/merge-horarios-exports.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Horarios.jsx package.json package-lock.json .github/workflows/merge-horarios-exports.yml
+          git commit -m "feat(horarios): add formatted PDF and Excel exports"
+          git push origin HEAD:agent/fix-horarios-core
