@@ -3,13 +3,14 @@ name: Fix select and common subjects
 on:
   push:
     branches: [agent/fix-horarios-core]
+    paths:
+      - scripts/fix_select_and_common_subjects.py
 
 permissions:
   contents: write
 
 jobs:
   patch:
-    if: ${{ !contains(github.event.head_commit.message, 'fix(ui): align selects and general subjects') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
