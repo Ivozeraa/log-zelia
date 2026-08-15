@@ -275,13 +275,54 @@ export const Horarios = () => {
     return same ? first : null;
   };
 
+  const normalizeDisciplineText = (value = '') => String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
+  const GENERAL_DISCIPLINE_NAMES = new Set([
+    'lingua portuguesa',
+    'portugues',
+    'redacao',
+    'arte',
+    'lingua estrangeira ingles',
+    'lingua estrangeira: ingles',
+    'lingua estrangeira',
+    'educacao fisica',
+    'historia',
+    'geografia',
+    'filosofia',
+    'sociologia',
+    'matematica',
+    'biologia',
+    'fisica',
+    'quimica',
+  ]);
+
+  const isGeneralDiscipline = (row) => {
+    const category = normalizeDisciplineText(row?.categoria);
+    const name = normalizeDisciplineText(row?.nome);
+    return category.includes('formacao geral')
+      || category === 'geral'
+      || GENERAL_DISCIPLINE_NAMES.has(name);
+  };
+
   const catalogOptionsForTurmas = (turmaIds = []) => {
     const curriculum = curriculumForTurmas(turmaIds);
     if (!curriculum) return [];
+    const multipleTurmas = turmaIds.length > 1;
+
     return disciplinaCatalogo
-      .filter((row) => row.curso === curriculum.curso && Number(row.serie) === Number(curriculum.serie) && Number(row.semestre) === Number(currentConfig.semestre))
+      .filter((row) => row.curso === curriculum.curso
+        && Number(row.serie) === Number(curriculum.serie)
+        && Number(row.semestre) === Number(currentConfig.semestre))
+      .filter((row) => !multipleTurmas || isGeneralDiscipline(row))
       .sort((a, b) => a.categoria.localeCompare(b.categoria) || a.nome.localeCompare(b.nome))
-      .map((row) => ({ value: String(row.id), label: row.nome }));
+      .map((row) => ({
+        value: String(row.id),
+        label: `${row.nome}${multipleTurmas && isGeneralDiscipline(row) ? ' · comum' : ''}`,
+      }));
   };
 
   const getMateriaSettings = (item) => item.materia_settings || {};
