@@ -548,6 +548,7 @@ export const Home = () => {
             placeholder="Selecionar aluno(s)"
             showSearch={true}
             multiple={true}
+            showSelectedValues={false}
           />
 
           <CustomSelect
