@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
   const loadUser = useCallback(async (authUser) => {
     if (!authUser) {
       setUser(null);
-      return;
+      return null;
     }
 
     try {
@@ -39,7 +39,7 @@ export function AuthProvider({ children }) {
         console.error("Erro buscando perfil:", perfilError);
       }
 
-      setUser({
+      const nextUser = {
         id: authUser.id,
         nome: perfil?.nome || authUser.user_metadata?.name || "Usuário",
         role_id: perfil?.role_id ?? null,
@@ -47,12 +47,14 @@ export function AuthProvider({ children }) {
         pdt: perfil?.pdt ?? false,
         email: authUser.email,
         avatar_url: authUser.user_metadata?.avatar_url || null,
-      });
+      };
+
+      setUser(nextUser);
+      return nextUser;
     } catch (err) {
       console.error("Erro em loadUser:", err);
 
-      // Mantém a sessão disponível mesmo que a consulta ao perfil falhe.
-      setUser({
+      const fallbackUser = {
         id: authUser.id,
         nome: authUser.user_metadata?.name || "Usuário",
         role_id: null,
@@ -60,9 +62,31 @@ export function AuthProvider({ children }) {
         pdt: false,
         email: authUser.email,
         avatar_url: authUser.user_metadata?.avatar_url || null,
-      });
+      };
+
+      // Mantém a sessão disponível mesmo que a consulta ao perfil falhe.
+      setUser(fallbackUser);
+      return fallbackUser;
     }
   }, []);
+
+  const signIn = useCallback(async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error || !data?.user) {
+      return { data, error };
+    }
+
+    // O Supabase atualiza a sessão imediatamente, mas o evento de auth
+    // pode chegar antes ou depois da navegação. Carregamos o perfil aqui
+    // e só devolvemos sucesso quando o AuthContext já conhece o usuário.
+    await loadUser(data.user);
+
+    return { data, error: null };
+  }, [loadUser]);
 
   useEffect(() => {
     let mounted = true;
@@ -75,7 +99,10 @@ export function AuthProvider({ children }) {
           AUTH_INIT_TIMEOUT_MS,
           "Tempo limite ao inicializar a sessão.",
         );
-        const { data: { session }, error } = result;
+        const {
+          data: { session },
+          error,
+        } = result;
 
         if (error) {
           console.error("Erro obtendo sessão:", error);
@@ -139,7 +166,7 @@ export function AuthProvider({ children }) {
   }, [loadUser, user]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, refreshUser, logout }}>
+    <AuthContext.Provider value={{ user, loading, signIn, refreshUser, logout }}>
       {children}
     </AuthContext.Provider>
   );
