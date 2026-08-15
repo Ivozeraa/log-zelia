@@ -1,0 +1,35 @@
+name: Apply common general subjects patch
+
+on:
+  push:
+    branches: [agent/fix-horarios-core]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, 'fix(horarios): common general subjects') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fix-horarios-core
+          fetch-depth: 0
+
+      - name: Apply patch
+        run: python3 scripts/apply_general_subjects_common.py
+
+      - name: Validate build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Horarios.jsx
+          git rm -f scripts/apply_general_subjects_common.py .github/workflows/apply-general-subjects-common.yml
+          git commit -m "fix(horarios): common general subjects"
+          git push origin agent/fix-horarios-core
