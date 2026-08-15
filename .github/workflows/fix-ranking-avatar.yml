@@ -1,0 +1,61 @@
+name: Fix ranking avatar lookup
+
+on:
+  push:
+    branches:
+      - agent/fix-horarios-core
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch Ranking avatar lookup
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/ui/Ranking.jsx')
+          s = p.read_text(encoding='utf-8')
+          old = '''      if (top3.length > 0) {
+        const { data: usuariosData } = await supabase
+          .from('usuarios')
+          .select('id, avatar_url')
+          .in('id', top3.map((p) => p.id))
+        if (usuariosData) {
+          const map = {}
+          usuariosData.forEach((u) => { map[u.id] = u.avatar_url || null })
+          setAvatars(map)
+        }
+      }
+'''
+          new = '''      if (top3.length > 0) {
+        const avatarEntries = top3.map((professor) => {
+          const { data: publicData } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(`${professor.id}/avatar.png`)
+          return [professor.id, publicData?.publicUrl || null]
+        })
+        setAvatars(Object.fromEntries(avatarEntries))
+      }
+'''
+          if old not in s:
+              raise SystemExit('Ranking avatar block not found')
+          p.write_text(s.replace(old, new), encoding='utf-8')
+          PY
+
+      - name: Validate build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit and remove workflow
+        run: |
+          rm -f .github/workflows/fix-ranking-avatar.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/ui/Ranking.jsx .github/workflows/fix-ranking-avatar.yml
+          git commit -m "fix(ranking): load avatars from storage"
+          git push origin HEAD:agent/fix-horarios-core
