@@ -1,0 +1,330 @@
+name: Simplify curriculum assignments
+
+on:
+  push:
+    branches: [agent/fix-horarios-core]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, 'feat(horarios): simplify curriculum assignments') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fix-horarios-core
+          fetch-depth: 0
+
+      - name: Patch Horarios.jsx
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          p = Path('src/pages/Horarios.jsx')
+          s = p.read_text(encoding='utf-8')
+
+          # 1) Etapa 3: somente Professores e Áreas.
+          s = s.replace("  'Professores, Áreas e Disciplinas',", "  'Professores e Áreas',", 1)
+          s = s.replace("  if (currentStep === 3 && !currentConfig.disciplinas.length) return notify.error('Cadastre pelo menos uma disciplina antes de avançar.');\n", "", 1)
+
+          step3_catalog = '''            <div className="mb-4 rounded-2xl border border-green-200 bg-green-50/70 p-5 dark:border-green-900 dark:bg-green-950/20"><div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div><h3 className="font-semibold text-slate-900 dark:text-white">Base curricular</h3><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Importe disciplinas por curso, série e semestre.</p></div><Button type="button" onClick={openDisciplinaCatalogModal}><FaPlus className="mr-2"/> Importar da base curricular</Button></div></div><div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-semibold text-slate-900 dark:text-white">Disciplinas</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Cadastre aqui as matérias que serão usadas nas atribuições da Etapa 4.</p></div><Button type="button" variant="secondary" onClick={() => openDisciplinaModal()}><FaPlus className="mr-2" /> Nova disciplina</Button></div></div>
+
+            <div><div className="mb-3 flex items-center justify-between"><h3 className="font-semibold text-slate-900 dark:text-white">Disciplinas cadastradas</h3><span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{currentConfig.disciplinas.length} disciplina(s)</span></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{currentConfig.disciplinas.map((discipline) => <div key={discipline.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-slate-900 dark:text-white">{discipline.nome}</p><span className="mt-2 inline-flex rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-bold text-green-800 dark:bg-green-950 dark:text-green-300">{byId(currentConfig.areas, discipline.area_id)?.nome || 'Área inválida'}</span></div><div className="flex gap-1"><button type="button" onClick={() => openDisciplinaModal(discipline)} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-white">Editar</button><button type="button" onClick={() => removeDisciplina(discipline.id)} className="rounded-lg px-2 py-1 text-xs font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950">Excluir</button></div></div></div>)}</div>{!currentConfig.disciplinas.length && <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Nenhuma disciplina cadastrada.</div>}</div>
+'''
+          if step3_catalog in s:
+              s = s.replace(step3_catalog, '', 1)
+
+          # 2) Helpers da atribuição: curso/série por turma e catálogo filtrado por semestre.
+          anchor = "  const professorAssignmentGroups = useMemo(() => {"
+          helper = '''  const getTurmaCurriculum = (turmaId) => {
+    const turma = byId(turmas, turmaId);
+    const curso = catalogCourseFromTurma(turma?.nome);
+    const match = String(turma?.nome || '').match(/(\\d+)\\s*º|\\b(\\d+)\\b/);
+    const serie = match ? Number(match[1] || match[2]) : null;
+    return { curso, serie };
+  };
+
+  const curriculumCourseSeriesOptions = useMemo(() => {
+    const map = new Map();
+    currentConfig.turmas.forEach((turmaId) => {
+      const { curso, serie } = getTurmaCurriculum(turmaId);
+      if (!curso || !serie) return;
+      const value = `${curso}|${serie}`;
+      if (!map.has(value)) map.set(value, { value, label: `${curso} · ${serie}ª série`, curso, serie });
+    });
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [currentConfig.turmas, turmas]);
+
+  const catalogOptionsForGroup = (courseSeries) => {
+    if (!courseSeries) return [];
+    const [curso, serieValue] = String(courseSeries).split('|');
+    return disciplinaCatalogo
+      .filter((row) => row.curso === curso && Number(row.serie) === Number(serieValue) && Number(row.semestre) === Number(currentConfig.semestre))
+      .sort((a, b) => a.categoria.localeCompare(b.categoria) || a.nome.localeCompare(b.nome))
+      .map((row) => ({ value: String(row.id), label: row.nome }));
+  };
+
+  const turmaOptionsForGroup = (courseSeries) => {
+    if (!courseSeries) return [];
+    const [curso, serieValue] = String(courseSeries).split('|');
+    return currentConfig.turmas
+      .map((turmaId) => ({ turmaId, turma: byId(turmas, turmaId) }))
+      .filter(({ turma }) => {
+        const curriculum = getTurmaCurriculum(turma?.id);
+        return curriculum.curso === curso && Number(curriculum.serie) === Number(serieValue);
+      })
+      .map(({ turmaId, turma }) => ({ value: String(turmaId), label: turma?.nome || 'Turma' }));
+  };
+
+'''
+          if 'const getTurmaCurriculum' not in s:
+              s = s.replace(anchor, helper + anchor, 1)
+
+          # 3) Estado de grupo: curso/série + catálogo, em vez de matéria manual/configurada.
+          old_item = """  const [linkDraft, setLinkDraft] = useState({
+    professor_id: '',
+    items: [{ id: newId('assignment-item'), turma_id: '', disciplina_id: '', aulas_semana: 2, max_aulas_consecutivas: 2 }],
+  });"""
+          new_item = """  const [linkDraft, setLinkDraft] = useState({
+    professor_id: '',
+    items: [{ id: newId('assignment-item'), course_series: '', turma_ids: [], disciplina_catalog_id: '', aulas_semana: 2, max_aulas_consecutivas: 2 }],
+  });"""
+          if old_item in s:
+              s = s.replace(old_item, new_item, 1)
+
+          # 4) Substituir helpers de atribuição por uma versão mais simples.
+          start = s.find("  const newAssignmentItem = () => ({")
+          end = s.find("  const removeAssignment = (professorId) =>", start)
+          if start == -1 or end == -1:
+              raise SystemExit('assignment helper markers not found')
+
+          replacement = '''  const newAssignmentItem = (courseSeries = '') => ({
+    id: newId('assignment-item'),
+    course_series: courseSeries,
+    turma_ids: [],
+    disciplina_catalog_id: '',
+    aulas_semana: 2,
+    max_aulas_consecutivas: 2,
+  });
+
+  const openLinkModal = (assignment = null) => {
+    setEditingLinkProfessorId(assignment?.professor_id || null);
+    const groupedItems = [];
+    const groupedMap = new Map();
+    (assignment?.items || []).forEach((item) => {
+      const curriculum = getTurmaCurriculum(item.turma_id);
+      const courseSeries = curriculum.curso && curriculum.serie ? `${curriculum.curso}|${curriculum.serie}` : '';
+      const discipline = byId(currentConfig.disciplinas, item.disciplina_id);
+      const catalogRow = disciplinaCatalogo.find((row) =>
+        row.curso === curriculum.curso &&
+        Number(row.serie) === Number(curriculum.serie) &&
+        Number(row.semestre) === Number(currentConfig.semestre) &&
+        row.nome.trim().toLowerCase() === String(discipline?.nome || '').trim().toLowerCase(),
+      );
+      const key = `${courseSeries}|${catalogRow?.id || discipline?.nome || ''}|${Number(item.aulas_semana || 2)}|${Number(item.max_aulas_consecutivas || 2)}`;
+      if (!groupedMap.has(key)) {
+        const grouped = {
+          id: item.id || newId('assignment-item'),
+          course_series: courseSeries,
+          turma_ids: [],
+          disciplina_catalog_id: catalogRow?.id ? String(catalogRow.id) : '',
+          aulas_semana: Number(item.aulas_semana || 2),
+          max_aulas_consecutivas: Number(item.max_aulas_consecutivas || 2),
+        };
+        groupedMap.set(key, grouped);
+        groupedItems.push(grouped);
+      }
+      const target = groupedMap.get(key);
+      if (item.turma_id && !target.turma_ids.includes(String(item.turma_id))) target.turma_ids.push(String(item.turma_id));
+    });
+    setLinkDraft({
+      professor_id: assignment?.professor_id || '',
+      items: groupedItems.length ? groupedItems : [newAssignmentItem()],
+    });
+    setVinculoModalOpen(true);
+  };
+
+  const closeLinkModal = () => {
+    setVinculoModalOpen(false);
+    setEditingLinkProfessorId(null);
+    setLinkDraft({ professor_id: '', items: [newAssignmentItem()] });
+  };
+
+  const updateAssignmentItem = (itemId, field, value) => {
+    setLinkDraft((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => {
+        if (String(item.id) !== String(itemId)) return item;
+        if (field === 'course_series') {
+          return { ...item, course_series: value, turma_ids: [], disciplina_catalog_id: '' };
+        }
+        if (field === 'disciplina_catalog_id') {
+          return { ...item, disciplina_catalog_id: value };
+        }
+        return { ...item, [field]: value };
+      }),
+    }));
+  };
+
+  const addAssignmentItem = () => {
+    setLinkDraft((prev) => ({ ...prev, items: [...prev.items, newAssignmentItem()] }));
+  };
+
+  const removeAssignmentItem = (itemId) => {
+    setLinkDraft((prev) => ({
+      ...prev,
+      items: prev.items.length > 1 ? prev.items.filter((item) => String(item.id) !== String(itemId)) : prev.items,
+    }));
+  };
+
+  const saveLinkFromModal = () => {
+    if (!linkDraft.professor_id || !byId(currentConfig.professores, linkDraft.professor_id)) {
+      return notify.error('Selecione um professor válido.');
+    }
+
+    const seenTurmas = new Set();
+    const normalizedItems = linkDraft.items.map((item) => ({
+      ...item,
+      turma_ids: Array.from(new Set((Array.isArray(item.turma_ids) ? item.turma_ids : []).map(String))),
+      disciplina_catalog_id: String(item.disciplina_catalog_id || ''),
+      aulas_semana: Number(item.aulas_semana),
+      max_aulas_consecutivas: Number(item.max_aulas_consecutivas),
+    }));
+
+    for (const item of normalizedItems) {
+      if (!item.course_series) return notify.error('Selecione o curso e a série em cada grupo.');
+      if (!item.disciplina_catalog_id || !byId(disciplinaCatalogo, item.disciplina_catalog_id)) return notify.error('Selecione uma matéria válida para cada grupo.');
+      if (!item.turma_ids.length) return notify.error('Selecione pelo menos uma turma em cada grupo.');
+      if (!Number.isFinite(item.aulas_semana) || item.aulas_semana <= 0 || !Number.isFinite(item.max_aulas_consecutivas) || item.max_aulas_consecutivas <= 0) return notify.error('Informe aulas por semana e máximo de consecutivas válidos.');
+      const allowed = new Set(turmaOptionsForGroup(item.course_series).map((option) => String(option.value)));
+      for (const turmaId of item.turma_ids) {
+        if (!allowed.has(String(turmaId))) return notify.error('Existe uma turma que não pertence ao curso/série escolhido.');
+        if (seenTurmas.has(String(turmaId))) return notify.error('A mesma turma não pode aparecer em dois grupos desta atribuição.');
+        seenTurmas.add(String(turmaId));
+      }
+    }
+
+    const professorId = String(linkDraft.professor_id);
+    const disciplineByCatalogId = new Map();
+    const nextDisciplines = [...currentConfig.disciplinas];
+
+    normalizedItems.forEach((item) => {
+      const row = byId(disciplinaCatalogo, item.disciplina_catalog_id);
+      if (!row) return;
+      const existing = nextDisciplines.find((discipline) => discipline.nome.trim().toLowerCase() === row.nome.trim().toLowerCase());
+      const discipline = existing || {
+        id: newId('disc'),
+        nome: row.nome,
+        area_id: String(currentConfig.areas.find((area) => area.nome.trim().toLowerCase() === row.area_nome.trim().toLowerCase())?.id || currentConfig.areas[0]?.id || ''),
+      };
+      if (!existing) nextDisciplines.push(discipline);
+      disciplineByCatalogId.set(String(row.id), String(discipline.id));
+    });
+
+    const nextLinks = normalizedItems.flatMap((item) => item.turma_ids.map((turmaId) => ({
+      id: newId('link'),
+      professor_id: professorId,
+      turma_id: turmaId,
+      disciplina_id: disciplineByCatalogId.get(String(item.disciplina_catalog_id)),
+      aulas_semana: item.aulas_semana,
+      max_aulas_consecutivas: item.max_aulas_consecutivas,
+    })));
+
+    setCurrentConfig((prev) => ({
+      ...prev,
+      disciplinas: nextDisciplines,
+      professorTurmas: [
+        ...prev.professorTurmas.filter((item) => String(item.professor_id) !== professorId),
+        ...nextLinks,
+      ],
+    }));
+    closeLinkModal();
+  };
+
+'''
+          s = s[:start] + replacement + s[end:]
+
+          # 5) Step 4: texto e visual mais simples.
+          old_header = '<h3 className="font-semibold text-slate-900 dark:text-white">Atribuições por professor</h3><p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-slate-400">Uma atribuição reúne várias turmas do mesmo professor. Em cada turma você escolhe a matéria e a quantidade de aulas separadamente.</p>'
+          new_header = '<h3 className="font-semibold text-slate-900 dark:text-white">Atribuições</h3><p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-slate-400">Escolha o professor, depois o curso/série, a matéria e as turmas. A matéria fica automaticamente limitada ao currículo do semestre da Etapa 1.</p>'
+          s = s.replace(old_header, new_header, 1)
+
+          # 6) Modal de atribuição: curso/série -> matéria -> turmas.
+          old_modal = '''      <Modal isOpen={vinculoModalOpen} onClose={closeLinkModal} title={editingLinkProfessorId ? 'Editar atribuição' : 'Nova atribuição'}>
+        <div className="space-y-5">
+          <CustomSelect label="Professor" value={linkDraft.professor_id} onChange={(value) => setLinkDraft((prev) => ({ ...prev, professor_id: value }))} options={editingLinkProfessorId ? professorOptions : professorOptions.filter((option) => !professorAssignmentGroups.some((assignment) => String(assignment.professor_id) === String(option.value)))} placeholder="Selecione o professor" showSearch emptyLabel="Nenhum professor disponível" disabled={Boolean(editingLinkProfessorId)} />
+          <div className="space-y-3"><div className="flex items-center justify-between gap-3"><div><h4 className="font-semibold text-slate-900 dark:text-white">Turmas, matéria e carga</h4><p className="text-xs text-slate-500 dark:text-slate-400">Selecione várias turmas no mesmo grupo quando a matéria e a carga semanal forem iguais.</p></div><Button type="button" variant="secondary" onClick={addAssignmentItem}><FaPlus className="mr-2" /> Adicionar grupo</Button></div>
+            {linkDraft.items.map((item, index) => <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900"><div className="mb-3 flex items-center justify-between gap-3"><span className="text-xs font-bold uppercase tracking-wide text-slate-500">Grupo {index + 1}</span>{linkDraft.items.length > 1 && <button type="button" onClick={() => removeAssignmentItem(item.id)} className="rounded-lg p-2 text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950"><FaTrash /></button>}</div><div className="grid gap-4 sm:grid-cols-2"><CustomSelect label="Turmas" value={item.turma_ids} multiple onChange={(value) => updateAssignmentItem(item.id, 'turma_ids', value)} options={turmaOptions.filter((option) => currentConfig.turmas.includes(String(option.value)))} placeholder="Selecione uma ou mais turmas" emptyLabel="Selecione turmas na Etapa 2" showSearch showSelectedValues={false} /><CustomSelect label="Matéria" value={item.disciplina_id} onChange={(value) => updateAssignmentItem(item.id, 'disciplina_id', value)} options={disciplinaOptions} placeholder="Selecione a matéria" emptyLabel="Cadastre disciplinas na Etapa 3" /><FormInput label="Aulas por semana" type="number" min="1" value={item.aulas_semana} onChange={(event) => updateAssignmentItem(item.id, 'aulas_semana', Number(event.target.value) || 0)} /><FormInput label="Máx. de aulas consecutivas" type="number" min="1" value={item.max_aulas_consecutivas} onChange={(event) => updateAssignmentItem(item.id, 'max_aulas_consecutivas', Number(event.target.value) || 0)} /></div></div>)}
+          </div>
+          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700"><Button type="button" variant="secondary" onClick={closeLinkModal}>Cancelar</Button><Button type="button" onClick={saveLinkFromModal}>{editingLinkProfessorId ? 'Salvar atribuição' : 'Criar atribuição'}</Button></div>
+        </div>
+      </Modal>'''
+          new_modal = '''      <Modal isOpen={vinculoModalOpen} onClose={closeLinkModal} title={editingLinkProfessorId ? 'Editar atribuição' : 'Nova atribuição'}>
+        <div className="space-y-5">
+          <CustomSelect label="Professor" value={linkDraft.professor_id} onChange={(value) => setLinkDraft((prev) => ({ ...prev, professor_id: value }))} options={editingLinkProfessorId ? professorOptions : professorOptions.filter((option) => !professorAssignmentGroups.some((assignment) => String(assignment.professor_id) === String(option.value)))} placeholder="Selecione o professor" showSearch emptyLabel="Nenhum professor disponível" disabled={Boolean(editingLinkProfessorId)} />
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h4 className="font-semibold text-slate-900 dark:text-white">Matérias por turma</h4><p className="text-xs text-slate-500 dark:text-slate-400">A matéria é filtrada automaticamente pelo curso, série e semestre.</p></div><Button type="button" variant="secondary" onClick={addAssignmentItem}><FaPlus className="mr-2" /> Outra matéria</Button></div>
+            <div className="mt-4 space-y-3">{linkDraft.items.map((item, index) => <div key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-950"><div className="mb-3 flex items-center justify-between gap-3"><span className="text-xs font-bold uppercase tracking-wide text-slate-500">Matéria {index + 1}</span>{linkDraft.items.length > 1 && <button type="button" onClick={() => removeAssignmentItem(item.id)} className="rounded-lg p-2 text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950"><FaTrash /></button>}</div><div className="grid gap-4 sm:grid-cols-2"><CustomSelect label="Curso e série" value={item.course_series} onChange={(value) => updateAssignmentItem(item.id, 'course_series', value)} options={curriculumCourseSeriesOptions} placeholder="Selecione o curso e a série" emptyLabel="Nenhum curso/série disponível" /><CustomSelect label="Matéria" value={item.disciplina_catalog_id} onChange={(value) => updateAssignmentItem(item.id, 'disciplina_catalog_id', value)} options={catalogOptionsForGroup(item.course_series)} placeholder="Selecione a matéria" emptyLabel="Nenhuma matéria para este semestre" showSearch /><CustomSelect label="Turmas" value={item.turma_ids} multiple onChange={(value) => updateAssignmentItem(item.id, 'turma_ids', value)} options={turmaOptionsForGroup(item.course_series)} placeholder="Selecione uma ou mais turmas" emptyLabel="Nenhuma turma para este curso/série" showSearch showSelectedValues={false} /><FormInput label="Aulas por semana" type="number" min="1" value={item.aulas_semana} onChange={(event) => updateAssignmentItem(item.id, 'aulas_semana', Number(event.target.value) || 0)} /><FormInput label="Máx. de aulas consecutivas" type="number" min="1" value={item.max_aulas_consecutivas} onChange={(event) => updateAssignmentItem(item.id, 'max_aulas_consecutivas', Number(event.target.value) || 0)} /></div></div>)}</div>
+          </div>
+          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700"><Button type="button" variant="secondary" onClick={closeLinkModal}>Cancelar</Button><Button type="button" onClick={saveLinkFromModal}>{editingLinkProfessorId ? 'Salvar atribuição' : 'Criar atribuição'}</Button></div>
+        </div>
+      </Modal>'''
+          if old_modal not in s:
+              raise SystemExit('assignment modal marker not found')
+          s = s.replace(old_modal, new_modal, 1)
+
+          # 7) Remove os modais de cadastro/importação manual de disciplinas. A matéria nasce do catálogo no momento da atribuição.
+          catalog_modal_start = s.find('      <Modal isOpen={catalogModalOpen}')
+          disciplina_modal_start = s.find('      <Modal isOpen={disciplinaModalOpen}')
+          vinculo_modal_start = s.find('      <Modal isOpen={vinculoModalOpen}')
+          if catalog_modal_start != -1 and disciplina_modal_start != -1 and catalog_modal_start < disciplina_modal_start:
+              s = s[:catalog_modal_start] + s[disciplina_modal_start:]
+              # remove the discipline modal that is now before the assignment modal
+              disciplina_modal_start = s.find('      <Modal isOpen={disciplinaModalOpen}')
+              vinculo_modal_start = s.find('      <Modal isOpen={vinculoModalOpen}')
+              if disciplina_modal_start != -1 and vinculo_modal_start != -1 and disciplina_modal_start < vinculo_modal_start:
+                  # find exact end using the next assignment modal marker
+                  s = s[:disciplina_modal_start] + s[vinculo_modal_start:]
+
+          # 8) No more manual discipline helper state/modals are needed. Keep catalog query for assignment filtering.
+          for line in [
+              "  const [disciplinaModalOpen, setDisciplinaModalOpen] = useState(false);\n",
+              "  const [editingDisciplinaId, setEditingDisciplinaId] = useState(null);\n",
+              "  const [disciplinaForm, setDisciplinaForm] = useState({ nome: '', area_id: '' });\n",
+              "  const [catalogModalOpen, setCatalogModalOpen] = useState(false);\n",
+              "  const [catalogCourse, setCatalogCourse] = useState('');\n",
+              "  const [catalogSerie, setCatalogSerie] = useState('1');\n",
+              "  const [catalogSelected, setCatalogSelected] = useState([]);\n",
+          ]:
+              s = s.replace(line, '')
+
+          # Remove old catalog useMemo definitions if still present.
+          old_catalog_use = "  const catalogCourseOptions = useMemo(() => CURRICULUM_COURSES.map((curso) => ({ value: curso, label: curso })), []);\n  const catalogFilteredRows = useMemo(() => disciplinaCatalogo.filter((row) => row.curso === catalogCourse && String(row.serie) === String(catalogSerie) && Number(row.semestre) === Number(currentConfig.semestre)).sort((a,b) => a.categoria.localeCompare(b.categoria) || a.nome.localeCompare(b.nome)), [disciplinaCatalogo, catalogCourse, catalogSerie, currentConfig.semestre]);\n"
+          s = s.replace(old_catalog_use, '')
+
+          # Remove stale discipline modal functions and catalog functions.
+          stale_start = s.find('  const openDisciplinaCatalogModal = () => {')
+          stale_end = s.find('  const newAssignmentItem = (courseSeries = \'\') => ({', stale_start)
+          if stale_start != -1 and stale_end != -1:
+              s = s[:stale_start] + s[stale_end:]
+
+          # Update new configuration cleanup to remove calls that no longer exist.
+          s = s.replace('    closeDisciplinaModal();\n', '', 1)
+          s = s.replace('    closeDisciplinaCatalogModal();\n', '', 1)
+
+          # Step 7 can still list disciplines because they are populated automatically by assignments.
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Validate and publish
+        shell: bash
+        run: |
+          npm ci
+          npm run build
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Horarios.jsx .github/workflows/simplify-curriculum-assignments.yml
+          git commit -m "feat(horarios): simplify curriculum assignments"
+          git push origin agent/fix-horarios-core
