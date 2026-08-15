@@ -807,14 +807,16 @@ export const Horarios = () => {
   };
 
   const drawPdfFooter = (doc) => {
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    doc.setDrawColor(203, 213, 225);
-    doc.line(12, pageHeight - PDF_FOOTER_HEIGHT, pageWidth - 12, pageHeight - PDF_FOOTER_HEIGHT);
-    doc.setFontSize(7);
-    doc.setTextColor(100);
-    doc.text(`LogZélia · ${currentConfig.nome || 'Horário'}`, 12, pageHeight - 2.5);
-  };
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  doc.setDrawColor(203, 213, 225);
+
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+
+  doc.text(`LogZélia · ${currentConfig.nome || 'Horário'}`, 12, pageHeight - 10);
+};
 
   const renderTurmaTable = (doc, turmaId, startY, { compact = false } = {}) => {
     const turma = byId(turmas, turmaId);
