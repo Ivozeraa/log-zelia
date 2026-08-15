@@ -1,0 +1,31 @@
+name: Fix catalog reference v3
+
+on:
+  push:
+    branches:
+      - agent/fix-horarios-core
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fix-horarios-core
+          fetch-depth: 0
+      - name: Remove stale references
+        run: python3 -c "from pathlib import Path; p=Path('src/pages/Horarios.jsx'); s=p.read_text(encoding='utf-8'); s=s.replace(\"  const catalogCourseOptions = useMemo(() => CURRICULUM_COURSES.map((curso) => ({ value: curso, label: curso })), []);\\n\", '').replace(\"  const catalogFilteredRows = useMemo(() => disciplinaCatalogo.filter((row) => row.curso === catalogCourse && String(row.serie) === String(catalogSerie) && Number(row.semestre) === Number(currentConfig.semestre)).sort((a,b) => a.categoria.localeCompare(b.categoria) || a.nome.localeCompare(b.nome)), [disciplinaCatalogo, catalogCourse, catalogSerie, currentConfig.semestre]);\\n\", ''); p.write_text(s, encoding='utf-8')"
+      - name: Build
+        run: |
+          npm ci
+          npm run build
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Horarios.jsx
+          git commit -m "fix(horarios): remove stale catalog memos"
+          git push origin agent/fix-horarios-core
