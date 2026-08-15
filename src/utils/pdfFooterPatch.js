@@ -1,18 +1,17 @@
 import { jsPDF } from 'jspdf';
-import topoMiniImg from '../assets/images/topo_mini.png';
 
 const PDF_FOOTER_HEIGHT = 18;
+const TOPO_MINI_URL = 'https://raw.githubusercontent.com/Ivozeraa/log-zelia/0aa51dc2d81ae99261ea980de707f785cdc55f70/src/assets/images/topo_mini.png';
 let patched = false;
 
 const loadImageAsDataUrl = async (url) => {
   if (!url || typeof window === 'undefined') return null;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { cache: 'force-cache' });
     if (!response.ok) throw new Error(`Falha ao carregar footer: HTTP ${response.status}`);
 
     const blob = await response.blob();
-
     return await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result);
@@ -25,9 +24,7 @@ const loadImageAsDataUrl = async (url) => {
   }
 };
 
-// Pré-carrega a imagem assim que o módulo é importado. Isso evita o problema
-// de chamar doc.save() antes que a imagem termine de ser carregada.
-const footerDataUrlPromise = loadImageAsDataUrl(topoMiniImg);
+const footerDataUrlPromise = loadImageAsDataUrl(TOPO_MINI_URL);
 
 const addFooterToPdf = async (doc) => {
   const footerDataUrl = await footerDataUrlPromise;
@@ -55,9 +52,6 @@ if (!patched && typeof jsPDF?.prototype?.save === 'function') {
   patched = true;
   const originalSave = jsPDF.prototype.save;
 
-  // O exportador atual não usa await em doc.save(). Portanto, o wrapper não
-  // pode simplesmente ser async: precisamos segurar o save original até que
-  // o footer esteja realmente incorporado ao documento.
   jsPDF.prototype.save = function patchedSave(...args) {
     const filename = String(args[0] || '');
 
