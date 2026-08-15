@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Restores the full-width topo_mini.png footer from the approved Horarios export code.
 path = Path('src/pages/Horarios.jsx')
 text = path.read_text(encoding='utf-8')
 
