@@ -9,9 +9,6 @@ import {
   FaTrash,
   FaUserPlus,
 } from 'react-icons/fa';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import ExcelJS from 'exceljs';
 import { addPdfFooter } from '../utils/pdfFooterPatch';
 import logoImg from '../assets/images/logoEEEP.png';
 
@@ -31,6 +28,16 @@ import {
   WEEK_DAYS,
   generateHorario,
 } from '../services/horarioService';
+
+const pdfLibrariesPromise = Promise.all([
+  import('jspdf'),
+  import('jspdf-autotable'),
+]).then(([jspdfModule, autoTableModule]) => ({
+  jsPDF: jspdfModule.jsPDF,
+  autoTable: autoTableModule.default,
+}));
+
+const excelLibrariesPromise = import('exceljs').then((module) => module.default);
 
 const emptyGrade = { grid: {}, schedule: [], validation: [], unscheduled: [] };
 const PROFESSOR_ROLE_ID = 4;
@@ -827,7 +834,7 @@ export const Horarios = () => {
   doc.text(`LogZélia · ${currentConfig.nome || 'Horário'}`, 12, pageHeight - 10);
 };
 
-  const renderTurmaTable = (doc, turmaId, startY, { compact = false } = {}) => {
+  const renderTurmaTable = (doc, turmaId, startY, { compact = false, autoTable } = {}) => {
     const turma = byId(turmas, turmaId);
     const turmaNome = turma?.nome || 'Turma';
     const course = getCourseStyle(turmaNome);
@@ -842,6 +849,8 @@ export const Horarios = () => {
     doc.setTextColor(25);
     doc.text(turmaNome.toUpperCase(), doc.internal.pageSize.getWidth() / 2, startY, { align: 'center' });
     doc.setFont(undefined, 'normal');
+    if (!autoTable) throw new Error('Biblioteca PDF não carregada.');
+
     autoTable(doc, {
       startY: startY + 5,
       head: [['', ...WEEK_DAYS.map((day) => day.replace('-feira', '').toUpperCase())]],
@@ -868,6 +877,7 @@ export const Horarios = () => {
   };
 
   const exportPdf = async ({ mode = 'separated', courseKey = '' } = {}) => {
+    const { jsPDF, autoTable } = await pdfLibrariesPromise;
     if (!generatedSchedule.schedule.length) return notify.error('Não há grade para exportar.');
     let turmaIds = currentConfig.turmas;
     if (mode === 'course') {
@@ -890,14 +900,14 @@ export const Horarios = () => {
             drawPdfHeader(doc, { schoolName, semesterLabel });
             cursorY = PDF_TOP_MARGIN;
           }
-          cursorY = renderTurmaTable(doc, turmaId, cursorY, { compact: true }) + 8;
+          cursorY = renderTurmaTable(doc, turmaId, cursorY, { compact: true, autoTable }) + 8;
         });
         renderSchedulesLegend(doc, Math.min(cursorY + 3, pageHeight - 38), DEFAULT_COURSE_STYLE);
       } else {
         turmaIds.forEach((turmaId, index) => {
           if (index > 0) doc.addPage();
           drawPdfHeader(doc, { schoolName, semesterLabel });
-          const finalY = renderTurmaTable(doc, turmaId, PDF_TOP_MARGIN);
+          const finalY = renderTurmaTable(doc, turmaId, PDF_TOP_MARGIN, { autoTable });
           renderSchedulesLegend(doc, finalY + 8, getCourseStyle(byId(turmas, turmaId)?.nome));
         });
       }
@@ -925,6 +935,7 @@ export const Horarios = () => {
   };
 
   const exportExcel = async () => {
+    const ExcelJS = await excelLibrariesPromise;
     if (!generatedSchedule.schedule.length) return notify.error('Não há grade para exportar.');
     try {
       const workbook = new ExcelJS.Workbook();

@@ -1,27 +1,26 @@
-import { jsPDF } from 'jspdf';
-
 const PDF_FOOTER_HEIGHT = 18;
-const TOPO_MINI_URL = 'https://raw.githubusercontent.com/Ivozeraa/log-zelia/main/src/assets/images/topo_mini.png';
+import topoMiniImg from '../assets/images/topo_mini.png';
 
 const loadImageAsDataUrl = async (url) => {
   if (!url || typeof window === 'undefined') return null;
 
-  const response = await fetch(url, { mode: 'cors', cache: 'no-store' });
-  if (!response.ok) {
-    throw new Error(`Falha ao carregar footer: HTTP ${response.status}`);
-  }
-
-  const blob = await response.blob();
-  return await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = reject;
+    img.src = url;
   });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  canvas.getContext('2d').drawImage(img, 0, 0);
+  return canvas.toDataURL('image/png');
 };
 
 export const addPdfFooter = async (doc) => {
-  const footerDataUrl = await loadImageAsDataUrl(TOPO_MINI_URL);
+  const footerDataUrl = await loadImageAsDataUrl(topoMiniImg);
   if (!footerDataUrl) throw new Error('Imagem topo_mini.png não foi carregada.');
 
   const pageWidth = doc.internal.pageSize.getWidth();
