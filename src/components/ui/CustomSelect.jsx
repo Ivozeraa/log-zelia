@@ -62,7 +62,7 @@ export const CustomSelect = ({
 
       const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - viewportPadding - gap);
       const spaceAbove = Math.max(0, rect.top - viewportPadding - gap);
-      const optionCount = displayedOptions.length;
+      const optionCount = Math.max(0, options.length - (multiple ? options.filter((option) => option.value === "").length : 0));
       const estimatedContentHeight = Math.min(
         380,
         Math.max(48, optionCount * 44 + (showSearch ? 60 : 0) + (multiple ? 58 : 0)),
@@ -87,7 +87,7 @@ export const CustomSelect = ({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [open, menuMinWidth, displayedOptions.length, showSearch, multiple]);
+  }, [open, menuMinWidth, options, showSearch, multiple]);
 
   const selectedValues = multiple ? (Array.isArray(value) ? value : []) : null;
 
