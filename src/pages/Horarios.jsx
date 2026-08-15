@@ -223,6 +223,18 @@ export const Horarios = () => {
     [usuarios, currentConfig.professores],
   );
 
+  const availablePdtTurmaOptions = useMemo(() => {
+    const assigned = new Set(
+      Object.entries(currentConfig.pdt || {})
+        .filter(([, professorId]) => String(professorId) !== String(editingProfessorId || ''))
+        .map(([turmaId]) => String(turmaId)),
+    );
+    return turmaOptions.filter(
+      (option) => currentConfig.turmas.includes(String(option.value)) &&
+        (!assigned.has(String(option.value)) || String(option.value) === String(professorDraft.pdt_turma_id)),
+    );
+  }, [currentConfig.pdt, currentConfig.turmas, editingProfessorId, professorDraft.pdt_turma_id, turmaOptions]);
+
   const professorAssignmentGroups = useMemo(() => {
     const groups = new Map();
     currentConfig.professorTurmas.forEach((link) => {
@@ -544,7 +556,7 @@ export const Horarios = () => {
 
   const newAssignmentItem = () => ({
     id: newId('assignment-item'),
-    turma_id: '',
+    turma_ids: [],
     disciplina_id: '',
     aulas_semana: 2,
     max_aulas_consecutivas: 2,
@@ -552,18 +564,19 @@ export const Horarios = () => {
 
   const openLinkModal = (assignment = null) => {
     setEditingLinkProfessorId(assignment?.professor_id || null);
-    setLinkDraft({
-      professor_id: assignment?.professor_id || '',
-      items: assignment?.items?.length
-        ? assignment.items.map((item) => ({
-            id: item.id || newId('assignment-item'),
-            turma_id: String(item.turma_id || ''),
-            disciplina_id: String(item.disciplina_id || ''),
-            aulas_semana: Number(item.aulas_semana || 2),
-            max_aulas_consecutivas: Number(item.max_aulas_consecutivas || 2),
-          }))
-        : [newAssignmentItem()],
+    const groupedItems = [];
+    const groupedMap = new Map();
+    (assignment?.items || []).forEach((item) => {
+      const key = `${String(item.disciplina_id || '')}|${Number(item.aulas_semana || 2)}|${Number(item.max_aulas_consecutivas || 2)}`;
+      if (!groupedMap.has(key)) {
+        const grouped = { id: item.id || newId('assignment-item'), turma_ids: [], disciplina_id: String(item.disciplina_id || ''), aulas_semana: Number(item.aulas_semana || 2), max_aulas_consecutivas: Number(item.max_aulas_consecutivas || 2) };
+        groupedMap.set(key, grouped);
+        groupedItems.push(grouped);
+      }
+      const target = groupedMap.get(key);
+      if (item.turma_id && !target.turma_ids.includes(String(item.turma_id))) target.turma_ids.push(String(item.turma_id));
     });
+    setLinkDraft({ professor_id: assignment?.professor_id || '', items: groupedItems.length ? groupedItems : [newAssignmentItem()] });
     setVinculoModalOpen(true);
   };
 
@@ -574,10 +587,7 @@ export const Horarios = () => {
   };
 
   const updateAssignmentItem = (itemId, field, value) => {
-    setLinkDraft((prev) => ({
-      ...prev,
-      items: prev.items.map((item) => String(item.id) === String(itemId) ? { ...item, [field]: value } : item),
-    }));
+    setLinkDraft((prev) => ({ ...prev, items: prev.items.map((item) => String(item.id) === String(itemId) ? { ...item, [field]: value } : item) }));
   };
 
   const addAssignmentItem = () => {
@@ -585,10 +595,7 @@ export const Horarios = () => {
   };
 
   const removeAssignmentItem = (itemId) => {
-    setLinkDraft((prev) => ({
-      ...prev,
-      items: prev.items.length > 1 ? prev.items.filter((item) => String(item.id) !== String(itemId)) : prev.items,
-    }));
+    setLinkDraft((prev) => ({ ...prev, items: prev.items.length > 1 ? prev.items.filter((item) => String(item.id) !== String(itemId)) : prev.items }));
   };
 
   const saveLinkFromModal = () => {
@@ -599,33 +606,25 @@ export const Horarios = () => {
     const seenTurmas = new Set();
     const items = linkDraft.items.map((item) => ({
       ...item,
-      turma_id: String(item.turma_id || ''),
+      turma_ids: Array.from(new Set((Array.isArray(item.turma_ids) ? item.turma_ids : []).map(String))),
       disciplina_id: String(item.disciplina_id || ''),
       aulas_semana: Number(item.aulas_semana),
       max_aulas_consecutivas: Number(item.max_aulas_consecutivas),
     }));
-
     for (const item of items) {
-      if (!currentConfig.turmas.map(String).includes(item.turma_id) || !byId(currentConfig.disciplinas, item.disciplina_id) || !Number.isFinite(item.aulas_semana) || item.aulas_semana <= 0 || !Number.isFinite(item.max_aulas_consecutivas) || item.max_aulas_consecutivas <= 0) {
-        return notify.error('Cada linha precisa de turma, matéria, aulas por semana e máximo de consecutivas válidos.');
+      if (!item.turma_ids.length || !byId(currentConfig.disciplinas, item.disciplina_id) || !Number.isFinite(item.aulas_semana) || item.aulas_semana <= 0 || !Number.isFinite(item.max_aulas_consecutivas) || item.max_aulas_consecutivas <= 0) return notify.error('Cada grupo precisa de uma ou mais turmas, matéria, aulas por semana e máximo de consecutivas válidos.');
+      for (const turmaId of item.turma_ids) {
+        if (!currentConfig.turmas.map(String).includes(turmaId)) return notify.error('Existe uma turma selecionada que não pertence à configuração.');
+        if (seenTurmas.has(turmaId)) return notify.error('A mesma turma não pode aparecer em dois grupos da mesma atribuição.');
+        seenTurmas.add(turmaId);
       }
-      if (seenTurmas.has(item.turma_id)) return notify.error('Cada turma pode aparecer apenas uma vez na mesma atribuição.');
-      seenTurmas.add(item.turma_id);
     }
-
     const professorId = String(linkDraft.professor_id);
     setCurrentConfig((prev) => ({
       ...prev,
       professorTurmas: [
         ...prev.professorTurmas.filter((item) => String(item.professor_id) !== professorId),
-        ...items.map((item) => ({
-          id: newId('link'),
-          professor_id: professorId,
-          turma_id: item.turma_id,
-          disciplina_id: item.disciplina_id,
-          aulas_semana: item.aulas_semana,
-          max_aulas_consecutivas: item.max_aulas_consecutivas,
-        })),
+        ...items.flatMap((item) => item.turma_ids.map((turmaId) => ({ id: newId('link'), professor_id: professorId, turma_id: turmaId, disciplina_id: item.disciplina_id, aulas_semana: item.aulas_semana, max_aulas_consecutivas: item.max_aulas_consecutivas }))),
       ],
     }));
     closeLinkModal();
@@ -1167,14 +1166,14 @@ export const Horarios = () => {
 
       <Modal isOpen={professorModalOpen} onClose={closeProfessorModal} title={editingProfessorId ? 'Editar professor' : 'Adicionar professor'}>
         <div className="space-y-5">
-          <CustomSelect label="Professor da base" value={professorDraft.usuario_id} onChange={(value) => setProfessorDraft((prev) => ({ ...prev, usuario_id: value, pdt_turma_id: '' }))} options={usuarios.filter((usuario) => Number(usuario.role_id) === PROFESSOR_ROLE_ID).map((usuario) => ({ value: String(usuario.id), label: `${usuario.nome}${usuario.pdt ? ' · PDT' : ''}` }))} placeholder="Selecione o professor" showSearch emptyLabel="Nenhum professor disponível" disabled={Boolean(editingProfessorId)} />
+          <CustomSelect label="Professor da base" value={professorDraft.usuario_id} onChange={(value) => setProfessorDraft((prev) => ({ ...prev, usuario_id: value, pdt_turma_id: '' }))} options={editingProfessorId && selectedModalProfessor?.usuario_id ? [{ value: String(selectedModalProfessor.usuario_id), label: `${selectedModalProfessor.nome}${selectedModalUser?.pdt ? ' · PDT' : ''}` }, ...professorUsers] : professorUsers} placeholder="Selecione o professor" showSearch emptyLabel="Nenhum professor disponível" disabled={Boolean(editingProfessorId)} />
           <CustomSelect label="Área" value={professorDraft.area_id} onChange={(value) => setProfessorDraft((prev) => ({ ...prev, area_id: value }))} options={areaOptions} placeholder="Selecione a área" />
           <FormInput label="Máximo de aulas consecutivas" type="number" min="1" value={professorDraft.max_aulas_consecutivas_default} onChange={(event) => setProfessorDraft((prev) => ({ ...prev, max_aulas_consecutivas_default: Number(event.target.value) || 1 }))} />
 
           {selectedModalUser?.pdt && (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40">
               <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-900 dark:text-amber-200"><span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-bold text-amber-900 dark:bg-amber-900 dark:text-amber-100">PDT</span> Professor marcado como PDT</div>
-              <CustomSelect label="Turma correspondente ao PDT" value={professorDraft.pdt_turma_id} onChange={(value) => setProfessorDraft((prev) => ({ ...prev, pdt_turma_id: value }))} options={turmaOptions.filter((option) => currentConfig.turmas.includes(String(option.value)))} placeholder="Selecione a turma" emptyLabel="Selecione turmas na Etapa 2" />
+              <CustomSelect label="Turma correspondente ao PDT" value={professorDraft.pdt_turma_id} onChange={(value) => setProfessorDraft((prev) => ({ ...prev, pdt_turma_id: value }))} options={availablePdtTurmaOptions} placeholder="Selecione a turma" emptyLabel="Todas as turmas selecionadas já possuem PDT" />
             </div>
           )}
 
@@ -1199,8 +1198,8 @@ export const Horarios = () => {
       <Modal isOpen={vinculoModalOpen} onClose={closeLinkModal} title={editingLinkProfessorId ? 'Editar atribuição' : 'Nova atribuição'}>
         <div className="space-y-5">
           <CustomSelect label="Professor" value={linkDraft.professor_id} onChange={(value) => setLinkDraft((prev) => ({ ...prev, professor_id: value }))} options={editingLinkProfessorId ? professorOptions : professorOptions.filter((option) => !professorAssignmentGroups.some((assignment) => String(assignment.professor_id) === String(option.value)))} placeholder="Selecione o professor" showSearch emptyLabel="Nenhum professor disponível" disabled={Boolean(editingLinkProfessorId)} />
-          <div className="space-y-3"><div className="flex items-center justify-between gap-3"><div><h4 className="font-semibold text-slate-900 dark:text-white">Turmas e matérias</h4><p className="text-xs text-slate-500 dark:text-slate-400">Uma matéria diferente pode ser escolhida para cada turma da mesma atribuição.</p></div><Button type="button" variant="secondary" onClick={addAssignmentItem}><FaPlus className="mr-2" /> Adicionar turma</Button></div>
-            {linkDraft.items.map((item, index) => <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900"><div className="mb-3 flex items-center justify-between gap-3"><span className="text-xs font-bold uppercase tracking-wide text-slate-500">Turma {index + 1}</span>{linkDraft.items.length > 1 && <button type="button" onClick={() => removeAssignmentItem(item.id)} className="rounded-lg p-2 text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950"><FaTrash /></button>}</div><div className="grid gap-4 sm:grid-cols-2"><CustomSelect label="Turma" value={item.turma_id} onChange={(value) => updateAssignmentItem(item.id, 'turma_id', value)} options={turmaOptions.filter((option) => currentConfig.turmas.includes(String(option.value)))} placeholder="Selecione a turma" emptyLabel="Selecione turmas na Etapa 2" /><CustomSelect label="Matéria" value={item.disciplina_id} onChange={(value) => updateAssignmentItem(item.id, 'disciplina_id', value)} options={disciplinaOptions} placeholder="Selecione a matéria" emptyLabel="Cadastre disciplinas na Etapa 3" /><FormInput label="Aulas por semana" type="number" min="1" value={item.aulas_semana} onChange={(event) => updateAssignmentItem(item.id, 'aulas_semana', Number(event.target.value) || 0)} /><FormInput label="Máx. de aulas consecutivas" type="number" min="1" value={item.max_aulas_consecutivas} onChange={(event) => updateAssignmentItem(item.id, 'max_aulas_consecutivas', Number(event.target.value) || 0)} /></div></div>)}
+          <div className="space-y-3"><div className="flex items-center justify-between gap-3"><div><h4 className="font-semibold text-slate-900 dark:text-white">Turmas, matéria e carga</h4><p className="text-xs text-slate-500 dark:text-slate-400">Selecione várias turmas no mesmo grupo quando a matéria e a carga semanal forem iguais.</p></div><Button type="button" variant="secondary" onClick={addAssignmentItem}><FaPlus className="mr-2" /> Adicionar grupo</Button></div>
+            {linkDraft.items.map((item, index) => <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900"><div className="mb-3 flex items-center justify-between gap-3"><span className="text-xs font-bold uppercase tracking-wide text-slate-500">Grupo {index + 1}</span>{linkDraft.items.length > 1 && <button type="button" onClick={() => removeAssignmentItem(item.id)} className="rounded-lg p-2 text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950"><FaTrash /></button>}</div><div className="grid gap-4 sm:grid-cols-2"><CustomSelect label="Turmas" value={item.turma_ids} multiple onChange={(value) => updateAssignmentItem(item.id, 'turma_ids', value)} options={turmaOptions.filter((option) => currentConfig.turmas.includes(String(option.value)))} placeholder="Selecione uma ou mais turmas" emptyLabel="Selecione turmas na Etapa 2" showSearch /><CustomSelect label="Matéria" value={item.disciplina_id} onChange={(value) => updateAssignmentItem(item.id, 'disciplina_id', value)} options={disciplinaOptions} placeholder="Selecione a matéria" emptyLabel="Cadastre disciplinas na Etapa 3" /><FormInput label="Aulas por semana" type="number" min="1" value={item.aulas_semana} onChange={(event) => updateAssignmentItem(item.id, 'aulas_semana', Number(event.target.value) || 0)} /><FormInput label="Máx. de aulas consecutivas" type="number" min="1" value={item.max_aulas_consecutivas} onChange={(event) => updateAssignmentItem(item.id, 'max_aulas_consecutivas', Number(event.target.value) || 0)} /></div></div>)}
           </div>
           <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700"><Button type="button" variant="secondary" onClick={closeLinkModal}>Cancelar</Button><Button type="button" onClick={saveLinkFromModal}>{editingLinkProfessorId ? 'Salvar atribuição' : 'Criar atribuição'}</Button></div>
         </div>

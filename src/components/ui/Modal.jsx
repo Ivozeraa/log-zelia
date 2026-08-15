@@ -48,7 +48,7 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
         onClick={(e) => e.stopPropagation()}
         className={`
           relative z-9999
-          bg-white dark:bg-slate-950 rounded-2xl shadow-xl max-w-2xl w-full max-h-[92vh]
+          bg-white dark:bg-slate-950 rounded-2xl shadow-xl w-fit min-w-[min(92vw,32rem)] max-w-[calc(100vw-2rem)] max-h-[92vh]
           border border-slate-200 dark:border-slate-700
           transform transition-all duration-200
           ${animate

@@ -15,7 +15,14 @@ export const CustomSelect = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [menuMinWidth, setMenuMinWidth] = useState(240);
   const rootRef = useRef(null);
+
+  useEffect(() => {
+    const labels = [placeholder, ...options.map((option) => option.label)];
+    const maxLength = Math.max(0, ...labels.map((label) => String(label || '').length));
+    setMenuMinWidth(Math.min(Math.max(240, Math.round(maxLength * 7.2 + 72)), 720));
+  }, [options, placeholder]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -43,7 +50,7 @@ export const CustomSelect = ({
           placeholder
         );
       }
-      return `${selectedValues.length} alunos selecionados`;
+      return `${selectedValues.length} itens selecionados`;
     }
     return options.find((o) => o.value === value)?.label ?? placeholder;
   };
@@ -76,7 +83,7 @@ export const CustomSelect = ({
     : filteredOptions;
 
   return (
-    <div className={`relative flex flex-col gap-2 ${className}`} ref={rootRef}>
+    <div className={`relative flex flex-col gap-2 ${className}`} ref={rootRef} style={{ minWidth: `min(${menuMinWidth}px, calc(100vw - 48px))` }}>
       {label && (
         <label className="text-sm font-semibold text-slate-700 dark:text-slate-400">
           {label}
@@ -128,7 +135,7 @@ export const CustomSelect = ({
       )}
 
       {open && !disabled && (
-        <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+        <div className="absolute left-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900" style={{ minWidth: `min(${menuMinWidth}px, calc(100vw - 48px))` }}>
           {showSearch && (
             <div className="sticky top-0 border-b border-slate-200 bg-white p-2">
               <input
