@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../utils/supabase";
 import { AuthContext } from "./AuthContextImpl";
 
@@ -6,7 +6,15 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  async function loadUser(authUser) {
+  const loadUser = useCallback(async (authUser, { blocking = false } = {}) => {
+    if (!authUser) {
+      setUser(null);
+      if (blocking) setLoading(false);
+      return;
+    }
+
+    if (blocking) setLoading(true);
+
     try {
       const { data: perfil, error: perfilError } = await supabase
         .from("usuarios")
@@ -31,45 +39,57 @@ export function AuthProvider({ children }) {
       console.error("Erro em loadUser:", err);
       setUser(null);
     } finally {
-      setLoading(false);
+      if (blocking) setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    let resolved = false;
+    let mounted = true;
+    let initialized = false;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (!session?.user) {
-          setUser(null);
-          setLoading(false);
-          resolved = true;
-          return;
-        }
-
-        resolved = true;
-        setLoading(true);
-        loadUser(session.user);
+    const handleSession = async (session, blocking = false) => {
+      if (!mounted) return;
+      if (!session?.user) {
+        setUser(null);
+        if (blocking) setLoading(false);
+        return;
       }
-    );
+      await loadUser(session.user, { blocking });
+    };
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user && !resolved) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const blocking = event === "INITIAL_SESSION" && !initialized;
+      initialized = true;
+
+      if (event === "SIGNED_OUT") {
         setUser(null);
         setLoading(false);
+        return;
       }
+
+      void handleSession(session, blocking);
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted || initialized) return;
+      initialized = true;
+      void handleSession(session, true);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [loadUser]);
 
   async function logout() {
     await supabase.auth.signOut();
     setUser(null);
+    setLoading(false);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, refreshUser: () => { }, logout }}>
+    <AuthContext.Provider value={{ user, loading, refreshUser: () => loadUser(user, { blocking: false }), logout }}>
       {children}
     </AuthContext.Provider>
   );
