@@ -1,0 +1,45 @@
+name: Restore Horarios PDF Footer
+
+on:
+  push:
+    branches:
+      - agent/fix-horarios-core
+    paths:
+      - scripts/restore_horarios_pdf_footer.py
+
+permissions:
+  contents: write
+
+jobs:
+  restore-footer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: agent/fix-horarios-core
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Apply footer patch
+        run: python scripts/restore_horarios_pdf_footer.py
+
+      - name: Validate build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit footer and cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/restore_horarios_pdf_footer.py .github/workflows/restore-horarios-pdf-footer.yml
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "fix(horarios): restore pdf footer image"
+          git push origin HEAD:agent/fix-horarios-core
