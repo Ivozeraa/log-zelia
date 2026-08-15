@@ -10,7 +10,8 @@ import {
   FaUserPlus,
 } from 'react-icons/fa';
 import { jsPDF } from 'jspdf';
-import * as XLSX from 'xlsx';
+import autoTable from 'jspdf-autotable';
+import ExcelJS from 'exceljs';
 
 import { supabase } from '../utils/supabase';
 import { notify } from '../utils/notify';
@@ -31,6 +32,37 @@ import {
 
 const emptyGrade = { grid: {}, schedule: [], validation: [], unscheduled: [] };
 const PROFESSOR_ROLE_ID = 4;
+
+const COURSE_STYLES = [
+  { key: 'adm', label: 'Adm', match: /adm/i, hex: '60A5FA', rgb: [96, 165, 250] },
+  { key: 'enfermagem', label: 'Enfermagem', match: /enferm/i, hex: '22C55E', rgb: [34, 197, 94] },
+  { key: 'eletro', label: 'Eletro', match: /eletro/i, hex: 'F97316', rgb: [249, 115, 22] },
+  { key: 'informatica', label: 'Informática', match: /inform[aá]tica/i, hex: 'DC2626', rgb: [220, 38, 38] },
+];
+const DEFAULT_COURSE_STYLE = { key: 'outros', label: 'Outros', hex: '475569', rgb: [71, 85, 105] };
+const getCourseStyle = (turmaNome = '') => COURSE_STYLES.find((course) => course.match.test(turmaNome)) || DEFAULT_COURSE_STYLE;
+const SCHEDULE_EXPORT_ROWS = [
+  { type: 'slot', slot: 1 }, { type: 'slot', slot: 2 },
+  { type: 'break', label: 'LANCHE DA MANHÃ' },
+  { type: 'slot', slot: 3 }, { type: 'slot', slot: 4 }, { type: 'slot', slot: 5 },
+  { type: 'break', label: 'ALMOÇO' },
+  { type: 'slot', slot: 6 }, { type: 'slot', slot: 7 },
+  { type: 'break', label: 'LANCHE DA TARDE' },
+  { type: 'slot', slot: 8 }, { type: 'slot', slot: 9 },
+];
+const SCHEDULE_LEGEND_LEFT = ['7h20 - 1º TEMPO','8h10 - 2º TEMPO','9h00 - LANCHE','9h30 - 3º TEMPO','10h20 - 4º TEMPO','11h10 - 5º TEMPO','12h - ALMOÇO'];
+const SCHEDULE_LEGEND_RIGHT = ['13h00 - 6º TEMPO','13h50 - 7º TEMPO','14h40 - LANCHE','15h - 8º TEMPO','15h50 - 9º TEMPO','16h40 - ENCERRAMENTO'];
+const PDF_EXPORT_MODES = [
+  { value: 'separated', title: 'Todos separados', description: 'Uma página por turma.' },
+  { value: 'course', title: 'Somente por curso', description: 'Escolha um curso e gere somente as turmas dele.' },
+  { value: 'unified', title: 'Todos em uma única página', description: 'Junta as turmas respeitando o espaço disponível.' },
+];
+const PDF_FOOTER_HEIGHT = 7;
+const PDF_TOP_MARGIN = 22;
+const firstName = (nome = '') => String(nome).trim().split(/\s+/)[0] || '';
+const cellLabel = (aula) => !aula ? '—' : aula.tipo === 'FC' ? 'FC' : [aula.disciplina, aula.professor_nome].filter(Boolean).join(' - ').toUpperCase();
+const cellLabelPdf = (aula) => !aula ? '—' : aula.tipo === 'FC' ? 'FC' : [aula.disciplina, firstName(aula.professor_nome)].filter(Boolean).join(' - ').toUpperCase();
+
 
 const steps = [
   'Configuração',
@@ -128,6 +160,10 @@ export const Horarios = () => {
   });
   const [generatedSchedule, setGeneratedSchedule] = useState(emptyGrade);
   const [statusMessage, setStatusMessage] = useState('');
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  const [pdfMode, setPdfMode] = useState('separated');
+  const [pdfCourseKey, setPdfCourseKey] = useState('');
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const schoolTurmas = useMemo(
     () =>
@@ -153,6 +189,15 @@ export const Horarios = () => {
     () => schoolTurmas.map((turma) => ({ value: String(turma.id), label: turma.nome })),
     [schoolTurmas],
   );
+
+  const availablePdfCourses = useMemo(() => {
+    const map = new Map();
+    currentConfig.turmas.forEach((turmaId) => {
+      const course = getCourseStyle(byId(turmas, turmaId)?.nome);
+      if (!map.has(course.key)) map.set(course.key, course);
+    });
+    return Array.from(map.values());
+  }, [currentConfig.turmas, turmas]);
 
   const professorOptions = useMemo(
     () => currentConfig.professores.map((professor) => ({
@@ -749,52 +794,187 @@ export const Horarios = () => {
     }
   };
 
-  const exportPdf = () => {
-    if (!generatedSchedule.schedule.length) return notify.error('Não há grade para exportar.');
-    const doc = new jsPDF('l', 'mm', 'a4');
-    const schoolName = schools.find((school) => String(school.id) === String(currentConfig.escola_id))?.nome || 'Escola';
-    doc.setFontSize(14);
-    doc.text(schoolName, 12, 12);
+  const drawPdfHeader = (doc, { schoolName, semesterLabel }) => {
+    const pageWidth = doc.internal.pageSize.getWidth();
     doc.setFontSize(11);
-    doc.text(`Configuração: ${currentConfig.nome} · ${currentConfig.ano_letivo} · ${currentConfig.semestre}º semestre`, 12, 19);
-    let y = 28;
-    currentConfig.turmas.forEach((turmaId) => {
-      const turma = byId(turmas, turmaId);
-      doc.setFontSize(12);
-      doc.text(`Turma: ${turma?.nome || 'Turma'}`, 12, y);
-      y += 7;
-      doc.setFontSize(8);
-      generatedSchedule.schedule
-        .filter((aula) => String(aula.turma_id) === String(turmaId))
-        .sort((a, b) => WEEK_DAYS.indexOf(a.dia) - WEEK_DAYS.indexOf(b.dia) || a.slot - b.slot)
-        .forEach((aula) => {
-          if (y > 190) {
-            doc.addPage();
-            y = 14;
-          }
-          doc.text(`${aula.dia} · ${aula.slot}ª · ${aula.disciplina}${aula.tipo === 'FC' ? ' [FC]' : ''} · ${aula.professor_nome}`, 12, y);
-          y += 5;
-        });
-      y += 4;
-    });
-    doc.save(`horario_${currentConfig.nome || 'gerado'}.pdf`);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(60);
+    doc.text(schoolName, 12, 11);
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text(semesterLabel, pageWidth - 12, 11, { align: 'right' });
   };
 
-  const exportExcel = () => {
+  const drawPdfFooter = (doc) => {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setDrawColor(203, 213, 225);
+    doc.line(12, pageHeight - PDF_FOOTER_HEIGHT, pageWidth - 12, pageHeight - PDF_FOOTER_HEIGHT);
+    doc.setFontSize(7);
+    doc.setTextColor(100);
+    doc.text(`LogZélia · ${currentConfig.nome || 'Horário'}`, 12, pageHeight - 2.5);
+  };
+
+  const renderTurmaTable = (doc, turmaId, startY, { compact = false } = {}) => {
+    const turma = byId(turmas, turmaId);
+    const turmaNome = turma?.nome || 'Turma';
+    const course = getCourseStyle(turmaNome);
+    const aulas = generatedSchedule.grid[String(turmaId)] || [];
+    const body = SCHEDULE_EXPORT_ROWS.map((row) => {
+      if (row.type === 'break') return [{ content: row.label, colSpan: 6, styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249], textColor: [51, 65, 85] } }];
+      const cells = WEEK_DAYS.map((day) => cellLabelPdf(aulas.find((aula) => aula.dia === day && Number(aula.slot) === row.slot)));
+      return [{ content: `${row.slot}°`, styles: { fontStyle: 'bold', halign: 'center' } }, ...cells];
+    });
+    doc.setFontSize(compact ? 11 : 15);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(25);
+    doc.text(turmaNome.toUpperCase(), doc.internal.pageSize.getWidth() / 2, startY, { align: 'center' });
+    doc.setFont(undefined, 'normal');
+    autoTable(doc, {
+      startY: startY + 5,
+      head: [['', ...WEEK_DAYS.map((day) => day.replace('-feira', '').toUpperCase())]],
+      body,
+      theme: 'grid',
+      styles: { fontSize: compact ? 6.2 : 7.4, cellPadding: compact ? 1.25 : 1.8, lineColor: [203, 213, 225], lineWidth: 0.15, valign: 'middle', textColor: [20, 20, 20], fontStyle: 'bold' },
+      headStyles: { fillColor: course.rgb, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: compact ? 6.6 : 8 },
+      columnStyles: { 0: { cellWidth: compact ? 8 : 10, fillColor: [248, 250, 252] } },
+      margin: { left: 10, right: 10, bottom: PDF_FOOTER_HEIGHT + 2 },
+    });
+    return doc.lastAutoTable.finalY;
+  };
+
+  const renderSchedulesLegend = (doc, startY, course) => {
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(course.rgb[0], course.rgb[1], course.rgb[2]);
+    doc.text('HORÁRIOS', 14, startY);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(55);
+    const lineHeight = 4.2;
+    SCHEDULE_LEGEND_LEFT.forEach((line, i) => doc.text(line, 14, startY + lineHeight * (i + 1)));
+    SCHEDULE_LEGEND_RIGHT.forEach((line, i) => doc.text(line, 85, startY + lineHeight * (i + 1)));
+  };
+
+  const exportPdf = async ({ mode = 'separated', courseKey = '' } = {}) => {
     if (!generatedSchedule.schedule.length) return notify.error('Não há grade para exportar.');
-    const rows = generatedSchedule.schedule.map((aula) => ({
-      Turma: aula.turma_nome,
-      Dia: aula.dia,
-      Aula: `${aula.slot}ª`,
-      Horário: SLOT_DEFINITIONS.find((slot) => slot.slot === Number(aula.slot))?.time || '',
-      Disciplina: aula.disciplina,
-      Professor: aula.professor_nome,
-      Tipo: aula.tipo === 'FC' ? 'FC' : 'Aula',
-    }));
-    const workbook = XLSX.utils.book_new();
-    const sheet = XLSX.utils.json_to_sheet(rows);
-    XLSX.utils.book_append_sheet(workbook, sheet, 'Horários');
-    XLSX.writeFile(workbook, `horario_${currentConfig.nome || 'gerado'}.xlsx`);
+    let turmaIds = currentConfig.turmas;
+    if (mode === 'course') {
+      if (!courseKey) return notify.error('Selecione um curso para gerar o PDF.');
+      turmaIds = turmaIds.filter((turmaId) => getCourseStyle(byId(turmas, turmaId)?.nome).key === courseKey);
+      if (!turmaIds.length) return notify.error('Nenhuma turma desse curso foi encontrada.');
+    }
+    setExportingPdf(true);
+    try {
+      const schoolName = schools.find((item) => String(item.id) === String(currentConfig.escola_id))?.nome || 'Escola';
+      const semesterLabel = `${currentConfig.ano_letivo} · ${currentConfig.semestre}º semestre`;
+      const doc = new jsPDF('l', 'mm', 'a4');
+      const pageHeight = doc.internal.pageSize.getHeight();
+      if (mode === 'unified') {
+        let cursorY = PDF_TOP_MARGIN;
+        drawPdfHeader(doc, { schoolName, semesterLabel });
+        turmaIds.forEach((turmaId, index) => {
+          if (index > 0 && cursorY + 88 > pageHeight - PDF_FOOTER_HEIGHT) {
+            doc.addPage();
+            drawPdfHeader(doc, { schoolName, semesterLabel });
+            cursorY = PDF_TOP_MARGIN;
+          }
+          cursorY = renderTurmaTable(doc, turmaId, cursorY, { compact: true }) + 8;
+        });
+        renderSchedulesLegend(doc, Math.min(cursorY + 3, pageHeight - 38), DEFAULT_COURSE_STYLE);
+      } else {
+        turmaIds.forEach((turmaId, index) => {
+          if (index > 0) doc.addPage();
+          drawPdfHeader(doc, { schoolName, semesterLabel });
+          const finalY = renderTurmaTable(doc, turmaId, PDF_TOP_MARGIN);
+          renderSchedulesLegend(doc, finalY + 8, getCourseStyle(byId(turmas, turmaId)?.nome));
+        });
+      }
+      for (let page = 1; page <= doc.getNumberOfPages(); page += 1) { doc.setPage(page); drawPdfFooter(doc); }
+      doc.save(`horario_${currentConfig.nome || 'gerado'}.pdf`);
+    } catch (error) {
+      console.error(error);
+      notify.error(`Não foi possível gerar o PDF: ${error.message || 'erro desconhecido'}.`);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const openPdfModal = () => {
+    if (!generatedSchedule.schedule.length) return notify.error('Não há grade para exportar.');
+    setPdfMode('separated');
+    setPdfCourseKey(availablePdfCourses[0]?.key || '');
+    setPdfModalOpen(true);
+  };
+
+  const confirmPdfExport = async () => {
+    await exportPdf({ mode: pdfMode, courseKey: pdfCourseKey });
+    setPdfModalOpen(false);
+  };
+
+  const exportExcel = async () => {
+    if (!generatedSchedule.schedule.length) return notify.error('Não há grade para exportar.');
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const usedSheetNames = new Set();
+      currentConfig.turmas.forEach((turmaId) => {
+        const turmaNome = byId(turmas, turmaId)?.nome || 'Turma';
+        const course = getCourseStyle(turmaNome);
+        const aulas = generatedSchedule.grid[String(turmaId)] || [];
+        let sheetName = turmaNome.replace(/[\/*?:[\]]/g, ' ').trim().slice(0, 31) || 'Turma';
+        let suffix = 2;
+        while (usedSheetNames.has(sheetName.toLowerCase())) { sheetName = `${turmaNome.slice(0, 28)} ${suffix}`; suffix += 1; }
+        usedSheetNames.add(sheetName.toLowerCase());
+        const sheet = workbook.addWorksheet(sheetName, { views: [{ showGridLines: false }] });
+        sheet.columns = [{ width: 9 }, ...WEEK_DAYS.map(() => ({ width: 22 }))];
+        const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${course.hex}` } };
+        const thinBorder = { style: 'thin', color: { argb: 'FFCBD5E1' } };
+        const borders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+        const titleRow = sheet.addRow([turmaNome.toUpperCase()]);
+        sheet.mergeCells(titleRow.number, 1, titleRow.number, 6);
+        titleRow.getCell(1).font = { bold: true, size: 16 };
+        titleRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+        titleRow.height = 24;
+        const headerRow = sheet.addRow(['', ...WEEK_DAYS.map((day) => day.replace('-feira', '').toUpperCase())]);
+        headerRow.eachCell((cell) => { cell.fill = headerFill; cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; cell.alignment = { horizontal: 'center', vertical: 'middle' }; cell.border = borders; });
+        SCHEDULE_EXPORT_ROWS.forEach((row) => {
+          if (row.type === 'break') {
+            const breakRow = sheet.addRow([row.label]);
+            sheet.mergeCells(breakRow.number, 1, breakRow.number, 6);
+            breakRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+            breakRow.getCell(1).font = { bold: true, color: { argb: 'FF334155' } };
+            breakRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+            breakRow.eachCell({ includeEmpty: true }, (cell) => { cell.border = borders; });
+            return;
+          }
+          const cells = WEEK_DAYS.map((day) => cellLabel(aulas.find((aula) => aula.dia === day && Number(aula.slot) === row.slot)));
+          const dataRow = sheet.addRow([`${row.slot}°`, ...cells]);
+          dataRow.eachCell({ includeEmpty: true }, (cell, colNumber) => { cell.border = borders; cell.alignment = { vertical: 'middle', horizontal: colNumber === 1 ? 'center' : 'left', wrapText: true }; if (colNumber === 1) cell.font = { bold: true }; });
+        });
+        sheet.addRow([]);
+        const legendTitle = sheet.addRow(['HORÁRIOS']);
+        legendTitle.getCell(1).font = { bold: true, color: { argb: `FF${course.hex}` } };
+        const legendRows = Math.max(SCHEDULE_LEGEND_LEFT.length, SCHEDULE_LEGEND_RIGHT.length);
+        for (let i = 0; i < legendRows; i += 1) {
+          const legendRow = sheet.addRow(['', SCHEDULE_LEGEND_LEFT[i] || '', '', '', SCHEDULE_LEGEND_RIGHT[i] || '']);
+          sheet.mergeCells(legendRow.number, 2, legendRow.number, 3);
+          sheet.mergeCells(legendRow.number, 5, legendRow.number, 6);
+        }
+      });
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `horario_${currentConfig.nome || 'gerado'}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      notify.error(`Não foi possível exportar o Excel: ${error.message || 'erro desconhecido'}.`);
+    }
   };
 
   if (loading) {
@@ -951,7 +1131,7 @@ export const Horarios = () => {
             <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-950"><span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Atribuições</span>{currentConfig.professorTurmas.map((link) => <p key={link.id} className="text-sm text-slate-700 dark:text-slate-300">{byId(currentConfig.professores, link.professor_id)?.nome || 'Professor'} · {byId(turmas, link.turma_id)?.nome || 'Turma'} · {byId(currentConfig.disciplinas, link.disciplina_id)?.nome || 'Disciplina'} · {link.aulas_semana} aulas/semana</p>)}</div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-950"><span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Restrições</span><p className="text-sm text-slate-600 dark:text-slate-300">Folgas: {currentConfig.folgas.length} · Indisponibilidades: {currentConfig.indisponibilidades.length} · Formações: {currentConfig.formacaoArea.length}</p></div>
             {blockingProblems.length > 0 && <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"><h3 className="mb-2 font-semibold">Problemas encontrados</h3>{blockingProblems.map((problem, index) => <p key={index} className="text-sm">• {problem.mensagem}{problem.professor ? ` · ${problem.professor}` : ''}{problem.turma ? ` · ${problem.turma}` : ''}{problem.disciplina ? ` · ${problem.disciplina}` : ''}</p>)}</div>}
-            <div className="flex flex-wrap gap-3"><Button type="button" onClick={generate} disabled={saving || blockingProblems.length > 0}><FaCalendarAlt className="mr-2" /> Gerar horário</Button><Button type="button" variant="secondary" onClick={() => saveConfiguration(true)} disabled={saving}>{saving ? 'Salvando...' : 'Salvar configuração'}</Button>{generatedSchedule.schedule.length > 0 && <><Button type="button" variant="secondary" onClick={exportPdf}><FaFilePdf className="mr-2" /> PDF</Button><Button type="button" variant="secondary" onClick={exportExcel}><FaFileExcel className="mr-2" /> Excel</Button></>}</div>
+            <div className="flex flex-wrap gap-3"><Button type="button" onClick={generate} disabled={saving || blockingProblems.length > 0}><FaCalendarAlt className="mr-2" /> Gerar horário</Button><Button type="button" variant="secondary" onClick={() => saveConfiguration(true)} disabled={saving}>{saving ? 'Salvando...' : 'Salvar configuração'}</Button>{generatedSchedule.schedule.length > 0 && <><Button type="button" variant="secondary" onClick={openPdfModal}><FaFilePdf className="mr-2" /> PDF</Button><Button type="button" variant="secondary" onClick={exportExcel}><FaFileExcel className="mr-2" /> Excel</Button></>}</div>
             {statusMessage && <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">{statusMessage}</div>}
             {generatedSchedule.schedule.length > 0 && currentConfig.turmas.map((turmaId) => { const turma = byId(turmas, turmaId); const aulas = generatedSchedule.grid[String(turmaId)] || []; return <div key={turmaId} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950"><div className="border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900"><h3 className="font-bold text-slate-900 dark:text-white">{turma?.nome || 'Turma'}</h3></div><div className="overflow-x-auto"><table className="min-w-full border-collapse text-sm"><thead><tr><th className="border-b border-slate-200 bg-slate-50 p-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">Aula / horário</th>{WEEK_DAYS.map((day) => <th key={day} className="border-b border-slate-200 bg-slate-50 p-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">{day}</th>)}</tr></thead><tbody>{SLOT_DEFINITIONS.map((slot) => <tr key={slot.slot}><td className="border-b border-slate-100 p-3 font-semibold text-slate-700 dark:border-slate-800 dark:text-slate-300">{slot.label} · {slot.time}</td>{WEEK_DAYS.map((day) => { const aula = aulas.find((item) => item.dia === day && Number(item.slot) === slot.slot); return <td key={`${day}-${slot.slot}`} className="border-b border-slate-100 p-3 align-top dark:border-slate-800">{aula ? <div><div className="font-semibold text-slate-900 dark:text-white">{aula.disciplina}{aula.tipo === 'FC' && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-200">FC</span>}</div><div className="text-xs text-slate-500 dark:text-slate-400">{aula.professor_nome}</div></div> : <span className="text-slate-400">—</span>}</td>; })}</tr>)}</tbody></table></div></div>; })}
             {(gradeProblems.length > 0 || unscheduled.length > 0) && <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"><h3 className="mb-2 font-semibold">Conflitos / aulas não distribuídas</h3>{gradeProblems.map((item, index) => <p key={`g-${index}`} className="text-sm">• {item.professor || ''} · {item.turma || ''} · {item.disciplina || ''} — {item.mensagem}</p>)}{unscheduled.map((item, index) => <p key={`u-${index}`} className="text-sm">• {item.professor || ''} · {item.turma || ''} · {item.disciplina || ''} — solicitadas: {item.solicitadas}, distribuídas: {item.distribuidas}, motivo: {item.motivo || item.mensagem}</p>)}</div>}
@@ -960,6 +1140,30 @@ export const Horarios = () => {
 
         <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-4 dark:border-slate-700"><Button type="button" variant="secondary" onClick={previousStep} disabled={currentStep === 1}>Voltar</Button><div className="text-xs text-slate-500">Etapa {currentStep} de {steps.length}</div><Button type="button" onClick={nextStep} disabled={currentStep === 7 || saving}>{currentStep === 7 ? 'Concluído' : 'Continuar'}</Button></div>
       </div>
+
+      <Modal isOpen={pdfModalOpen} onClose={() => setPdfModalOpen(false)} title="Exportar PDF do Horário">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Modo de exportação</label>
+            <div className="space-y-2">
+              {PDF_EXPORT_MODES.map((mode) => (
+                <label key={mode.value} className={`flex cursor-pointer flex-col rounded-xl border p-3 transition ${pdfMode === mode.value ? 'border-green-600 bg-green-50/50 dark:bg-green-950/20' : 'border-slate-200 dark:border-slate-800'}`}>
+                  <div className="flex items-center gap-2">
+                    <input type="radio" name="pdfMode" value={mode.value} checked={pdfMode === mode.value} onChange={(event) => setPdfMode(event.target.value)} />
+                    <span className="font-semibold text-slate-900 dark:text-white">{mode.title}</span>
+                  </div>
+                  <span className="ml-6 text-xs text-slate-500 dark:text-slate-400">{mode.description}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          {pdfMode === 'course' && <CustomSelect label="Curso" value={pdfCourseKey} onChange={(value) => setPdfCourseKey(value)} options={availablePdfCourses.map((course) => ({ value: course.key, label: course.label }))} placeholder="Selecione o curso" />}
+          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+            <Button type="button" variant="secondary" onClick={() => setPdfModalOpen(false)}>Cancelar</Button>
+            <Button type="button" onClick={confirmPdfExport} disabled={exportingPdf}>{exportingPdf ? 'Gerando...' : 'Exportar PDF'}</Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal isOpen={professorModalOpen} onClose={closeProfessorModal} title={editingProfessorId ? 'Editar professor' : 'Adicionar professor'}>
         <div className="space-y-5">
