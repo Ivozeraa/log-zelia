@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export const CustomSelect = ({
   label,
@@ -19,6 +20,7 @@ export const CustomSelect = ({
   const [menuPosition, setMenuPosition] = useState(null);
   const rootRef = useRef(null);
   const triggerRef = useRef(null);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     const labels = [placeholder, ...options.map((option) => option.label)];
@@ -28,7 +30,11 @@ export const CustomSelect = ({
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (rootRef.current && !rootRef.current.contains(event.target)) {
+      if (
+        rootRef.current &&
+        !rootRef.current.contains(event.target) &&
+        !(menuRef.current && menuRef.current.contains(event.target))
+      ) {
         setOpen(false);
         setSearchTerm("");
       }
@@ -134,8 +140,9 @@ export const CustomSelect = ({
         </div>
       )}
 
-      {open && !disabled && menuPosition && (
+      {open && !disabled && menuPosition && typeof document !== "undefined" && createPortal(
         <div
+          ref={menuRef}
           className="fixed z-[10050] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
           style={{ top: menuPosition.top, left: menuPosition.left, width: menuPosition.width, maxHeight: menuPosition.maxHeight }}
         >
@@ -169,7 +176,8 @@ export const CustomSelect = ({
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
