@@ -748,9 +748,7 @@ export const Horarios = () => {
     for (const item of linkDraft.items) {
       const turmaIds = Array.from(new Set((item.turma_ids || []).map(String)));
       const disciplineIds = Array.from(new Set((item.disciplina_catalog_ids || []).map(String)));
-      const curriculum = curriculumForTurmas(turmaIds);
       if (!turmaIds.length) return notify.error('Selecione pelo menos uma turma em cada bloco.');
-      if (!curriculum) return notify.error('As turmas de um mesmo bloco precisam pertencer ao mesmo curso e série.');
       if (!disciplineIds.length) return notify.error('Selecione pelo menos uma matéria em cada bloco.');
 
       const allowed = new Set(catalogOptionsForTurmas(turmaIds).map((option) => String(option.value)));
