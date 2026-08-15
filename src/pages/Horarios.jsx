@@ -246,6 +246,18 @@ export const Horarios = () => {
     );
   }, [currentConfig.pdt, currentConfig.turmas, editingProfessorId, professorDraft.pdt_turma_id, turmaOptions]);
 
+  const pdtOptionsForTurma = (turmaId) => {
+    const currentProfessorId = currentConfig.pdt?.[turmaId];
+    const assignedElsewhere = new Set(
+      Object.entries(currentConfig.pdt || {})
+        .filter(([otherTurmaId]) => String(otherTurmaId) !== String(turmaId))
+        .map(([, professorId]) => String(professorId)),
+    );
+    return professorOptions.filter((option) =>
+      String(option.value) === String(currentProfessorId) || !assignedElsewhere.has(String(option.value)),
+    );
+  };
+
   const professorAssignmentGroups = useMemo(() => {
     const groups = new Map();
     currentConfig.professorTurmas.forEach((link) => {
@@ -1199,7 +1211,7 @@ export const Horarios = () => {
 
         {currentStep === 6 && (
           <div className="space-y-4">
-            {currentConfig.turmas.map((turmaId) => { const turma = byId(turmas, turmaId); return <div key={turmaId} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-950"><div className="mb-2 font-semibold text-slate-900 dark:text-white">{turma?.nome || 'Turma'}</div><CustomSelect label="Professor PDT" value={currentConfig.pdt?.[turmaId] || ''} onChange={(value) => setCurrentConfig((prev) => ({ ...prev, pdt: { ...prev.pdt, [turmaId]: value } }))} options={professorOptions} placeholder="Selecione o PDT" /></div>; })}
+            {currentConfig.turmas.map((turmaId) => { const turma = byId(turmas, turmaId); return <div key={turmaId} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-950"><div className="mb-2 font-semibold text-slate-900 dark:text-white">{turma?.nome || 'Turma'}</div><CustomSelect label="Professor PDT" value={currentConfig.pdt?.[turmaId] || ''} onChange={(value) => setCurrentConfig((prev) => ({ ...prev, pdt: { ...prev.pdt, [turmaId]: value } }))} options={pdtOptionsForTurma(turmaId)} placeholder="Selecione o PDT" /></div>; })}
           </div>
         )}
 
