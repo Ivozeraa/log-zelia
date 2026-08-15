@@ -36,5 +36,5 @@ jobs:
           git add src/pages/Horarios.jsx package.json package-lock.json scripts/merge_horarios_exports.py .github/workflows/merge-horarios-exports.yml
           git diff --cached --quiet && exit 0
           git commit -m "feat(horarios): add formatted PDF and Excel exports"
-          git push origin HEAD:agent/fix-horarios-core
-# trigger export merge
+          git push --force origin HEAD:agent/fix-horarios-core
+# force-publish
