@@ -50,6 +50,8 @@ const COURSE_STYLES = [
 ];
 const DEFAULT_COURSE_STYLE = { key: 'outros', label: 'Outros', hex: '475569', rgb: [71, 85, 105] };
 const getCourseStyle = (turmaNome = '') => COURSE_STYLES.find((course) => course.match.test(turmaNome)) || DEFAULT_COURSE_STYLE;
+const CURRICULUM_COURSES = ['Administração','Eletrotécnica','Enfermagem','Informática'];
+const catalogCourseFromTurma = (nome='') => /eletro/i.test(nome) ? 'Eletrotécnica' : /enferm/i.test(nome) ? 'Enfermagem' : /inform[aá]tica/i.test(nome) ? 'Informática' : /adm/i.test(nome) ? 'Administração' : '';
 const SCHEDULE_EXPORT_ROWS = [
   { type: 'slot', slot: 1 }, { type: 'slot', slot: 2 },
   { type: 'break', label: 'LANCHE DA MANHÃ' },
@@ -162,6 +164,11 @@ export const Horarios = () => {
   const [disciplinaModalOpen, setDisciplinaModalOpen] = useState(false);
   const [editingDisciplinaId, setEditingDisciplinaId] = useState(null);
   const [disciplinaForm, setDisciplinaForm] = useState({ nome: '', area_id: '' });
+  const [disciplinaCatalogo, setDisciplinaCatalogo] = useState([]);
+  const [catalogModalOpen, setCatalogModalOpen] = useState(false);
+  const [catalogCourse, setCatalogCourse] = useState('');
+  const [catalogSerie, setCatalogSerie] = useState('1');
+  const [catalogSelected, setCatalogSelected] = useState([]);
   const [vinculoModalOpen, setVinculoModalOpen] = useState(false);
   const [editingLinkProfessorId, setEditingLinkProfessorId] = useState(null);
   const [linkDraft, setLinkDraft] = useState({
@@ -227,6 +234,8 @@ export const Horarios = () => {
     [currentConfig.disciplinas, currentConfig.areas],
   );
 
+  const catalogCourseOptions = useMemo(() => CURRICULUM_COURSES.map((curso) => ({ value: curso, label: curso })), []);
+  const catalogFilteredRows = useMemo(() => disciplinaCatalogo.filter((row) => row.curso === catalogCourse && String(row.serie) === String(catalogSerie) && Number(row.semestre) === Number(currentConfig.semestre)).sort((a,b) => a.categoria.localeCompare(b.categoria) || a.nome.localeCompare(b.nome)), [disciplinaCatalogo, catalogCourse, catalogSerie, currentConfig.semestre]);
   const professorUsers = useMemo(
     () => usuarios
       .filter((usuario) => Number(usuario.role_id) === PROFESSOR_ROLE_ID)
@@ -282,6 +291,7 @@ export const Horarios = () => {
           supabase.from('turmas').select('*').order('nome', { ascending: true }),
           supabase.from('horario_configuracoes').select('*').order('created_at', { ascending: false }),
           supabase.from('usuarios').select('id, nome, escola_id, role_id, pdt').order('nome', { ascending: true }),
+          supabase.from('horario_disciplinas_catalogo').select('id, curso, curriculo, serie, semestre, nome, categoria, area_nome, ordem').eq('ativo', true).order('curso').order('serie').order('semestre').order('ordem'),
         ]);
         const error = results.find((result) => result.error)?.error;
         if (error) throw error;
@@ -290,6 +300,7 @@ export const Horarios = () => {
         setTurmas(results[1].data || []);
         setConfigs(results[2].data || []);
         setUsuarios(results[3].data || []);
+        setDisciplinaCatalogo(results[4].data || []);
         if (!selectedConfigId && results[2].data?.length) {
           setSelectedConfigId(String(results[2].data[0].id));
         } else if (!currentConfig.escola_id) {
@@ -531,6 +542,30 @@ export const Horarios = () => {
     }));
   };
 
+  const openDisciplinaCatalogModal = () => {
+    const firstTurma = byId(turmas, currentConfig.turmas[0]);
+    setCatalogCourse(catalogCourseFromTurma(firstTurma?.nome) || CURRICULUM_COURSES[0]);
+    setCatalogSerie(String((String(firstTurma?.nome || '').match(/(\d+)\s*º|\b(\d+)\b/) || [,'1'])[1]));
+    setCatalogSelected([]);
+    setCatalogModalOpen(true);
+  };
+  const closeDisciplinaCatalogModal = () => { setCatalogModalOpen(false); setCatalogSelected([]); };
+  const toggleCatalogDiscipline = (id) => setCatalogSelected((prev) => prev.includes(String(id)) ? prev.filter((v) => v !== String(id)) : [...prev, String(id)]);
+  const addCatalogDisciplines = () => {
+    const rows = disciplinaCatalogo.filter((row) => catalogSelected.includes(String(row.id)));
+    if (!rows.length) return notify.error('Selecione pelo menos uma disciplina.');
+    setCurrentConfig((prev) => {
+      const existing = new Set(prev.disciplinas.map((d) => d.nome.trim().toLowerCase()));
+      const additions = rows.filter((row) => !existing.has(row.nome.trim().toLowerCase())).map((row) => {
+        const area = prev.areas.find((a) => a.nome.trim().toLowerCase() === row.area_nome.trim().toLowerCase()) || prev.areas.find((a) => a.nome === 'Técnica');
+        return area ? { id: newId('disc'), nome: row.nome, area_id: String(area.id) } : null;
+      }).filter(Boolean);
+      return { ...prev, disciplinas: [...prev.disciplinas, ...additions] };
+    });
+    closeDisciplinaCatalogModal();
+    notify.success('Disciplinas adicionadas da base curricular.');
+  };
+
   const openDisciplinaModal = (discipline = null) => {
     setEditingDisciplinaId(discipline?.id || null);
     setDisciplinaForm({
@@ -652,6 +687,7 @@ export const Horarios = () => {
       ],
     }));
     closeLinkModal();
+    closeDisciplinaCatalogModal();
   };
 
   const removeAssignment = (professorId) => setCurrentConfig((prev) => ({
@@ -1199,7 +1235,7 @@ export const Horarios = () => {
               {!currentConfig.professores.length && <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center dark:border-slate-700"><p className="font-semibold text-slate-700 dark:text-slate-200">Nenhum professor adicionado</p><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Use o botão acima para adicionar professores com cargo de professor.</p></div>}
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-semibold text-slate-900 dark:text-white">Disciplinas</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Cadastre aqui as matérias que serão usadas nas atribuições da Etapa 4.</p></div><Button type="button" variant="secondary" onClick={() => openDisciplinaModal()}><FaPlus className="mr-2" /> Nova disciplina</Button></div></div>
+            <div className="mb-4 rounded-2xl border border-green-200 bg-green-50/70 p-5 dark:border-green-900 dark:bg-green-950/20"><div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div><h3 className="font-semibold text-slate-900 dark:text-white">Base curricular</h3><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Importe disciplinas por curso, série e semestre.</p></div><Button type="button" onClick={openDisciplinaCatalogModal}><FaPlus className="mr-2"/> Importar da base curricular</Button></div></div><div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-semibold text-slate-900 dark:text-white">Disciplinas</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Cadastre aqui as matérias que serão usadas nas atribuições da Etapa 4.</p></div><Button type="button" variant="secondary" onClick={() => openDisciplinaModal()}><FaPlus className="mr-2" /> Nova disciplina</Button></div></div>
 
             <div><div className="mb-3 flex items-center justify-between"><h3 className="font-semibold text-slate-900 dark:text-white">Disciplinas cadastradas</h3><span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{currentConfig.disciplinas.length} disciplina(s)</span></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{currentConfig.disciplinas.map((discipline) => <div key={discipline.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-slate-900 dark:text-white">{discipline.nome}</p><span className="mt-2 inline-flex rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-bold text-green-800 dark:bg-green-950 dark:text-green-300">{byId(currentConfig.areas, discipline.area_id)?.nome || 'Área inválida'}</span></div><div className="flex gap-1"><button type="button" onClick={() => openDisciplinaModal(discipline)} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-white">Editar</button><button type="button" onClick={() => removeDisciplina(discipline.id)} className="rounded-lg px-2 py-1 text-xs font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950">Excluir</button></div></div></div>)}</div>{!currentConfig.disciplinas.length && <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Nenhuma disciplina cadastrada.</div>}</div>
           </div>
@@ -1310,6 +1346,8 @@ export const Horarios = () => {
           </div>
         </div>
       </Modal>
+
+      <Modal isOpen={catalogModalOpen} onClose={closeDisciplinaCatalogModal} title="Base curricular de disciplinas"><div className="space-y-5"><div className="grid gap-4 sm:grid-cols-2"><CustomSelect label="Curso" value={catalogCourse} onChange={setCatalogCourse} options={catalogCourseOptions} placeholder="Selecione o curso"/><CustomSelect label="Série" value={catalogSerie} onChange={setCatalogSerie} options={[1,2,3].map((serie)=>({value:String(serie),label:`${serie}ª série`}))} placeholder="Selecione a série"/></div><div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm"><strong>{currentConfig.semestre}º semestre</strong></div><div className="max-h-[48vh] space-y-2 overflow-y-auto pr-1">{catalogFilteredRows.map((row)=>{const checked=catalogSelected.includes(String(row.id)); const alreadyAdded=currentConfig.disciplinas.some((d)=>d.nome.trim().toLowerCase()===row.nome.trim().toLowerCase()); return <button key={row.id} type="button" disabled={alreadyAdded} onClick={()=>toggleCatalogDiscipline(row.id)} className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left ${alreadyAdded?'opacity-50':'hover:border-green-400'} ${checked?'border-green-500 bg-green-50':'border-slate-200 bg-white'}`}><span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${checked?'border-green-600 bg-green-600 text-white':'border-slate-300'}`}>{checked&&<FaCheck className="text-xs"/>}</span><span><span className="block font-semibold">{row.nome}</span><span className="block text-[11px] text-slate-500">{row.categoria} · {row.area_nome}</span></span></button>})}</div><div className="flex justify-end gap-3 border-t border-slate-200 pt-4"><Button type="button" variant="secondary" onClick={closeDisciplinaCatalogModal}>Cancelar</Button><Button type="button" onClick={addCatalogDisciplines} disabled={!catalogSelected.length}>Adicionar selecionadas</Button></div></div></Modal>
 
       <Modal isOpen={disciplinaModalOpen} onClose={closeDisciplinaModal} title={editingDisciplinaId ? 'Editar disciplina' : 'Nova disciplina'}>
         <div className="space-y-5">
