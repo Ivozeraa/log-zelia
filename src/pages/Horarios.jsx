@@ -311,18 +311,22 @@ export const Horarios = () => {
   const catalogOptionsForTurmas = (turmaIds = []) => {
     const curriculum = curriculumForTurmas(turmaIds);
     if (!curriculum) return [];
-    const multipleTurmas = turmaIds.length > 1;
-
+    const selectedCount = turmaIds.length;
+    const isTechnical = (row) => {
+      const category = String(row?.categoria || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const name = String(row?.nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      return category.includes('tecn') || category.includes('formacao tecnica') || category.includes('itinerario tecnico')
+        || name.includes('estagio') || name.includes('pratica profissional') || name.includes('projeto integrador');
+    };
     return disciplinaCatalogo
-      .filter((row) => row.curso === curriculum.curso
+      .filter((row) =>
+        row.curso === curriculum.curso
         && Number(row.serie) === Number(curriculum.serie)
-        && Number(row.semestre) === Number(currentConfig.semestre))
-      .filter((row) => !multipleTurmas || isGeneralDiscipline(row))
+        && Number(row.semestre) === Number(currentConfig.semestre)
+        && (selectedCount <= 1 || !isTechnical(row)),
+      )
       .sort((a, b) => a.categoria.localeCompare(b.categoria) || a.nome.localeCompare(b.nome))
-      .map((row) => ({
-        value: String(row.id),
-        label: `${row.nome}${multipleTurmas && isGeneralDiscipline(row) ? ' · comum' : ''}`,
-      }));
+      .map((row) => ({ value: String(row.id), label: row.nome }));
   };
 
   const getMateriaSettings = (item) => item.materia_settings || {};

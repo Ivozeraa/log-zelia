@@ -60,12 +60,17 @@ export const CustomSelect = ({
         Math.min(rect.left, window.innerWidth - width - viewportPadding),
       );
 
-      const spaceBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
-      const spaceAbove = rect.top - viewportPadding - gap;
-      const openAbove = spaceBelow < 240 && spaceAbove > spaceBelow;
+      const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - viewportPadding - gap);
+      const spaceAbove = Math.max(0, rect.top - viewportPadding - gap);
+      const optionCount = displayedOptions.length;
+      const estimatedContentHeight = Math.min(
+        380,
+        Math.max(48, optionCount * 44 + (showSearch ? 60 : 0) + (multiple ? 58 : 0)),
+      );
+      const openAbove = spaceBelow < estimatedContentHeight && spaceAbove > spaceBelow;
       const maxHeight = Math.max(
-        180,
-        Math.min(380, openAbove ? spaceAbove : spaceBelow),
+        120,
+        Math.min(380, openAbove ? spaceAbove : Math.max(spaceBelow, 120)),
       );
       const top = openAbove
         ? Math.max(viewportPadding, rect.top - maxHeight - gap)
@@ -82,7 +87,7 @@ export const CustomSelect = ({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [open, menuMinWidth]);
+  }, [open, menuMinWidth, displayedOptions.length, showSearch, multiple]);
 
   const selectedValues = multiple ? (Array.isArray(value) ? value : []) : null;
 
