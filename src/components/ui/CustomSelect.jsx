@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FormInput } from "./FormInput";
+import "../../utils/pdfFooterPatch";
 
 export const CustomSelect = ({
   label,
@@ -38,7 +39,6 @@ export const CustomSelect = ({
     };
   }, []);
 
-  // --- lógica de seleção múltipla ---
   const selectedValues = multiple ? (Array.isArray(value) ? value : []) : null;
 
   const getDisplayLabel = () => {
@@ -57,13 +57,12 @@ export const CustomSelect = ({
 
   const handleOptionClick = (optionValue) => {
     if (multiple) {
-      if (optionValue === "") return; // ignora placeholder
+      if (optionValue === "") return;
       const current = Array.isArray(value) ? value : [];
       const next = current.includes(optionValue)
         ? current.filter((v) => v !== optionValue)
         : [...current, optionValue];
       onChange(next);
-      // mantém o dropdown aberto para selecionar mais
     } else {
       onChange(optionValue);
       setOpen(false);
@@ -77,7 +76,6 @@ export const CustomSelect = ({
       )
     : options;
 
-  // no modo múltiplo, remove a opção-placeholder do dropdown
   const displayedOptions = multiple
     ? filteredOptions.filter((o) => o.value !== "")
     : filteredOptions;
@@ -109,7 +107,6 @@ export const CustomSelect = ({
         <span className="text-slate-500">▾</span>
       </button>
 
-      {/* badges dos alunos selecionados */}
       {multiple && selectedValues && selectedValues.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {selectedValues.map((v) => {
@@ -150,8 +147,7 @@ export const CustomSelect = ({
 
           {displayedOptions.length > 0 ? (
             displayedOptions.map((option) => {
-              const isSelected =
-                multiple && selectedValues?.includes(option.value);
+              const isSelected = multiple && selectedValues?.includes(option.value);
 
               return (
                 <button
@@ -171,11 +167,7 @@ export const CustomSelect = ({
                       }`}
                     >
                       {isSelected && (
-                        <svg
-                          viewBox="0 0 10 8"
-                          fill="none"
-                          className="h-2.5 w-2.5"
-                        >
+                        <svg viewBox="0 0 10 8" fill="none" className="h-2.5 w-2.5">
                           <path
                             d="M1 4l2.5 2.5L9 1"
                             stroke="currentColor"
@@ -195,7 +187,6 @@ export const CustomSelect = ({
             <div className="px-3 py-3 text-sm text-slate-500">{emptyLabel}</div>
           )}
 
-          {/* botão de confirmar no modo múltiplo */}
           {multiple && (
             <div className="sticky bottom-0 border-t border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
               <button
