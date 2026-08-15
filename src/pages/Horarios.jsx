@@ -227,8 +227,6 @@ export const Horarios = () => {
     [currentConfig.disciplinas, currentConfig.areas],
   );
 
-  const catalogCourseOptions = useMemo(() => CURRICULUM_COURSES.map((curso) => ({ value: curso, label: curso })), []);
-  const catalogFilteredRows = useMemo(() => disciplinaCatalogo.filter((row) => row.curso === catalogCourse && String(row.serie) === String(catalogSerie) && Number(row.semestre) === Number(currentConfig.semestre)).sort((a,b) => a.categoria.localeCompare(b.categoria) || a.nome.localeCompare(b.nome)), [disciplinaCatalogo, catalogCourse, catalogSerie, currentConfig.semestre]);
   const professorUsers = useMemo(
     () => usuarios
       .filter((usuario) => Number(usuario.role_id) === PROFESSOR_ROLE_ID)
