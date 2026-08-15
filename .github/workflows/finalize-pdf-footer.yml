@@ -1,0 +1,64 @@
+name: Finalize PDF footer wiring
+
+on:
+  push:
+    branches:
+      - agent/fix-horarios-core
+    paths:
+      - .github/workflows/finalize-pdf-footer.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fix-horarios-core
+
+      - name: Wire footer directly into Horarios
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          horarios = Path('src/pages/Horarios.jsx')
+          text = horarios.read_text(encoding='utf-8')
+
+          if "from '../utils/pdfFooterPatch'" not in text:
+              anchor = "import ExcelJS from 'exceljs';\n"
+              if anchor not in text:
+                  raise SystemExit('ExcelJS import anchor not found')
+              text = text.replace(anchor, anchor + "import { addPdfFooter } from '../utils/pdfFooterPatch';\n", 1)
+
+          target = "      doc.save(`horario_${currentConfig.nome || 'gerado'}.pdf`);"
+          replacement = "      await addPdfFooter(doc);\n      doc.save(`horario_${currentConfig.nome || 'gerado'}.pdf`);"
+          if target not in text:
+              raise SystemExit('PDF save call not found')
+          if replacement not in text:
+              text = text.replace(target, replacement, 1)
+
+          horarios.write_text(text, encoding='utf-8')
+
+          select = Path('src/components/ui/CustomSelect.jsx')
+          select_text = select.read_text(encoding='utf-8')
+          select_text = select_text.replace('import "../../utils/pdfFooterPatch";\n', '')
+          select.write_text(select_text, encoding='utf-8')
+          PY
+
+      - name: Validate build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Remove temporary workflow
+        run: rm -f .github/workflows/finalize-pdf-footer.yml
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Horarios.jsx src/components/ui/CustomSelect.jsx .github/workflows/finalize-pdf-footer.yml
+          git commit -m "fix(horarios): wire pdf footer directly into export"
+          git push origin HEAD:agent/fix-horarios-core
