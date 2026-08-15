@@ -21,7 +21,6 @@ jobs:
         run: |
           python3 <<'PY'
           from pathlib import Path
-          from textwrap import dedent
 
           wf = Path('.github/workflows/simplify-curriculum-assignments.yml').read_text(encoding='utf-8')
           marker_start = "          python3 <<'PY'\n"
@@ -30,7 +29,8 @@ jobs:
           end = wf.find(marker_end, start + len(marker_start))
           if start == -1 or end == -1:
               raise SystemExit('Prepared patch block not found')
-          code = dedent(wf[start + len(marker_start):end])
+          raw = wf[start + len(marker_start):end].splitlines()
+          code = '\n'.join(line[10:] if line.startswith('          ') else line for line in raw) + '\n'
           exec(code, {})
           PY
 
