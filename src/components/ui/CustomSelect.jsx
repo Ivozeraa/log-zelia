@@ -126,6 +126,10 @@ export const CustomSelect = ({
     ? filteredOptions.filter((option) => option.value !== "")
     : filteredOptions;
 
+  const searchHeight = showSearch ? 60 : 0;
+  const footerHeight = multiple ? 58 : 0;
+  const listMaxHeight = Math.max(120, menuPosition?.maxHeight - searchHeight - footerHeight || 120);
+
   return (
     <div ref={rootRef} className={`relative flex flex-col gap-2 ${className}`}>
       {label && (
@@ -184,7 +188,6 @@ export const CustomSelect = ({
             top: menuPosition.top,
             left: menuPosition.left,
             width: menuPosition.width,
-            height: menuPosition.maxHeight,
             maxHeight: menuPosition.maxHeight,
           }}
           onMouseDown={(event) => event.stopPropagation()}
@@ -204,13 +207,11 @@ export const CustomSelect = ({
           )}
 
           <div
-            className="overflow-y-scroll overscroll-contain"
+            className="overflow-y-auto overscroll-contain"
             style={{
-              height: multiple
-                ? `calc(100% - ${showSearch ? 112 : 52}px)`
-                : `calc(100% - ${showSearch ? 60 : 0}px)`,
+              maxHeight: listMaxHeight,
               WebkitOverflowScrolling: "touch",
-              scrollbarGutter: "stable",
+              scrollbarGutter: displayedOptions.length > 8 ? "stable" : "auto",
               touchAction: "pan-y",
             }}
           >
@@ -247,7 +248,7 @@ export const CustomSelect = ({
           </div>
 
           {multiple && (
-            <div className="absolute inset-x-0 bottom-0 border-t border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
+            <div className="border-t border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
               <button
                 type="button"
                 onClick={() => {
