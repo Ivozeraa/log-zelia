@@ -26,7 +26,7 @@ replacement = '''  const catalogOptionsForTurmas = (turmaIds = []) => {
   };'''
 if not pattern.search(s):
     raise SystemExit('catalogOptionsForTurmas block not found')
-s = pattern.sub(replacement, s, count=1)
+s = pattern.sub(lambda _m: replacement, s, count=1)
 
 select = Path('src/components/ui/CustomSelect.jsx')
 t = select.read_text(encoding='utf-8')
