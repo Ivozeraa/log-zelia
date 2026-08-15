@@ -37,11 +37,14 @@ const Avatar = ({ nome, avatarUrl, size = 44 }) => {
     ? nome.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()
     : '?'
 
-  if (avatarUrl) {
+  const [imageFailed, setImageFailed] = useState(false)
+
+  if (avatarUrl && !imageFailed) {
     return (
       <img
         src={avatarUrl}
         alt={nome}
+        onError={() => setImageFailed(true)}
         style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
       />
     )
