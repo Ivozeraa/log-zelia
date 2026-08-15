@@ -1,0 +1,62 @@
+name: Add horarios config deletion
+
+on:
+  push:
+    branches:
+      - agent/fix-horarios-core
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch Horarios configuration deletion
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/Horarios.jsx')
+          s = p.read_text(encoding='utf-8')
+
+          old_state = """  const [pdfCourseKey, setPdfCourseKey] = useState('');\n  const [exportingPdf, setExportingPdf] = useState(false);\n"""
+          new_state = """  const [pdfCourseKey, setPdfCourseKey] = useState('');\n  const [exportingPdf, setExportingPdf] = useState(false);\n  const [deleteConfigModalOpen, setDeleteConfigModalOpen] = useState(false);\n  const [deletingConfig, setDeletingConfig] = useState(false);\n"""
+          if old_state not in s:
+              raise SystemExit('state anchor not found')
+          s = s.replace(old_state, new_state, 1)
+
+          old_fn = """  const nextStep = async () => {\n"""
+          new_fn = """  const deleteConfiguration = async () => {\n    if (!selectedConfigId) return;\n    setDeletingConfig(true);\n    try {\n      const relatedTables = [\n        'horario_grade_gerada',\n        'horario_pdt',\n        'horario_professor_turma',\n        'horario_professor_folgas',\n        'horario_professor_indisponibilidades',\n        'horario_formacao_area',\n        'horario_professores',\n        'horario_disciplinas',\n        'horario_config_turmas',\n        'horario_areas',\n      ];\n\n      for (const table of relatedTables) {\n        const result = await supabase.from(table).delete().eq('configuracao_id', selectedConfigId);\n        if (result.error) throw new Error(`Falha ao excluir ${table}: ${result.error.message}`);\n      }\n\n      const configResult = await supabase\n        .from('horario_configuracoes')\n        .delete()\n        .eq('id', selectedConfigId);\n      if (configResult.error) throw configResult.error;\n\n      const nextConfigs = configs.filter((config) => String(config.id) !== String(selectedConfigId));\n      const nextConfigId = nextConfigs[0]?.id ? String(nextConfigs[0].id) : '';\n\n      setConfigs(nextConfigs);\n      setDeleteConfigModalOpen(false);\n      setGeneratedSchedule(emptyGrade);\n      setStatusMessage('');\n\n      if (nextConfigId) {\n        setSelectedConfigId(nextConfigId);\n      } else {\n        setSelectedConfigId('');\n        setCurrentConfig(emptyConfig(user?.escola_id || schools[0]?.id || ''));\n        setCurrentStep(1);\n      }\n\n      notify.success('Configuração excluída com sucesso.');\n    } catch (error) {\n      console.error(error);\n      notify.error(`Não foi possível excluir a configuração: ${error.message || 'erro desconhecido'}.`);\n    } finally {\n      setDeletingConfig(false);\n    }\n  };\n\n  const nextStep = async () => {\n"""
+          if old_fn not in s:
+              raise SystemExit('function anchor not found')
+          s = s.replace(old_fn, new_fn, 1)
+
+          old_step = """            <div className=\"md:col-span-2\"><Button type=\"button\" onClick={() => saveConfiguration(false)} disabled={saving}>{saving ? 'Salvando...' : 'Salvar configuração'}</Button></div>\n"""
+          new_step = """            <div className=\"flex flex-wrap gap-3 md:col-span-2\">\n              <Button type=\"button\" onClick={() => saveConfiguration(false)} disabled={saving}>{saving ? 'Salvando...' : 'Salvar configuração'}</Button>\n              {selectedConfigId && (\n                <Button type=\"button\" variant=\"destructive\" onClick={() => setDeleteConfigModalOpen(true)} disabled={saving || deletingConfig}>\n                  <FaTrash className=\"mr-2\" /> Excluir configuração\n                </Button>\n              )}\n            </div>\n"""
+          if old_step not in s:
+              raise SystemExit('step 1 anchor not found')
+          s = s.replace(old_step, new_step, 1)
+
+          old_before_pdf = """      <Modal isOpen={pdfModalOpen} onClose={() => setPdfModalOpen(false)} title=\"Exportar PDF do Horário\">\n"""
+          new_before_pdf = """      <Modal isOpen={deleteConfigModalOpen} onClose={() => setDeleteConfigModalOpen(false)} title=\"Excluir configuração\">\n        <div className=\"space-y-4\">\n          <div className=\"rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200\">\n            Esta ação excluirá a configuração e todas as informações relacionadas, incluindo turmas, professores, disciplinas, atribuições, PDT, disponibilidades e a grade gerada.\n          </div>\n          <p className=\"text-sm text-slate-600 dark:text-slate-300\">Tem certeza de que deseja excluir <strong>{currentConfig.nome || 'esta configuração'}</strong>? Essa ação não pode ser desfeita.</p>\n          <div className=\"flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700\">\n            <Button type=\"button\" variant=\"secondary\" onClick={() => setDeleteConfigModalOpen(false)} disabled={deletingConfig}>Cancelar</Button>\n            <Button type=\"button\" variant=\"destructive\" onClick={deleteConfiguration} disabled={deletingConfig}>\n              {deletingConfig ? 'Excluindo...' : 'Excluir definitivamente'}\n            </Button>\n          </div>\n        </div>\n      </Modal>\n\n      <Modal isOpen={pdfModalOpen} onClose={() => setPdfModalOpen(false)} title=\"Exportar PDF do Horário\">\n"""
+          if old_before_pdf not in s:
+              raise SystemExit('modal anchor not found')
+          s = s.replace(old_before_pdf, new_before_pdf, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Validate build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit and remove workflow
+        run: |
+          rm -f .github/workflows/add-horarios-delete-config.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Horarios.jsx .github/workflows/add-horarios-delete-config.yml
+          git commit -m "feat(horarios): add configuration deletion to step one"
+          git push origin HEAD:agent/fix-horarios-core
