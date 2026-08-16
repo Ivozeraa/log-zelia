@@ -17,30 +17,74 @@ const Suporte = lazy(() => import("./pages/Suport").then((module) => ({ default:
 const Feedback = lazy(() => import("./pages/Feedback").then((module) => ({ default: module.Feedback })));
 const Horarios = lazy(() => import("./pages/Horarios").then((module) => ({ default: module.Horarios })));
 
-function PageFallback() { return <div className="min-h-[40vh] animate-pulse rounded-2xl bg-slate-100/60 dark:bg-slate-900/40" aria-hidden="true" />; }
-function ProtectedAppRoutes() { return <ProtectedRoute><Layout /></ProtectedRoute>; }
+function PublicPageFallback() {
+  return (
+    <div className="min-h-screen bg-white dark:bg-slate-950" aria-hidden="true">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="h-10 w-36 animate-pulse rounded-xl bg-slate-200/80 dark:bg-slate-800/80" />
+        <div className="mt-16 h-12 w-full max-w-xl animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-800/70" />
+        <div className="mt-5 h-5 w-full max-w-2xl animate-pulse rounded-lg bg-slate-200/60 dark:bg-slate-800/60" />
+      </div>
+    </div>
+  );
+}
+
+function ProtectedAppRoutes() {
+  return (
+    <ProtectedRoute>
+      <Layout />
+    </ProtectedRoute>
+  );
+}
 
 function App() {
-  return <>
-    <Router>
-      <Suspense fallback={<PageFallback />}>
+  return (
+    <>
+      <Router>
         <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/consultar-ocorrencias" element={<StudentOccurrenceLookup />} />
+          <Route
+            path="/"
+            element={
+              <Suspense fallback={<PublicPageFallback />}>
+                <Landing />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/consultar-ocorrencias"
+            element={
+              <Suspense fallback={<PublicPageFallback />}>
+                <StudentOccurrenceLookup />
+              </Suspense>
+            }
+          />
           <Route path="/login" element={<Login />} />
           <Route path="/app" element={<ProtectedAppRoutes />}>
-            <Route index element={<Home />} /><Route path="advertencias" element={<Occurrences />} />
-            <Route path="gestao" element={<ProtectedRoute allowedRoles={[1,2,3]}><Management /></ProtectedRoute>} />
-            <Route path="gestao/alunos" element={<ProtectedRoute allowedRoles={[1,2,3]}><StudentManagement /></ProtectedRoute>} />
-            <Route path="configuracoes" element={<Settings />} /><Route path="horarios" element={<Horarios />} /><Route path="editar-perfil" element={<EditProfile />} /><Route path="suporte" element={<Suporte />} /><Route path="feedback" element={<Feedback />} />
+            <Route index element={<Home />} />
+            <Route path="advertencias" element={<Occurrences />} />
+            <Route path="gestao" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><Management /></ProtectedRoute>} />
+            <Route path="gestao/alunos" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><StudentManagement /></ProtectedRoute>} />
+            <Route path="configuracoes" element={<Settings />} />
+            <Route path="horarios" element={<Horarios />} />
+            <Route path="editar-perfil" element={<EditProfile />} />
+            <Route path="suporte" element={<Suporte />} />
+            <Route path="feedback" element={<Feedback />} />
             <Route path="*" element={<h1 className="mt-20 text-center text-2xl">404 - Página Não Encontrada</h1>} />
           </Route>
-          <Route path="/advertencias" element={<Navigate to="/app/advertencias" replace />} /><Route path="/gestao" element={<Navigate to="/app/gestao" replace />} /><Route path="/gestao/alunos" element={<Navigate to="/app/gestao/alunos" replace />} /><Route path="/configuracoes" element={<Navigate to="/app/configuracoes" replace />} /><Route path="/horarios" element={<Navigate to="/app/horarios" replace />} /><Route path="/editar-perfil" element={<Navigate to="/app/editar-perfil" replace />} /><Route path="/suporte" element={<Navigate to="/app/suporte" replace />} /><Route path="/feedback" element={<Navigate to="/app/feedback" replace />} />
+          <Route path="/advertencias" element={<Navigate to="/app/advertencias" replace />} />
+          <Route path="/gestao" element={<Navigate to="/app/gestao" replace />} />
+          <Route path="/gestao/alunos" element={<Navigate to="/app/gestao/alunos" replace />} />
+          <Route path="/configuracoes" element={<Navigate to="/app/configuracoes" replace />} />
+          <Route path="/horarios" element={<Navigate to="/app/horarios" replace />} />
+          <Route path="/editar-perfil" element={<Navigate to="/app/editar-perfil" replace />} />
+          <Route path="/suporte" element={<Navigate to="/app/suporte" replace />} />
+          <Route path="/feedback" element={<Navigate to="/app/feedback" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </Suspense>
-    </Router>
-    <ToastProvider />
-  </>;
+      </Router>
+      <ToastProvider />
+    </>
+  );
 }
+
 export default App;
