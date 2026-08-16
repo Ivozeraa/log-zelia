@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Montserrat:wght@100..900&family=Poppins:wght@100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800&family=Poppins:wght@400;500;600;700&display=swap");
 
 @import "tailwindcss";
 
@@ -10,6 +10,51 @@
   --font-inter: "Inter", sans-serif;
 }
 
+:root {
+  color-scheme: light;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+}
+
+html {
+  min-width: 320px;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
 input,
 select,
 textarea {
@@ -18,13 +63,14 @@ textarea {
   color: #0f172a !important;
   outline: none !important;
   box-shadow: none !important;
+  min-width: 0;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
   border-color: #94a3b8 !important;
-  box-shadow: none !important;
+  box-shadow: 0 0 0 3px rgb(148 163 184 / 0.14) !important;
 }
 
 .dark input,
@@ -55,4 +101,35 @@ select option {
 select option:hover,
 select option:focus {
   background-color: #f1f5f9 !important;
+}
+
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  table {
+    min-width: 640px;
+  }
+
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
