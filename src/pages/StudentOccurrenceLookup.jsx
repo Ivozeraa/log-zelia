@@ -6,66 +6,231 @@ import logo from "../assets/images/logo.png";
 
 const categoryLabels = { ocorrencia: "Ocorrência", suspensao: "Suspensão" };
 const typeLabels = { indisciplina: "Indisciplina", infrequencia: "Infrequência", atraso: "Atraso", desrespeito: "Desrespeito", outro: "Outro" };
-const formatDate = (value) => { if (!value) return "—"; const [year,month,day] = String(value).split("-").map(Number); return new Intl.DateTimeFormat("pt-BR").format(new Date(year,month-1,day)); };
+
+const formatDate = (value) => {
+  if (!value) return "—";
+  const [year, month, day] = String(value).split("-").map(Number);
+  return new Intl.DateTimeFormat("pt-BR").format(new Date(year, month - 1, day));
+};
+
+const fieldClass = "h-12 w-full rounded-xl border border-slate-300 bg-slate-50 px-4 text-base outline-none transition focus:border-green-600 focus:ring-4 focus:ring-green-600/10 dark:border-slate-700 dark:bg-slate-950";
 
 export const StudentOccurrenceLookup = () => {
-  const [matricula,setMatricula] = useState("");
-  const [senha,setSenha] = useState("");
-  const [loading,setLoading] = useState(false);
-  const [searched,setSearched] = useState(false);
-  const [result,setResult] = useState(null);
-  const [errorMessage,setErrorMessage] = useState("");
+  const [matricula, setMatricula] = useState("");
+  const [senha, setSenha] = useState("");
+  const [novaSenha, setNovaSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [alterandoSenha, setAlterandoSenha] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [result, setResult] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const carregarOcorrencias = async (cleanMatricula, currentPassword) => {
+    const { data, error } = await supabase.rpc("consultar_ocorrencias_aluno", {
+      p_matricula: cleanMatricula,
+      p_senha: currentPassword,
+    });
+
+    if (error) throw error;
+    setResult((current) => ({ ...current, ocorrencias: data || [] }));
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     const cleanMatricula = matricula.trim();
-    if (!cleanMatricula || !senha) { setErrorMessage("Informe a matrícula e a senha."); return; }
-    setLoading(true); setSearched(true); setErrorMessage(""); setResult(null);
+
+    if (!cleanMatricula || !senha) {
+      setErrorMessage("Informe a matrícula e a senha.");
+      return;
+    }
+
+    setLoading(true);
+    setSearched(true);
+    setErrorMessage("");
+    setResult(null);
+    setMustChangePassword(false);
+
     try {
-      const [{data:alunoData,error:alunoError},{data:ocorrenciasData,error:ocorrenciasError}] = await Promise.all([
-        supabase.rpc("consultar_aluno_publico",{p_matricula:cleanMatricula,p_senha:senha}),
-        supabase.rpc("consultar_ocorrencias_aluno",{p_matricula:cleanMatricula,p_senha:senha}),
-      ]);
+      const { data: alunoData, error: alunoError } = await supabase.rpc("consultar_aluno_publico", {
+        p_matricula: cleanMatricula,
+        p_senha: senha,
+      });
+
       if (alunoError) throw alunoError;
-      if (ocorrenciasError) throw ocorrenciasError;
+
       const aluno = Array.isArray(alunoData) ? alunoData[0] : null;
-      if (!aluno) { setErrorMessage("Não encontramos um aluno com os dados informados. Confira a matrícula e a senha e tente novamente."); return; }
-      setResult({ aluno, ocorrencias: ocorrenciasData || [] });
-    } catch (error) { console.error(error); setErrorMessage("Não foi possível realizar a consulta agora. Tente novamente em alguns instantes."); } finally { setLoading(false); }
+
+      if (!aluno) {
+        setErrorMessage("Não encontramos um aluno com a matrícula e senha informadas.");
+        return;
+      }
+
+      setResult({ aluno, ocorrencias: [] });
+
+      if (aluno.primeiro_acesso) {
+        setMustChangePassword(true);
+        return;
+      }
+
+      await carregarOcorrencias(cleanMatricula, senha);
+    } catch (error) {
+      console.error("Erro na consulta pública:", error);
+      setErrorMessage("Não foi possível realizar a consulta agora. Tente novamente em alguns instantes.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return <main className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white">
-    <header className="border-b border-slate-200 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90">
-      <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-4 px-4 sm:px-6">
-        <Link to="/" className="flex min-w-0 items-center gap-2.5"><img src={logo} alt="Log Zélia" width="40" height="40" className="h-9 w-9 rounded-xl object-contain"/><span className="truncate font-montserrat text-base font-extrabold">LOG <span className="text-orange-500">ZÉLIA</span></span></Link>
-        <Link to="/login" className="rounded-xl bg-green-700 px-4 py-2.5 text-sm font-bold text-white">Entrar no sistema</Link>
+  const handleChangePassword = async (event) => {
+    event.preventDefault();
+    setErrorMessage("");
+
+    if (novaSenha.length < 8) {
+      setErrorMessage("A nova senha deve ter pelo menos 8 caracteres.");
+      return;
+    }
+
+    if (novaSenha !== confirmarSenha) {
+      setErrorMessage("As senhas não coincidem.");
+      return;
+    }
+
+    setAlterandoSenha(true);
+
+    try {
+      const { data, error } = await supabase.rpc("alterar_senha_aluno_publico", {
+        p_matricula: matricula.trim(),
+        p_senha_atual: senha,
+        p_nova_senha: novaSenha,
+      });
+
+      if (error) throw error;
+
+      const response = Array.isArray(data) ? data[0] : data;
+      if (!response?.sucesso) {
+        setErrorMessage(response?.mensagem || "Não foi possível alterar sua senha.");
+        return;
+      }
+
+      const currentPassword = novaSenha;
+      setSenha(currentPassword);
+      setMustChangePassword(false);
+      setNovaSenha("");
+      setConfirmarSenha("");
+      await carregarOcorrencias(matricula.trim(), currentPassword);
+    } catch (error) {
+      console.error("Erro ao alterar senha:", error);
+      setErrorMessage("Não foi possível alterar sua senha agora. Tente novamente.");
+    } finally {
+      setAlterandoSenha(false);
+    }
+  };
+
+  return (
+    <main className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white">
+      <header className="border-b border-slate-200 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90">
+        <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-4 px-4 sm:px-6">
+          <Link to="/" className="flex min-w-0 items-center gap-2.5">
+            <img src={logo} alt="Log Zélia" width="40" height="40" className="h-9 w-9 rounded-xl object-contain" />
+            <span className="truncate font-montserrat text-base font-extrabold">LOG <span className="text-orange-500">ZÉLIA</span></span>
+          </Link>
+          <Link to="/login" className="rounded-xl bg-green-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-green-800">Entrar no sistema</Link>
+        </div>
+      </header>
+
+      <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
+        <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-green-700 dark:text-slate-400 dark:hover:text-green-300">
+          <FaArrowLeft /> Voltar para o início
+        </Link>
+
+        <div className="mt-8 grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-start">
+          <section>
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300"><FaSearch /></div>
+            <p className="mt-6 text-sm font-bold uppercase tracking-[0.18em] text-green-700 dark:text-green-400">Portal do aluno</p>
+            <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Consulte suas ocorrências escolares.</h1>
+            <p className="mt-4 text-base leading-7 text-slate-600 dark:text-slate-300">Use sua matrícula e a senha de acesso do portal. No primeiro acesso, o sistema solicitará a criação de uma senha pessoal.</p>
+
+            <div className="mt-8 space-y-3">
+              {[
+                [FaLock, "Primeiro acesso protegido", "A senha inicial deve ser trocada antes da primeira consulta."],
+                [FaShieldAlt, "Dados essenciais", "Mostramos apenas as informações vinculadas ao cadastro autenticado."],
+                [FaCheckCircle, "Senha pessoal", "Depois da primeira troca, somente a nova senha continuará válida."],
+              ].map(([Icon, title, description]) => (
+                <div key={title} className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                  <div className="mt-0.5 text-green-700 dark:text-green-300"><Icon /></div>
+                  <div><p className="text-sm font-bold">{title}</p><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{description}</p></div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl sm:p-7 dark:border-slate-800 dark:bg-slate-900">
+            {!mustChangePassword ? (
+              <>
+                <div className="flex items-center gap-3 border-b border-slate-100 pb-5 dark:border-slate-800">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300"><FaGraduationCap /></div>
+                  <div><h2 className="font-bold">Acessar portal</h2><p className="text-xs text-slate-500 dark:text-slate-400">Informe sua matrícula e sua senha.</p></div>
+                </div>
+
+                <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+                  <label className="block"><span className="mb-2 block text-sm font-semibold">Matrícula</span><input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="Ex.: 2026001234" inputMode="numeric" autoComplete="username" className={fieldClass} /></label>
+                  <label className="block"><span className="mb-2 block text-sm font-semibold">Senha</span><input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="Senha de acesso" autoComplete="current-password" className={fieldClass} /></label>
+                  {errorMessage && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-700 dark:border-red-950/60 dark:bg-red-950/30 dark:text-red-300"><div className="flex gap-2"><FaExclamationTriangle className="mt-1 shrink-0" /><span>{errorMessage}</span></div></div>}
+                  <button type="submit" disabled={loading} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-green-700 px-4 text-sm font-bold text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60">{loading ? "Validando..." : "Acessar portal"}{!loading && <FaArrowLeft className="rotate-180 text-xs" />}</button>
+                  <p className="flex items-start gap-2 text-[11px] leading-5 text-slate-500 dark:text-slate-400"><FaShieldAlt className="mt-0.5 shrink-0" />A validação acontece no servidor antes das informações escolares serem retornadas.</p>
+                </form>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 border-b border-slate-100 pb-5 dark:border-slate-800">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"><FaLock /></div>
+                  <div><h2 className="font-bold">Primeiro acesso</h2><p className="text-xs text-slate-500 dark:text-slate-400">Crie sua senha pessoal antes de consultar.</p></div>
+                </div>
+
+                <form onSubmit={handleChangePassword} className="mt-6 space-y-4">
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+                    A senha inicial é temporária. Depois de salvar sua nova senha, ela passa a ser a única credencial válida para este portal.
+                  </div>
+                  <label className="block"><span className="mb-2 block text-sm font-semibold">Nova senha</span><input type="password" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} placeholder="Mínimo de 8 caracteres" autoComplete="new-password" className={fieldClass} /></label>
+                  <label className="block"><span className="mb-2 block text-sm font-semibold">Confirmar nova senha</span><input type="password" value={confirmarSenha} onChange={(e) => setConfirmarSenha(e.target.value)} placeholder="Digite novamente" autoComplete="new-password" className={fieldClass} /></label>
+                  {errorMessage && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-700 dark:border-red-950/60 dark:bg-red-950/30 dark:text-red-300"><div className="flex gap-2"><FaExclamationTriangle className="mt-1 shrink-0" /><span>{errorMessage}</span></div></div>}
+                  <button type="submit" disabled={alterandoSenha} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-green-700 px-4 text-sm font-bold text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60">{alterandoSenha ? "Salvando..." : "Salvar nova senha"}</button>
+                </form>
+              </>
+            )}
+          </section>
+        </div>
+
+        {searched && result && !mustChangePassword && (
+          <section className="mt-10 space-y-5">
+            <div className="rounded-[2rem] border border-green-200 bg-gradient-to-br from-green-50 to-white p-6 dark:border-green-900/50 dark:from-green-950/30 dark:to-slate-900">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-green-700 dark:text-green-400">Aluno encontrado</p><h2 className="mt-2 text-2xl font-black">{result.aluno.aluno_nome}</h2><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{result.aluno.turma_nome || "Turma não informada"} · {result.aluno.escola_nome}</p></div>
+                <div className="rounded-2xl border border-green-200 bg-white px-4 py-3 text-right dark:border-green-900/50 dark:bg-slate-950"><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Ocorrências</p><p className="mt-1 text-2xl font-black text-green-700 dark:text-green-300">{result.aluno.total_ocorrencias}</p></div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3"><div><h3 className="text-lg font-bold">Histórico</h3><p className="text-sm text-slate-500 dark:text-slate-400">Registros vinculados ao cadastro autenticado.</p></div><FaCalendarAlt className="text-slate-400" /></div>
+              {result.ocorrencias.length === 0 ? (
+                <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900"><FaCheckCircle className="mx-auto text-3xl text-green-600" /><p className="mt-3 font-bold">Nenhuma ocorrência registrada.</p><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Seu histórico está limpo no momento.</p></div>
+              ) : (
+                result.ocorrencias.map((occurrence) => (
+                  <article key={occurrence.ocorrencia_id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${occurrence.categoria === "suspensao" ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"}`}>{categoryLabels[occurrence.categoria] || occurrence.categoria || "Registro"}</span>{occurrence.tipo && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{typeLabels[occurrence.tipo] || occurrence.tipo}</span>}</div><p className="mt-3 text-sm font-semibold">Data do ocorrido: {formatDate(occurrence.data_ocorrido)}</p></div>
+                      {occurrence.categoria === "suspensao" && occurrence.data_inicio && occurrence.data_fim && <div className="rounded-2xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">Suspensão: {formatDate(occurrence.data_inicio)} a {formatDate(occurrence.data_fim)}</div>}
+                    </div>
+                    <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700 dark:bg-slate-950 dark:text-slate-300">{occurrence.descricao}</div>
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
+        )}
       </div>
-    </header>
-    <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-      <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-green-700"><FaArrowLeft/>Voltar para o início</Link>
-      <div className="mt-8 grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-start">
-        <section>
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300"><FaSearch/></div>
-          <p className="mt-6 text-sm font-bold uppercase tracking-[0.18em] text-green-700 dark:text-green-400">Portal do aluno</p>
-          <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Consulte suas ocorrências escolares.</h1>
-          <p className="mt-4 text-base leading-7 text-slate-600 dark:text-slate-300">Use sua matrícula e a senha de acesso do portal para consultar somente as informações vinculadas ao cadastro informado.</p>
-          <div className="mt-8 space-y-3">
-            {[[FaLock,"Consulta protegida","A busca exige a matrícula e a senha do portal."],[FaShieldAlt,"Dados essenciais","Mostramos apenas o que é necessário para a consulta."],[FaCheckCircle,"Sem conta extra","Você não precisa criar outro login para consultar."]].map(([Icon,title,description])=><div key={title} className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"><div className="mt-0.5 text-green-700 dark:text-green-300"><Icon/></div><div><p className="text-sm font-bold">{title}</p><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{description}</p></div></div>)}
-          </div>
-        </section>
-        <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl sm:p-7 dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-5 dark:border-slate-800"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300"><FaGraduationCap/></div><div><h2 className="font-bold">Dados do aluno</h2><p className="text-xs text-slate-500 dark:text-slate-400">Preencha os dois campos para continuar.</p></div></div>
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <label className="block"><span className="mb-2 block text-sm font-semibold">Matrícula</span><input value={matricula} onChange={e=>setMatricula(e.target.value)} placeholder="Ex.: 2026001234" inputMode="numeric" autoComplete="off" className="h-12 w-full rounded-xl border border-slate-300 bg-slate-50 px-4 text-base outline-none focus:border-green-600 focus:ring-4 focus:ring-green-600/10 dark:border-slate-700 dark:bg-slate-950"/></label>
-            <label className="block"><span className="mb-2 block text-sm font-semibold">Senha</span><input type="password" value={senha} onChange={e=>setSenha(e.target.value)} placeholder="Senha de acesso" autoComplete="off" className="h-12 w-full rounded-xl border border-slate-300 bg-slate-50 px-4 text-base outline-none focus:border-green-600 focus:ring-4 focus:ring-green-600/10 dark:border-slate-700 dark:bg-slate-950"/></label>
-            {errorMessage && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-700"><div className="flex gap-2"><FaExclamationTriangle className="mt-1 shrink-0"/><span>{errorMessage}</span></div></div>}
-            <button type="submit" disabled={loading} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-green-700 px-4 text-sm font-bold text-white transition hover:bg-green-800 disabled:opacity-60">{loading ? "Consultando..." : "Consultar ocorrências"}{!loading && <FaArrowLeft className="rotate-180 text-xs"/>}</button>
-            <p className="flex items-start gap-2 text-[11px] leading-5 text-slate-500"><FaShieldAlt className="mt-0.5 shrink-0"/>A validação da senha acontece no servidor antes das informações escolares serem retornadas.</p>
-          </form>
-        </section>
-      </div>
-      {searched && result && <section className="mt-10 space-y-5"><div className="rounded-[2rem] border border-green-200 bg-gradient-to-br from-green-50 to-white p-6 dark:border-green-900/50 dark:from-green-950/30 dark:to-slate-900"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-green-700">Aluno encontrado</p><h2 className="mt-2 text-2xl font-black">{result.aluno.aluno_nome}</h2><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{result.aluno.turma_nome || "Turma não informada"} · {result.aluno.escola_nome}</p></div><div className="rounded-2xl border border-green-200 bg-white px-4 py-3 text-right dark:border-green-900/50 dark:bg-slate-950"><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Ocorrências</p><p className="mt-1 text-2xl font-black text-green-700">{result.aluno.total_ocorrencias}</p></div></div></div>
-        <div className="space-y-3"><div className="flex items-center justify-between gap-3"><div><h3 className="text-lg font-bold">Histórico</h3><p className="text-sm text-slate-500 dark:text-slate-400">Registros vinculados ao cadastro informado.</p></div><FaCalendarAlt className="text-slate-400"/></div>{result.ocorrencias.length===0 ? <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900"><FaCheckCircle className="mx-auto text-3xl text-green-600"/><p className="mt-3 font-bold">Nenhuma ocorrência registrada.</p><p className="mt-1 text-sm text-slate-500">Seu histórico está limpo no momento.</p></div> : result.ocorrencias.map(occurrence=><article key={occurrence.ocorrencia_id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${occurrence.categoria === "suspensao" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>{categoryLabels[occurrence.categoria] || occurrence.categoria || "Registro"}</span>{occurrence.tipo && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">{typeLabels[occurrence.tipo] || occurrence.tipo}</span>}</div><p className="mt-3 text-sm font-semibold">Data do ocorrido: {formatDate(occurrence.data_ocorrido)}</p></div>{occurrence.categoria === "suspensao" && occurrence.data_inicio && occurrence.data_fim && <div className="rounded-2xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">Suspensão: {formatDate(occurrence.data_inicio)} a {formatDate(occurrence.data_fim)}</div>}</div><div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm leading-6 dark:bg-slate-950">{occurrence.descricao}</div></article>)}</div></section>}
-    </div>
-  </main>;
+    </main>
+  );
 };
