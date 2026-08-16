@@ -1,5 +1,5 @@
 import { SidebarOptions as So } from '../ui/SidebarOptions'
-import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaClipboardCheck, FaWrench, FaCalendarAlt } from 'react-icons/fa'
+import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt } from 'react-icons/fa'
 import { useAuth } from '../../hooks/useAuth'
 import { SectionTitle } from '../ui/SectionTitle'
 
@@ -33,20 +33,18 @@ export const Sidebar = ({ open, setOpen }) => {
           <SectionTitle text="Menu" />
         </div>
 
-        {/* Dentro do app, Início deve levar ao dashboard, não à landing pública. */}
         <So to="/app" end icon={FaHome} text="Início" onClick={handleClick} />
-        <So to="/advertencias" icon={FaExclamationCircle} text="Advertências" onClick={handleClick} />
-        <So to="/horarios" icon={FaCalendarAlt} text="Horários" onClick={handleClick} />
+        <So to="/app/advertencias" icon={FaExclamationCircle} text="Advertências" onClick={handleClick} />
+        <So to="/app/horarios" icon={FaCalendarAlt} text="Horários" onClick={handleClick} />
 
         {canSeeManagement && (
-          <So to="/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
+          <So to="/app/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
         )}
 
-        <So to="/suporte" icon={FaWrench} text="Suporte" onClick={handleClick} />
-        <So to="/feedback" icon={FaClipboardCheck} text="Feedback" onClick={handleClick} />
+        <So to="/app/suporte" icon={FaWrench} text="Suporte" onClick={handleClick} />
 
         <div className="mt-auto border-t-2 border-gray-300 dark:border-slate-700 pt-4">
-          <So to="/configuracoes" icon={FaCog} text="Configurações" onClick={handleClick} />
+          <So to="/app/configuracoes" icon={FaCog} text="Configurações" onClick={handleClick} />
         </div>
       </aside>
     </>
