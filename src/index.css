@@ -137,3 +137,90 @@ select option:focus {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Avaliações da landing */
+#feedback {
+  position: relative;
+  overflow: hidden;
+}
+
+#feedback::before {
+  content: "";
+  position: absolute;
+  top: -8rem;
+  right: -8rem;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 9999px;
+  background: rgb(34 197 94 / 0.08);
+  filter: blur(50px);
+  pointer-events: none;
+}
+
+#feedback .space-y-3 > div {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.5rem !important;
+  padding: 1.25rem 1.35rem !important;
+  border: 1px solid rgb(226 232 240) !important;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%) !important;
+  box-shadow: 0 8px 25px rgb(15 23 42 / 0.06) !important;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+#feedback .space-y-3 > div::before {
+  content: "“";
+  position: absolute;
+  top: -0.2rem;
+  right: 1rem;
+  font-family: Georgia, serif;
+  font-size: 5rem;
+  line-height: 1;
+  font-weight: 900;
+  color: rgb(22 163 74 / 0.10);
+  pointer-events: none;
+}
+
+#feedback .space-y-3 > div:hover {
+  transform: translateY(-3px);
+  border-color: rgb(134 239 172) !important;
+  box-shadow: 0 16px 35px rgb(15 23 42 / 0.10) !important;
+}
+
+#feedback .space-y-3 > div .text-amber-400 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 9999px;
+  background: rgb(245 158 11 / 0.10);
+  width: fit-content;
+}
+
+#feedback .space-y-3 > div p {
+  position: relative;
+  z-index: 1;
+}
+
+.dark #feedback .space-y-3 > div {
+  border-color: rgb(51 65 85) !important;
+  background: linear-gradient(145deg, #0f172a 0%, #111827 100%) !important;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.18) !important;
+}
+
+.dark #feedback .space-y-3 > div:hover {
+  border-color: rgb(34 197 94 / 0.55) !important;
+  box-shadow: 0 18px 38px rgb(0 0 0 / 0.25) !important;
+}
+
+@media (max-width: 767px) {
+  #feedback .space-y-3 {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  #feedback .space-y-3 > div {
+    padding: 1.1rem !important;
+    border-radius: 1.25rem !important;
+  }
+}
