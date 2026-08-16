@@ -29,14 +29,11 @@ export function Header() {
   const [openUser, setOpenUser] = useState(false)
   const [openMenu, setOpenMenu] = useState(false)
   const [openSino, setOpenSino] = useState(false)
-
   const sinoRef = useRef(null)
 
   useEffect(() => {
     const handler = (e) => {
-      if (sinoRef.current && !sinoRef.current.contains(e.target)) {
-        setOpenSino(false)
-      }
+      if (sinoRef.current && !sinoRef.current.contains(e.target)) setOpenSino(false)
     }
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
@@ -51,126 +48,92 @@ export function Header() {
 
   return (
     <>
-      <header className="h-16 flex justify-between items-center fixed w-full px-6 border-b-2 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 z-50">
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setOpenMenu(!openMenu)}
-            className="md:hidden text-xl cursor-pointer dark:text-white"
-          >
-            <FaBars />
-          </button>
-
-          <img className="w-12" src={logo} alt="Logo Log Zélia" />
-
-          <p className="font-bold font-montserrat text-2xl text-green-700 leading-none">
-            LOG <span className="text-orange-500 dark:text-orange-600">ZÉLIA</span>
-          </p>
-        </div>
-
-        <div className="flex gap-6 items-center">
-
-          <div className="relative" ref={sinoRef}>
+      <header className="fixed inset-x-0 top-0 z-50 h-16 border-b border-gray-200 bg-white/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:border-slate-700 dark:bg-slate-950/95 sm:px-5 md:px-6">
+        <div className="mx-auto flex h-full w-full max-w-[1600px] items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <button
-              onClick={() => setOpenSino((prev) => !prev)}
-              className="relative flex items-center justify-center text-xl text-slate-600 dark:text-white hover:text-slate-900 dark:hover:text-slate-300 transition"
-              aria-label="Notificações"
+              type="button"
+              onClick={() => setOpenMenu((prev) => !prev)}
+              className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-lg text-slate-700 transition hover:bg-slate-100 active:scale-95 dark:text-white dark:hover:bg-slate-800 md:hidden"
+              aria-label={openMenu ? "Fechar menu" : "Abrir menu"}
+              aria-expanded={openMenu}
             >
-              <FaBell />
-              {naoLidas > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white leading-none">
-                  {naoLidas > 9 ? "9+" : naoLidas}
-                </span>
-              )}
+              <FaBars />
             </button>
 
-            {openSino && (
-              <div className="absolute right-0 top-full mt-3 w-80 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl overflow-hidden z-50">
-
-                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    Notificações
-                  </span>
-                  {naoLidas > 0 && (
-                    <button
-                      onClick={marcarTodasComoLidas}
-                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline transition"
-                    >
-                      Marcar todas como lidas
-                    </button>
-                  )}
-                </div>
-
-                <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
-                  {notificacoes.length === 0 ? (
-                    <div className="px-4 py-8 text-center">
-                      <p className="text-2xl mb-2">🔔</p>
-                      <p className="text-sm text-slate-400 dark:text-slate-500">
-                        Nenhuma notificação
-                      </p>
-                    </div>
-                  ) : (
-                    notificacoes.map((n) => (
-                      <div
-                        key={n.id}
-                        onClick={() => handleClickNotificacao(n)}
-                        className={`flex items-start gap-3 px-4 py-3 transition ${
-                          n.lida
-                            ? "bg-white dark:bg-slate-900"
-                            : "bg-amber-50 dark:bg-amber-950/30"
-                        } ${
-                          n.aluno_id
-                            ? "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                            : ""
-                        }`}
-                      >
-                        <span className="mt-0.5 shrink-0 text-base leading-none">
-                          ⚠️
-                        </span>
-
-                        <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-snug">
-                            {n.mensagem}
-                          </p>
-                          
-                          <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                            {formatarTempo(n.criado_em)}
-                          </p>
-                        </div>
-
-                        {!n.lida && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); marcarComoLida(n.id) }}
-                            title="Marcar como lida"
-                            className="shrink-0 mt-1.5 h-2.5 w-2.5 rounded-full bg-amber-400 hover:bg-slate-300 dark:hover:bg-slate-600 transition"
-                          />
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {notificacoes.length > 0 && (
-                  <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center">
-                      {naoLidas > 0
-                        ? `${naoLidas} não ${naoLidas === 1 ? "lida" : "lidas"}`
-                        : "Tudo em dia ✓"}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+            <img className="h-9 w-9 shrink-0 sm:h-10 sm:w-10" src={logo} alt="Logo Log Zélia" width="40" height="40" />
+            <p className="truncate font-bold font-montserrat text-lg leading-none text-green-700 sm:text-xl md:text-2xl">
+              LOG <span className="text-orange-500 dark:text-orange-600">ZÉLIA</span>
+            </p>
           </div>
 
-          <div
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => setOpenUser(!openUser)}
-          >
-            <p className="hidden sm:block text-base dark:text-white">
-              {user?.nome || name || "Usuário"}
-            </p>
-            <CurrentUserAvatar />
+          <div className="flex shrink-0 items-center gap-2 sm:gap-4 md:gap-6">
+            <div className="relative" ref={sinoRef}>
+              <button
+                type="button"
+                onClick={() => setOpenSino((prev) => !prev)}
+                className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl text-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 active:scale-95 dark:text-white dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                aria-label="Notificações"
+                aria-expanded={openSino}
+              >
+                <FaBell />
+                {naoLidas > 0 && (
+                  <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
+                    {naoLidas > 9 ? "9+" : naoLidas}
+                  </span>
+                )}
+              </button>
+
+              {openSino && (
+                <div className="absolute right-0 top-full mt-2 w-[calc(100vw-1.5rem)] max-w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                  <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Notificações</span>
+                    {naoLidas > 0 && (
+                      <button type="button" onClick={marcarTodasComoLidas} className="text-xs text-blue-600 hover:underline dark:text-blue-400">Marcar todas como lidas</button>
+                    )}
+                  </div>
+
+                  <div className="max-h-[60vh] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                    {notificacoes.length === 0 ? (
+                      <div className="px-4 py-8 text-center">
+                        <p className="mb-2 text-2xl">🔔</p>
+                        <p className="text-sm text-slate-400 dark:text-slate-500">Nenhuma notificação</p>
+                      </div>
+                    ) : (
+                      notificacoes.map((n) => (
+                        <div
+                          key={n.id}
+                          onClick={() => handleClickNotificacao(n)}
+                          className={`flex items-start gap-3 px-4 py-3 transition ${n.lida ? "bg-white dark:bg-slate-900" : "bg-amber-50 dark:bg-amber-950/30"} ${n.aluno_id ? "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60" : ""}`}
+                        >
+                          <span className="mt-0.5 shrink-0 text-base leading-none">⚠️</span>
+                          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                            <p className="text-xs font-semibold leading-snug text-slate-800 dark:text-slate-200">{n.mensagem}</p>
+                            <p className="text-[11px] text-slate-400 dark:text-slate-500">{formatarTempo(n.criado_em)}</p>
+                          </div>
+                          {!n.lida && (
+                            <button type="button" onClick={(e) => { e.stopPropagation(); marcarComoLida(n.id) }} title="Marcar como lida" aria-label="Marcar como lida" className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-amber-400 transition hover:bg-slate-300 dark:hover:bg-slate-600" />
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {notificacoes.length > 0 && (
+                    <div className="border-t border-slate-100 bg-slate-50 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
+                      <p className="text-center text-[11px] text-slate-400 dark:text-slate-500">
+                        {naoLidas > 0 ? `${naoLidas} não ${naoLidas === 1 ? "lida" : "lidas"}` : "Tudo em dia ✓"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <button type="button" className="flex min-w-0 items-center gap-2 rounded-xl p-1 transition hover:bg-slate-100 active:scale-[0.98] dark:hover:bg-slate-800" onClick={() => setOpenUser((prev) => !prev)} aria-label="Abrir perfil">
+              <p className="hidden max-w-36 truncate text-sm dark:text-white sm:block md:max-w-52 md:text-base">{user?.nome || name || "Usuário"}</p>
+              <CurrentUserAvatar />
+            </button>
           </div>
         </div>
       </header>
