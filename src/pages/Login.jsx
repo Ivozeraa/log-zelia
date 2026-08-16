@@ -33,7 +33,7 @@ export const Login = () => {
       }
 
       notify.success("Login realizado com sucesso!")
-      navigate("/", { replace: true })
+      navigate("/app", { replace: true })
     } catch (error) {
       console.error("Erro no login:", error)
       notify.error("Não foi possível realizar o login")
@@ -45,7 +45,6 @@ export const Login = () => {
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
 
-      {/* Painel da foto */}
       <section className="relative w-full h-56 md:h-auto md:w-1/2 shrink-0">
         <img
           src={bgImg}
@@ -54,7 +53,6 @@ export const Login = () => {
         />
         <div className="absolute inset-0 bg-linear-to-b from-green-700/50 to-green-900/80 md:rounded-r-3xl" />
 
-        {/* Logo + texto sobre a imagem */}
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
           <img
             src={logo}
@@ -64,7 +62,6 @@ export const Login = () => {
         </div>
       </section>
 
-      {/* Painel do formulário */}
       <div className="flex-1 flex items-center justify-center px-6 py-10 md:py-0">
         <div className="w-full max-w-sm">
 
@@ -101,9 +98,7 @@ export const Login = () => {
             </div>
 
             <div className="text-right">
-              <a href="#" className="text-xs text-green-600 hover:underline">
-
-              </a>
+              <a href="#" className="text-xs text-green-600 hover:underline"></a>
             </div>
 
             <Button className="w-full mt-2" type="submit" disabled={submitting}>
