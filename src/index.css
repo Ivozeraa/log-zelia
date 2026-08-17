@@ -53,6 +53,15 @@ select {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Padroniza somente os botoes da navegacao por etapas do modulo de horarios. */
+main div.mb-6.grid.gap-2[class*="md:grid-cols-7"] > button {
+  font-family: var(--font-inter), Inter, sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.25rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+}
+
 input,
 select,
 textarea {
