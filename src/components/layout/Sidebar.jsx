@@ -47,7 +47,7 @@ export const Sidebar = ({ open, setOpen }) => {
         )}
 
         {canManageAnnouncements && (
-          <So to="/app/feedbacks" icon={FaBullhorn} text="Administração" onClick={handleClick} />
+          <So to="/app/avisos" icon={FaBullhorn} text="Avisos" onClick={handleClick} />
         )}
 
         <So to="/app/suporte" icon={FaWrench} text="Suporte" onClick={handleClick} />
