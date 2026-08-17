@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../../hooks/useAuth"
+import { useSchool } from "../../hooks/useSchool"
 import logo from "../../assets/images/logo.png"
 import { UserSidebar } from "../user/UserSidebar"
 import { Sidebar } from "./Sidebar"
@@ -22,6 +23,7 @@ const formatarTempo = (isoString) => {
 
 export function Header() {
   const { user } = useAuth()
+  const { school } = useSchool()
   const name = useCurrentUserName()
   const navigate = useNavigate()
   const { notificacoes, naoLidas, marcarComoLida, marcarTodasComoLidas } = useNotificacoes()
@@ -46,14 +48,19 @@ export function Header() {
     navigate("/app/advertencias", { state: { alunoId: n.aluno_id } })
   }
 
+  const schoolName = school?.nome || "LogView"
+
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-50 h-16 border-b border-gray-200 bg-white/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:border-slate-700 dark:bg-slate-950/95 sm:px-5 md:px-6">
         <div className="mx-auto flex h-full w-full max-w-[1600px] items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <button type="button" onClick={() => setOpenMenu((prev) => !prev)} className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-lg text-slate-700 transition hover:bg-slate-100 active:scale-95 dark:text-white dark:hover:bg-slate-800 md:hidden" aria-label={openMenu ? "Fechar menu" : "Abrir menu"} aria-expanded={openMenu}><FaBars /></button>
-            <img className="h-9 w-9 shrink-0 sm:h-10 sm:w-10" src={logo} alt="Logo Log Zélia" width="40" height="40" />
-            <p className="truncate font-bold font-montserrat text-lg leading-none text-green-700 sm:text-xl md:text-2xl">LOG <span className="text-orange-500 dark:text-orange-600">ZÉLIA</span></p>
+            <img className="h-9 w-9 shrink-0 sm:h-10 sm:w-10" src={logo} alt="Logo LogView" width="40" height="40" />
+            <div className="min-w-0">
+              <p className="truncate font-bold font-montserrat text-lg leading-none text-green-700 sm:text-xl md:text-2xl">LOG <span className="text-orange-500 dark:text-orange-600">VIEW</span></p>
+              <p className="max-w-[45vw] truncate text-[10px] font-medium text-slate-500 dark:text-slate-400 sm:text-xs" title={schoolName}>{schoolName}</p>
+            </div>
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-3 md:gap-5">
