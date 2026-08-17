@@ -1,5 +1,5 @@
 import { SidebarOptions as So } from '../ui/SidebarOptions'
-import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt } from 'react-icons/fa'
+import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn } from 'react-icons/fa'
 import { useAuth } from '../../hooks/useAuth'
 import { SectionTitle } from '../ui/SectionTitle'
 
@@ -13,6 +13,7 @@ export const Sidebar = ({ open, setOpen }) => {
   }
 
   const canSeeManagement = [1, 2, 3].includes(user?.role_id)
+  const canManageAnnouncements = Number(user?.role_id) === 1
   const canSeeSchedules = Number(user?.role_id) !== 4
 
   return (
@@ -43,6 +44,10 @@ export const Sidebar = ({ open, setOpen }) => {
 
         {canSeeManagement && (
           <So to="/app/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
+        )}
+
+        {canManageAnnouncements && (
+          <So to="/app/avisos" icon={FaBullhorn} text="Avisos" onClick={handleClick} />
         )}
 
         <So to="/app/suporte" icon={FaWrench} text="Suporte" onClick={handleClick} />
