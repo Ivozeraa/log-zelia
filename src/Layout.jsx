@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
@@ -22,6 +22,12 @@ function AppPageFallback() {
 function Layout() {
   const location = useLocation()
   const isHome = location.pathname === '/app' || location.pathname === '/app/'
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+  }, [location.pathname])
 
   return (
     <div className="min-h-screen overflow-x-hidden font-inter bg-neutral-100 dark:bg-gray-950">
