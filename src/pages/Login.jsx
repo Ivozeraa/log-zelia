@@ -50,7 +50,6 @@ export const Login = () => {
             </div>
             <div className="max-w-xl border-l-4 border-green-400 pl-6">
               <h1 className="text-4xl font-black leading-[1.08] tracking-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.5)] lg:text-5xl">Seu ambiente escolar, em um só lugar.</h1>
-              <p className="mt-5 max-w-lg text-base font-medium leading-7 text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.55)] lg:text-lg">Acesse horários, alunos, ocorrências, notificações e as ferramentas de gestão do LogZélia.</p>
             </div>
           </div>
           <p className="text-xs font-medium text-white/70 drop-shadow-md">LogZélia · Sistema de gestão escolar</p>
