@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../utils/supabase";
 import { SchoolContext } from "./SchoolContextImpl";
 import { useAuth } from "../hooks/useAuth";
+import { canSelectSchool, resolveSchoolId } from "../utils/schoolScope";
 
 export function SchoolProvider({ children }) {
   const { user, loading: authLoading } = useAuth();
@@ -51,24 +52,31 @@ export function SchoolProvider({ children }) {
     await loadSchool();
   }, [loadSchool]);
 
-  const scope = useMemo(() => ({
+  const schoolId = resolveSchoolId({
+    selectedSchoolId: null,
     schoolId: school?.id ?? user?.escola_id ?? null,
     isGlobalAdmin,
+  });
+
+  const scope = useMemo(() => ({
+    schoolId,
+    isGlobalAdmin,
     isSchoolBound,
-    canSwitchSchool: isGlobalAdmin,
+    canSwitchSchool: canSelectSchool(isGlobalAdmin),
     requireSchoolId() {
-      const currentSchoolId = school?.id ?? user?.escola_id ?? null;
-      if (!currentSchoolId && !isGlobalAdmin) {
+      if (!schoolId && !isGlobalAdmin) {
         throw new Error("A conta não possui uma escola vinculada.");
       }
-      return currentSchoolId;
+      return schoolId;
     },
     resolveSchoolId(requestedSchoolId = null) {
-      const currentSchoolId = school?.id ?? user?.escola_id ?? null;
-      if (isGlobalAdmin) return requestedSchoolId || null;
-      return currentSchoolId;
+      return resolveSchoolId({
+        selectedSchoolId: requestedSchoolId,
+        schoolId,
+        isGlobalAdmin,
+      });
     },
-  }), [isGlobalAdmin, isSchoolBound, school?.id, user?.escola_id]);
+  }), [isGlobalAdmin, isSchoolBound, schoolId]);
 
   return (
     <SchoolContext.Provider
