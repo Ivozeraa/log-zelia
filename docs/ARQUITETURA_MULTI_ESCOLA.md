@@ -38,3 +38,16 @@ const showSchoolSelector = canSelectSchool(isGlobalAdmin);
 ```
 
 A recomendação é não adicionar novas telas que aceitem `escola_id` livremente sem passar por essas regras.
+
+## Módulo de horários
+
+`horario_configuracoes` é a raiz de contexto do módulo de horários e possui `escola_id`. As estruturas dependentes de uma configuração devem permanecer dentro dessa escola.
+
+No frontend, use `src/utils/scheduleScope.js` para:
+
+- resolver a escola efetiva da configuração;
+- forçar `escola_id` para usuários não globais;
+- filtrar configurações pelo contexto da sessão;
+- validar acesso a uma configuração antes de operar sobre ela.
+
+Nunca aceite `escola_id` informado livremente pelo usuário comum para criar, editar ou carregar uma configuração.
