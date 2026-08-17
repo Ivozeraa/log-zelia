@@ -40,15 +40,20 @@ export const Login = () => {
     <main className="min-h-screen bg-slate-950 md:flex">
       <section className="relative hidden min-h-screen overflow-hidden md:flex md:w-[48%] lg:w-[52%]">
         <img src={bgImg} alt="Escola" className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-br from-green-900/75 via-green-800/55 to-slate-950/85" />
+        <div className="absolute inset-0 bg-gradient-to-br from-green-950/90 via-green-900/60 to-slate-950/90" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-green-950/20" />
         <div className="relative z-10 flex h-full w-full flex-col justify-between p-8 lg:p-12">
-          <Link to="/" className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-white/80 transition hover:text-white"><FaArrowLeft className="text-xs" /> Voltar para o início</Link>
-          <div className="max-w-lg">
-            <img src={logo} alt="Log Zélia" className="mb-8 w-56 object-contain lg:w-64" />
-            <h1 className="text-4xl font-black leading-tight text-white lg:text-5xl">Seu ambiente escolar, em um só lugar.</h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-white/75 lg:text-lg">Acesse horários, alunos, ocorrências, notificações e as ferramentas de gestão do LogZélia.</p>
+          <Link to="/" className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm font-semibold text-white/90 shadow-lg backdrop-blur-md transition hover:border-white/25 hover:bg-black/30 hover:text-white"><FaArrowLeft className="text-xs" /> Voltar para o início</Link>
+          <div className="max-w-xl">
+            <div className="mb-9 flex min-h-20 items-center">
+              <img src={logo} alt="Log Zélia" className="w-72 object-contain drop-shadow-[0_12px_30px_rgba(0,0,0,0.45)] lg:w-80" />
+            </div>
+            <div className="max-w-xl border-l-4 border-green-400 pl-6">
+              <h1 className="text-4xl font-black leading-[1.08] tracking-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.5)] lg:text-5xl">Seu ambiente escolar, em um só lugar.</h1>
+              <p className="mt-5 max-w-lg text-base font-medium leading-7 text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.55)] lg:text-lg">Acesse horários, alunos, ocorrências, notificações e as ferramentas de gestão do LogZélia.</p>
+            </div>
           </div>
-          <p className="text-xs text-white/50">LogZélia · Sistema de gestão escolar</p>
+          <p className="text-xs font-medium text-white/70 drop-shadow-md">LogZélia · Sistema de gestão escolar</p>
         </div>
       </section>
 
@@ -73,19 +78,9 @@ export const Login = () => {
               <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-900 dark:text-white">Entrar no LogZélia</h2>
               <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Use suas credenciais para acessar o ambiente da escola.</p>
             </div>
-
             <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">E-mail</label>
-                <FormInput type="email" placeholder="seu@email.com" onChange={(e) => setEmail(e.target.value)} className="w-full" disabled={submitting} />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Senha</label>
-                <div className="relative">
-                  <FormInput type={showPassword ? "text" : "password"} placeholder="Sua senha" onChange={(e) => setSenha(e.target.value)} className="w-full pr-12" disabled={submitting} />
-                  <button type="button" disabled={submitting} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed dark:hover:bg-slate-800 dark:hover:text-slate-200">{showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}</button>
-                </div>
-              </div>
+              <div><label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">E-mail</label><FormInput type="email" placeholder="seu@email.com" onChange={(e) => setEmail(e.target.value)} className="w-full" disabled={submitting} /></div>
+              <div><label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Senha</label><div className="relative"><FormInput type={showPassword ? "text" : "password"} placeholder="Sua senha" onChange={(e) => setSenha(e.target.value)} className="w-full pr-12" disabled={submitting} /><button type="button" disabled={submitting} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed dark:hover:bg-slate-800 dark:hover:text-slate-200">{showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}</button></div></div>
               <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-500 dark:bg-slate-950 dark:text-slate-400"><FaLock className="shrink-0 text-green-600" /><span>Seu acesso é protegido pelas permissões da sua conta.</span></div>
               <Button className="mt-2 w-full rounded-xl py-3.5 text-sm font-bold sm:py-3" type="submit" disabled={submitting}>{submitting ? "Entrando..." : "Entrar no sistema"}{!submitting && <FaArrowRight className="ml-1 text-xs" />}</Button>
             </form>
