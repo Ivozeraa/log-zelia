@@ -3,6 +3,8 @@ import { FaExclamationTriangle, FaCheckCircle } from "react-icons/fa";
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
+import { useSchool } from "../hooks/useSchool";
+import { scopePayload } from "../utils/schoolScope";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
@@ -15,6 +17,7 @@ import { notify } from "../utils/notify";
 
 export const Home = () => {
   const { user } = useAuth();
+  const { schoolId, isGlobalAdmin } = useSchool();
   const [open, setOpen] = useState(false);
   const [escolas, setEscolas] = useState([]);
   const [selectedEscola, setSelectedEscola] = useState("");
@@ -35,6 +38,8 @@ export const Home = () => {
   const [graficoData, setGraficoData] = useState([]);
   const [stats, setStats] = useState({ total: 0, mes: 0, semana: 0 });
 
+  const activeSchoolId = isGlobalAdmin ? selectedEscola : schoolId || "";
+
   const resetForm = () => {
     setSelectedTurma("");
     setSelectedAlunos([]);
@@ -49,12 +54,22 @@ export const Home = () => {
 
   useEffect(() => {
     const loadDashboard = async () => {
-      if (!selectedEscola) return;
-      const { data, error } = await supabase.from("ocorrencias").select("*").eq("escola_id", selectedEscola);
+      if (!activeSchoolId) {
+        setStats({ total: 0, mes: 0, semana: 0 });
+        setGraficoData([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("ocorrencias")
+        .select("*")
+        .eq("escola_id", activeSchoolId);
+
       if (error) {
         console.error("Erro ao carregar dashboard:", error);
         return;
       }
+
       const total = data.length;
       const hoje = new Date();
       const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
@@ -63,25 +78,32 @@ export const Home = () => {
       inicioSemana.setHours(0, 0, 0, 0);
       const mes = data.filter((o) => new Date(o.data_ocorrido) >= inicioMes).length;
       const semana = data.filter((o) => new Date(o.data_ocorrido) >= inicioSemana).length;
+
       setStats({ total, mes, semana });
+
       const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
       const dadosSemana = diasSemana.map((name) => ({ name, ocorrencias: 0 }));
       data.forEach((ocorrencia) => {
         const [ano, mesOcorrencia, dia] = ocorrencia.data_ocorrido.split("-").map(Number);
         const dataOcorrencia = new Date(ano, mesOcorrencia - 1, dia);
         dataOcorrencia.setHours(0, 0, 0, 0);
-        if (dataOcorrencia >= inicioSemana) dadosSemana[dataOcorrencia.getDay()].ocorrencias += 1;
+        if (dataOcorrencia >= inicioSemana) {
+          dadosSemana[dataOcorrencia.getDay()].ocorrencias += 1;
+        }
       });
       setGraficoData(dadosSemana);
     };
+
     loadDashboard();
-  }, [selectedEscola]);
+  }, [activeSchoolId]);
 
   useEffect(() => {
     const loadEscolas = async () => {
       if (!user) return;
-      const query = supabase.from("escolas").select("id, nome");
-      if (Number(user.role_id) === 1) {
+
+      const query = supabase.from("escolas").select("id, nome").order("nome", { ascending: true });
+
+      if (isGlobalAdmin) {
         const { data, error } = await query;
         if (error) {
           notify.error("Erro carregando as escolas");
@@ -90,39 +112,61 @@ export const Home = () => {
           return;
         }
         setEscolas(data || []);
-        if (data?.length > 0) setSelectedEscola(data[0].id);
-      } else if (user.escola_id) {
-        const { data, error } = await query.eq("id", user.escola_id).single();
-        if (error) {
-          notify.error("Erro carregando as escolas");
-          console.error(error);
-          setEscolas([]);
-          return;
+        if (data?.length > 0 && !selectedEscola) {
+          setSelectedEscola(data[0].id);
         }
-        setEscolas([data]);
-        setSelectedEscola(data?.id || "");
+        return;
       }
+
+      if (!schoolId) {
+        setEscolas([]);
+        setSelectedEscola("");
+        return;
+      }
+
+      const { data, error } = await query.eq("id", schoolId).maybeSingle();
+      if (error) {
+        notify.error("Erro carregando a escola");
+        console.error(error);
+        setEscolas([]);
+        return;
+      }
+
+      setEscolas(data ? [data] : []);
+      setSelectedEscola(schoolId);
     };
+
     loadEscolas();
-  }, [user]);
+  }, [user, schoolId, isGlobalAdmin, selectedEscola]);
 
   useEffect(() => {
     const loadTurmas = async () => {
-      if (!selectedEscola) {
+      if (!activeSchoolId) {
         setTurmas([]);
         setSelectedTurma("");
+        setAlunos([]);
+        setSelectedAlunos([]);
         return;
       }
+
       setLoadingTurmas(true);
-      const { data: turmasData, error } = await supabase.from("turmas").select("id, nome").eq("escola_id", selectedEscola).order("nome", { ascending: true });
+      const { data: turmasData, error } = await supabase
+        .from("turmas")
+        .select("id, nome")
+        .eq("escola_id", activeSchoolId)
+        .order("nome", { ascending: true });
+
       if (error) {
         console.error(error);
         setTurmas([]);
-      } else setTurmas(turmasData || []);
+      } else {
+        setTurmas(turmasData || []);
+      }
       setLoadingTurmas(false);
     };
+
     loadTurmas();
-  }, [selectedEscola]);
+  }, [activeSchoolId]);
 
   useEffect(() => {
     const loadAlunos = async () => {
@@ -131,42 +175,84 @@ export const Home = () => {
         setSelectedAlunos([]);
         return;
       }
+
       setLoadingAlunos(true);
-      const { data: alunosData, error } = await supabase.from("alunos").select("id, nome, matricula").eq("turma_id", selectedTurma).order("nome", { ascending: true });
+      const { data: alunosData, error } = await supabase
+        .from("alunos")
+        .select("id, nome, matricula")
+        .eq("turma_id", selectedTurma)
+        .order("nome", { ascending: true });
+
       if (error) {
         console.error(error);
         setAlunos([]);
-      } else setAlunos(alunosData || []);
+      } else {
+        setAlunos(alunosData || []);
+      }
       setLoadingAlunos(false);
     };
+
     loadAlunos();
   }, [selectedTurma]);
 
+  useEffect(() => {
+    if (!isGlobalAdmin && selectedEscola !== schoolId) {
+      setSelectedEscola(schoolId || "");
+    }
+  }, [isGlobalAdmin, schoolId, selectedEscola]);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
+
     if (!user?.id) {
       setFormMessage("Erro: usuário não autenticado.");
       return;
     }
-    if (!selectedEscola || !selectedTurma || selectedAlunos.length === 0 || !dataOcorrido || !tipoAdvertencia || !tipoSituacao || !descricao || (tipoAdvertencia === "suspensao" && (!dataInicio || !dataTermino))) {
+
+    if (!activeSchoolId || !selectedTurma || selectedAlunos.length === 0 || !dataOcorrido || !tipoAdvertencia || !tipoSituacao || !descricao || (tipoAdvertencia === "suspensao" && (!dataInicio || !dataTermino))) {
       notify.warning("Preencha todos os campos antes de registrar a ocorrência.");
       setFormMessage("Preencha todos os campos antes de registrar a ocorrência.");
       return;
     }
+
     setSubmitting(true);
     setFormMessage("");
+
     for (const alunoId of selectedAlunos) {
-      const payload = { escola_id: selectedEscola, aluno_id: alunoId, professor_id: user.id, professor_nome: user.nome, turma_id: selectedTurma, data_ocorrido: dataOcorrido, tipo: tipoSituacao, categoria: tipoAdvertencia, descricao };
+      let payload = {
+        escola_id: activeSchoolId,
+        aluno_id: alunoId,
+        professor_id: user.id,
+        professor_nome: user.nome,
+        turma_id: selectedTurma,
+        data_ocorrido: dataOcorrido,
+        tipo: tipoSituacao,
+        categoria: tipoAdvertencia,
+        descricao,
+      };
+
       if (tipoAdvertencia === "suspensao") {
         payload.data_inicio = dataInicio;
         payload.data_fim = dataTermino;
       }
+
+      payload = scopePayload(payload, { schoolId, isGlobalAdmin });
+
       let willSuspend = tipoAdvertencia === "suspensao";
       if (tipoAdvertencia === "ocorrencia") {
-        const { count, error: countError } = await supabase.from("ocorrencias").select("id", { count: "exact", head: true }).eq("aluno_id", alunoId).eq("categoria", "ocorrencia");
-        if (countError) console.error(countError);
-        else willSuspend = (count || 0) + 1 >= 3;
+        const { count, error: countError } = await supabase
+          .from("ocorrencias")
+          .select("id", { count: "exact", head: true })
+          .eq("aluno_id", alunoId)
+          .eq("categoria", "ocorrencia");
+
+        if (countError) {
+          console.error(countError);
+        } else {
+          willSuspend = (count || 0) + 1 >= 3;
+        }
       }
+
       const { error } = await supabase.from("ocorrencias").insert(payload);
       if (error) {
         console.error(error);
@@ -175,12 +261,31 @@ export const Home = () => {
         setSubmitting(false);
         return;
       }
+
       if (willSuspend) {
         const aluno = alunos.find((a) => String(a.id) === String(alunoId));
-        const { error: notificationError } = await supabase.from("notificacoes").insert({ escola_id: selectedEscola, aluno_id: alunoId, aluno_nome: aluno?.nome || "Aluno", mensagem: `${aluno?.nome} foi suspenso.`, lida: false });
+        let notificationPayload = {
+          escola_id: activeSchoolId,
+          aluno_id: alunoId,
+          aluno_nome: aluno?.nome || "Aluno",
+          mensagem: `${aluno?.nome} foi suspenso.`,
+          lida: false,
+        };
+
+        notificationPayload = scopePayload(notificationPayload, { schoolId, isGlobalAdmin });
+
+        const { error: notificationError } = await supabase
+          .from("notificacoes")
+          .insert(notificationPayload);
+
         if (notificationError) console.error(notificationError);
       }
-      const { error: updateError } = await supabase.from("alunos").update({ status: willSuspend ? "suspenso" : "normal" }).eq("id", alunoId);
+
+      const { error: updateError } = await supabase
+        .from("alunos")
+        .update({ status: willSuspend ? "suspenso" : "normal" })
+        .eq("id", alunoId);
+
       if (updateError) {
         console.error(updateError);
         notify.error("Erro ao atualizar status do aluno");
@@ -188,8 +293,13 @@ export const Home = () => {
         return;
       }
     }
+
     setSubmitting(false);
-    notify.success(selectedAlunos.length > 1 ? `Ocorrência registrada para ${selectedAlunos.length} alunos com sucesso!` : "Ocorrência registrada com sucesso!");
+    notify.success(
+      selectedAlunos.length > 1
+        ? `Ocorrência registrada para ${selectedAlunos.length} alunos com sucesso!`
+        : "Ocorrência registrada com sucesso!",
+    );
     setFormMessage("Ocorrência registrada com sucesso!");
     resetForm();
     setOpen(false);
@@ -200,7 +310,10 @@ export const Home = () => {
   return (
     <div className="flex w-full flex-col gap-10">
       <div className="flex flex-col items-start justify-between gap-5 md:flex-row md:items-center">
-        <PageTitle title="Início" subtitle={<>Bem-vindo(a), <span className="font-semibold text-green-700">{user?.nome}</span>! monitore as ocorrências registradas e adicione novas advertências.</>} />
+        <PageTitle
+          title="Início"
+          subtitle={<>Bem-vindo(a), <span className="font-semibold text-green-700">{user?.nome}</span>! monitore as ocorrências registradas e adicione novas advertências.</>}
+        />
         <Button onClick={() => setOpen(true)} className="gap-2">
           <FaExclamationTriangle size={20} className="text-white" />
           <span>Adicionar Advertência</span>
@@ -258,13 +371,32 @@ export const Home = () => {
         </div>
       </div>
 
-      <div><RankingOcorrencias escolaId={user?.escola_id} /></div>
+      <div><RankingOcorrencias escolaId={activeSchoolId} /></div>
 
       <Modal isOpen={open} onClose={() => setOpen(false)} title="Adicionar Advertência">
         <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>
           {formMessage && <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">{formMessage}</div>}
-          <CustomSelect label="Escola" value={selectedEscola} onChange={(val) => { setSelectedEscola(val); setSelectedTurma(""); setSelectedAlunos([]); }} options={[{ value: "", label: "Selecionar escola" }, ...escolas.map((e) => ({ value: String(e.id), label: e.nome })).sort((a, b) => a.label.localeCompare(b.label))]} placeholder="Selecionar escola" />
-          <CustomSelect label="Turma" value={selectedTurma} disabled={!selectedEscola || loadingTurmas} onChange={(val) => { setSelectedTurma(val); setSelectedAlunos([]); }} options={[{ value: "", label: "Selecionar turma" }, ...turmas.map((t) => ({ value: String(t.id), label: t.nome })).sort((a, b) => a.label.localeCompare(b.label))]} placeholder="Selecionar turma" />
+          {isGlobalAdmin ? (
+            <CustomSelect
+              label="Escola"
+              value={selectedEscola}
+              onChange={(val) => {
+                setSelectedEscola(val);
+                setSelectedTurma("");
+                setSelectedAlunos([]);
+              }}
+              options={[{ value: "", label: "Selecionar escola" }, ...escolas.map((e) => ({ value: String(e.id), label: e.nome })).sort((a, b) => a.label.localeCompare(b.label))]}
+              placeholder="Selecionar escola"
+            />
+          ) : (
+            <div className="sm:col-span-1 flex flex-col gap-2">
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-400">Escola</span>
+              <div className="min-h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                Ambiente da escola atual
+              </div>
+            </div>
+          )}
+          <CustomSelect label="Turma" value={selectedTurma} disabled={!activeSchoolId || loadingTurmas} onChange={(val) => { setSelectedTurma(val); setSelectedAlunos([]); }} options={[{ value: "", label: "Selecionar turma" }, ...turmas.map((t) => ({ value: String(t.id), label: t.nome })).sort((a, b) => a.label.localeCompare(b.label))]} placeholder="Selecionar turma" />
           <CustomSelect label="Aluno(s)" value={selectedAlunos} disabled={!selectedTurma || loadingAlunos} onChange={(val) => setSelectedAlunos(val)} options={alunos.map((a) => ({ value: String(a.id), label: `${a.nome} - ${a.matricula || "sem matrícula"}` })).sort((a, b) => a.label.localeCompare(b.label))} placeholder="Selecionar aluno(s)" showSearch={true} multiple={true} showSelectedValues={false} />
           <CustomSelect label="Tipo de advertência" value={tipoAdvertencia} onChange={(val) => setTipoAdvertencia(val)} options={[{ value: "", label: "Selecionar tipo" }, { value: "ocorrencia", label: "Ocorrência" }, { value: "suspensao", label: "Suspensão" }]} placeholder="Selecionar tipo" />
           <FormInput type="date" label="Data da ocorrência" value={dataOcorrido} onChange={(event) => setDataOcorrido(event.target.value)} />
