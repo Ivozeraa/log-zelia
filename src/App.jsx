@@ -5,6 +5,7 @@ import ProtectedRoute from "./routers/ProtectedRoute";
 import { Login } from "./pages/Login";
 import { ToastProvider } from "./components/ui/ToastProvide";
 import { LegalAndFeedback } from "./components/ui/LegalAndFeedback";
+import { AnnouncementPopup } from "./components/ui/AnnouncementPopup";
 
 const Landing = lazy(() => import("./pages/Landing").then((module) => ({ default: module.Landing })));
 const StudentOccurrenceLookup = lazy(() => import("./pages/StudentOccurrenceLookup").then((module) => ({ default: module.StudentOccurrenceLookup })));
@@ -17,6 +18,7 @@ const EditProfile = lazy(() => import("./components/user/EditProfile").then((mod
 const Suporte = lazy(() => import("./pages/Suport").then((module) => ({ default: module.Suporte })));
 const Horarios = lazy(() => import("./pages/Horarios").then((module) => ({ default: module.Horarios })));
 const AdminFeedbacks = lazy(() => import("./pages/AdminFeedbacks").then((module) => ({ default: module.AdminFeedbacks })));
+const AdminAvisos = lazy(() => import("./pages/AdminAvisos").then((module) => ({ default: module.AdminAvisos })));
 
 function PublicPageFallback() {
   return <div className="min-h-screen bg-white dark:bg-slate-950"><div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"><div className="h-10 w-36 animate-pulse rounded-xl bg-slate-200/80 dark:bg-slate-800/80" /><div className="mt-16 h-12 w-full max-w-xl animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-800/70" /></div></div>;
@@ -40,6 +42,7 @@ function App() {
             <Route path="gestao" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><Management /></ProtectedRoute>} />
             <Route path="gestao/alunos" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><StudentManagement /></ProtectedRoute>} />
             <Route path="feedbacks" element={<ProtectedRoute allowedRoles={[1]}><AdminFeedbacks /></ProtectedRoute>} />
+            <Route path="avisos" element={<ProtectedRoute allowedRoles={[1]}><AdminAvisos /></ProtectedRoute>} />
             <Route path="configuracoes" element={<Settings />} />
             <Route path="horarios" element={<Horarios />} />
             <Route path="editar-perfil" element={<EditProfile />} />
@@ -54,10 +57,12 @@ function App() {
           <Route path="/editar-perfil" element={<Navigate to="/app/editar-perfil" replace />} />
           <Route path="/suporte" element={<Navigate to="/app/suporte" replace />} />
           <Route path="/feedback" element={<Navigate to="/app/feedbacks" replace />} />
+          <Route path="/avisos" element={<Navigate to="/app/avisos" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
       <LegalAndFeedback />
+      <AnnouncementPopup />
       <ToastProvider />
     </>
   );
