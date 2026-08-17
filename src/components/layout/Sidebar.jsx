@@ -1,12 +1,10 @@
 import { SidebarOptions as So } from '../ui/SidebarOptions'
 import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn } from 'react-icons/fa'
 import { useAuth } from '../../hooks/useAuth'
-import { useSchool } from '../../hooks/useSchool'
 import { SectionTitle } from '../ui/SectionTitle'
 
 export const Sidebar = ({ open, setOpen }) => {
   const { user } = useAuth()
-  const { school, isGlobalAdmin } = useSchool()
 
   const handleClick = () => {
     if (window.innerWidth < 768) {
@@ -35,15 +33,6 @@ export const Sidebar = ({ open, setOpen }) => {
       >
         <div className="md:hidden">
           <SectionTitle text="Menu" />
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-            Contexto
-          </p>
-          <p className="mt-0.5 truncate text-sm font-semibold text-slate-800 dark:text-white">
-            {isGlobalAdmin ? 'Acesso global' : (school?.nome || 'Sua escola')}
-          </p>
         </div>
 
         <So to="/app" end icon={FaHome} text="Início" onClick={handleClick} />
