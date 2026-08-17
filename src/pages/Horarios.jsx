@@ -72,7 +72,14 @@ const PDF_FOOTER_HEIGHT = 7;
 const PDF_TOP_MARGIN = 22;
 const firstName = (nome = '') => String(nome).trim().split(/\s+/)[0] || '';
 const cellLabel = (aula) => !aula ? '—' : aula.tipo === 'FC' ? 'FC' : [aula.disciplina, aula.professor_nome].filter(Boolean).join(' - ').toUpperCase();
-const cellLabelPdf = (aula) => !aula ? '—' : aula.tipo === 'FC' ? 'FC' : [aula.disciplina, firstName(aula.professor_nome)].filter(Boolean).join(' - ').toUpperCase();
+const disciplineInitials = (nome = '') => String(nome).trim().split(/\s+/).filter(Boolean).map((word) => word[0]).join('').toUpperCase();
+const cellLabelPdf = (aula) => {
+  if (!aula) return '—';
+  if (aula.tipo === 'FC') return 'FC';
+  const disciplina = String(aula.disciplina || '').trim();
+  const disciplinaPdf = disciplina.split(/\s+/).filter(Boolean).length > 1 ? disciplineInitials(disciplina) : disciplina;
+  return [disciplinaPdf, firstName(aula.professor_nome)].filter(Boolean).join(' - ').toUpperCase();
+};
 
 
 const steps = [
