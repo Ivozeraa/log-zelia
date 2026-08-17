@@ -10,6 +10,8 @@ import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { addPdfFooter } from "../utils/pdfFooterPatch";
+import logoImg from "../assets/images/logoEEEP.png";
 
 const CSV_HEADERS = ["nome", "matricula", "turma_id", "escola_id"];
 
@@ -235,21 +237,55 @@ export const StudentManagement = () => {
     downloadCsv(csv, `relatorio-ocorrencias-alunos-${new Date().toISOString().split("T")[0]}.csv`);
   };
 
-  const generatePdfReport = (rows) => {
+  const generatePdfReport = async (rows) => {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const title = `Relatório de ocorrências dos alunos - ${new Date().toLocaleDateString("pt-BR")}`;
-    doc.setFontSize(16);
-    doc.text(title, 40, 40);
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 36;
+    const today = new Date().toLocaleDateString("pt-BR");
+    const schoolName = rows[0]?.escola || "Instituição de ensino";
+    const reportTitle = "RELATÓRIO DE ALUNOS E OCORRÊNCIAS";
+
+    // Cabeçalho institucional no mesmo espírito dos PDFs de horários.
+    doc.setFillColor(35, 146, 74);
+    doc.rect(0, 0, pageWidth, 8, "F");
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.8);
+    doc.line(margin, 92, pageWidth - margin, 92);
+
+    try {
+      doc.addImage(logoImg, "PNG", margin, 18, 56, 56);
+    } catch (error) {
+      console.warn("Logo da escola não pôde ser adicionada ao relatório:", error);
+    }
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(schoolName, margin + 70, 35, { maxWidth: pageWidth - margin * 2 - 70 });
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(71, 85, 105);
+    doc.text("LogView • Gestão escolar", margin + 70, 53);
+    doc.text(`Emitido em ${today}`, margin + 70, 69);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(22, 101, 52);
+    doc.text(reportTitle, pageWidth - margin, 35, { align: "right" });
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`${rows.length} registro(s) no relatório`, pageWidth - margin, 53, { align: "right" });
 
     const tableData = rows.map((row) => [
       row.aluno_nome,
       row.matricula,
       row.turma,
-      row.escola,
       row.status,
       row.data_ocorrido,
-      row.categoria,
-      row.tipo,
+      `${row.tipo || "—"}${row.categoria && row.categoria !== "—" ? ` • ${row.categoria}` : ""}`,
       row.descricao,
     ]);
 
@@ -258,24 +294,78 @@ export const StudentManagement = () => {
         "Aluno",
         "Matrícula",
         "Turma",
-        "Escola",
         "Status",
         "Data",
-        "Categoria",
-        "Tipo",
+        "Ocorrência",
         "Descrição",
       ]],
       body: tableData,
-      startY: 60,
-      styles: { fontSize: 9, cellPadding: 4 },
-      headStyles: { fillColor: [15, 118, 110] },
-      columnStyles: {
-        8: { cellWidth: 140 },
+      startY: 108,
+      margin: { top: 108, left: margin, right: margin, bottom: 62 },
+      styles: {
+        font: "helvetica",
+        fontSize: 8.5,
+        cellPadding: 5,
+        lineColor: [226, 232, 240],
+        lineWidth: 0.4,
+        textColor: [30, 41, 59],
+        overflow: "linebreak",
+        valign: "middle",
       },
-      bodyStyles: { valign: "top" },
+      headStyles: {
+        fillColor: [35, 146, 74],
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        fontSize: 8.5,
+        halign: "left",
+        cellPadding: 6,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      bodyStyles: {
+        minCellHeight: 23,
+      },
+      columnStyles: {
+        0: { cellWidth: 118, fontStyle: "bold" },
+        1: { cellWidth: 66 },
+        2: { cellWidth: 58 },
+        3: { cellWidth: 54, halign: "center", fontStyle: "bold" },
+        4: { cellWidth: 58, halign: "center" },
+        5: { cellWidth: 86 },
+        6: { cellWidth: "auto" },
+      },
+      didParseCell: (data) => {
+        if (data.section === "body" && data.column.index === 3) {
+          const status = String(data.cell.raw || "").toLowerCase();
+          if (status === "suspenso") {
+            data.cell.styles.textColor = [185, 28, 28];
+          } else if (status === "expulso") {
+            data.cell.styles.textColor = [124, 58, 237];
+          } else {
+            data.cell.styles.textColor = [21, 128, 61];
+          }
+        }
+      },
+      willDrawPage: (data) => {
+        if (data.pageNumber > 1) {
+          doc.setFillColor(35, 146, 74);
+          doc.rect(0, 0, pageWidth, 8, "F");
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(9);
+          doc.setTextColor(71, 85, 105);
+          doc.text(schoolName, margin, 28);
+          doc.text(reportTitle, pageWidth - margin, 28, { align: "right" });
+          doc.setDrawColor(226, 232, 240);
+          doc.line(margin, 38, pageWidth - margin, 38);
+        }
+      },
     });
 
-    doc.save(`relatorio-ocorrencias-alunos-${new Date().toISOString().split("T")[0]}.pdf`);
+    // Footer institucional compartilhado com os demais PDFs.
+    await addPdfFooter(doc);
+
+    doc.save(`relatorio-alunos-${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
   const openEditAluno = (aluno) => {
@@ -569,7 +659,7 @@ export const StudentManagement = () => {
       const reportRows = prepareReportRows(rows, occurrences || []);
 
       if (reportFormat === "pdf") {
-        generatePdfReport(reportRows);
+        await generatePdfReport(reportRows);
       } else {
         generateCsvReport(reportRows);
       }
