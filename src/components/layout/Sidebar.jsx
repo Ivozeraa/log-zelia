@@ -13,6 +13,7 @@ export const Sidebar = ({ open, setOpen }) => {
   }
 
   const canSeeManagement = [1, 2, 3].includes(user?.role_id)
+  const canSeeSchedules = Number(user?.role_id) !== 4
 
   return (
     <>
@@ -35,7 +36,10 @@ export const Sidebar = ({ open, setOpen }) => {
 
         <So to="/app" end icon={FaHome} text="Início" onClick={handleClick} />
         <So to="/app/advertencias" icon={FaExclamationCircle} text="Advertências" onClick={handleClick} />
-        <So to="/app/horarios" icon={FaCalendarAlt} text="Horários" onClick={handleClick} />
+
+        {canSeeSchedules && (
+          <So to="/app/horarios" icon={FaCalendarAlt} text="Horários" onClick={handleClick} />
+        )}
 
         {canSeeManagement && (
           <So to="/app/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
