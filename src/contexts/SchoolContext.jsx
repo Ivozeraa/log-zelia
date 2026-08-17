@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../utils/supabase";
 import { SchoolContext } from "./SchoolContextImpl";
 import { useAuth } from "../hooks/useAuth";
@@ -9,7 +9,8 @@ export function SchoolProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const isGlobalAdmin = user?.role_id === 1 && !user?.escola_id;
+  const isGlobalAdmin = Number(user?.role_id) === 1 && !user?.escola_id;
+  const isSchoolBound = Boolean(user?.escola_id);
 
   const loadSchool = useCallback(async () => {
     if (authLoading) return;
@@ -50,12 +51,35 @@ export function SchoolProvider({ children }) {
     await loadSchool();
   }, [loadSchool]);
 
+  const scope = useMemo(() => ({
+    schoolId: school?.id ?? user?.escola_id ?? null,
+    isGlobalAdmin,
+    isSchoolBound,
+    canSwitchSchool: isGlobalAdmin,
+    requireSchoolId() {
+      const currentSchoolId = school?.id ?? user?.escola_id ?? null;
+      if (!currentSchoolId && !isGlobalAdmin) {
+        throw new Error("A conta não possui uma escola vinculada.");
+      }
+      return currentSchoolId;
+    },
+    resolveSchoolId(requestedSchoolId = null) {
+      const currentSchoolId = school?.id ?? user?.escola_id ?? null;
+      if (isGlobalAdmin) return requestedSchoolId || null;
+      return currentSchoolId;
+    },
+  }), [isGlobalAdmin, isSchoolBound, school?.id, user?.escola_id]);
+
   return (
     <SchoolContext.Provider
       value={{
         school,
-        schoolId: school?.id ?? user?.escola_id ?? null,
-        isGlobalAdmin,
+        schoolId: scope.schoolId,
+        isGlobalAdmin: scope.isGlobalAdmin,
+        isSchoolBound: scope.isSchoolBound,
+        canSwitchSchool: scope.canSwitchSchool,
+        requireSchoolId: scope.requireSchoolId,
+        resolveSchoolId: scope.resolveSchoolId,
         loading: authLoading || loading,
         error,
         refreshSchool,
