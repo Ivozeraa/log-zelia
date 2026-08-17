@@ -1,6 +1,83 @@
 const PDF_FOOTER_HEIGHT = 18;
 import topoMiniImg from '../assets/images/topo_mini.png';
 
+const DISCIPLINE_ABBREVIATIONS = {
+  EF: 'ED. FIS',
+  MF: 'MAT. FIN',
+  LP: 'LÍNG. PORT',
+  LI: 'LÍNG. ING',
+  FPAAC: 'F. CIDAD.',
+  MC: 'MET. CIE.',
+  FDI: 'FUN. INF.',
+  PDS: 'PRO. SIS',
+};
+
+const escapePdfText = (value = '') => String(value)
+  .replace(/\\/g, '\\\\')
+  .replace(/\(/g, '\\(')
+  .replace(/\)/g, '\\)')
+  .replace(/\r?\n/g, ' ');
+
+export const normalizeDisciplineText = (value = '') => String(value)
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim()
+  .toUpperCase();
+
+export const abbreviateDiscipline = (nome = '') => {
+  const original = String(nome).trim();
+  if (!original) return '';
+
+  const normalized = normalizeDisciplineText(original);
+  const exceptions = {
+    'EDUCACAO FISICA': 'ED. FIS',
+    'LINGUA PORTUGUESA': 'LÍNG. PORT',
+    'LINGUA INGLESA': 'LÍNG. ING',
+    'LINGUA ESTRANGEIRA INGLES': 'LÍNG. ING',
+    'MATEMATICA FINANCEIRA': 'MAT. FIN',
+    'FORMACAO PARA A CIDADANIA': 'F. CIDAD.',
+    'METODOLOGIA CIENTIFICA': 'MET. CIE.',
+    'FUNDAMENTOS DA INFORMATICA': 'FUN. INF.',
+    'PROGRAMACAO DE SISTEMAS': 'PRO. SIS',
+  };
+  if (exceptions[normalized]) return exceptions[normalized];
+
+  const stopWords = new Set(['DE', 'DA', 'DO', 'DAS', 'DOS', 'PARA', 'E']);
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (words.length === 1) return words[0].slice(0, 3);
+
+  const relevant = words.filter((word) => word.length > 1 && !stopWords.has(word));
+  const source = relevant.length ? relevant : words;
+  const parts = source.map((word) => word.slice(0, 3));
+  return parts.join('. ');
+};
+
+const patchPdfDisciplineLabels = (doc) => {
+  const pages = doc?.internal?.pages;
+  if (!Array.isArray(pages)) return;
+
+  const replacements = Object.entries(DISCIPLINE_ABBREVIATIONS);
+  if (!replacements.length) return;
+
+  for (let pageIndex = 1; pageIndex < pages.length; pageIndex += 1) {
+    const page = pages[pageIndex];
+    if (!Array.isArray(page)) continue;
+
+    pages[pageIndex] = page.map((operation) => {
+      if (typeof operation !== 'string' || !operation.includes('Tj')) return operation;
+
+      let patched = operation;
+      for (const [initials, abbreviation] of replacements) {
+        const escapedInitials = escapePdfText(initials);
+        const escapedAbbreviation = escapePdfText(abbreviation);
+        const pattern = new RegExp(`\\(${escapedInitials}\\s*-\\s*`, 'g');
+        patched = patched.replace(pattern, `(${escapedAbbreviation} - `);
+      }
+      return patched;
+    });
+  }
+};
+
 const loadImageAsDataUrl = async (url) => {
   if (!url || typeof window === 'undefined') return null;
 
@@ -20,6 +97,8 @@ const loadImageAsDataUrl = async (url) => {
 };
 
 export const addPdfFooter = async (doc) => {
+  patchPdfDisciplineLabels(doc);
+
   const footerDataUrl = await loadImageAsDataUrl(topoMiniImg);
   if (!footerDataUrl) throw new Error('Imagem topo_mini.png não foi carregada.');
 
