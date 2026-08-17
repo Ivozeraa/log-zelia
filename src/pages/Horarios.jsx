@@ -267,6 +267,52 @@ export const Horarios = () => {
     return { curso, serie };
   };
 
+  const sortTurmasForPdf = (turmaIds = []) => {
+    const coursePriority = Object.fromEntries(CURRICULUM_COURSES.map((course, index) => [course, index]));
+    const normalizeCourseName = (value = '') => String(value)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLocaleLowerCase('pt-BR');
+    const extractSerie = (nome = '') => {
+      const value = String(nome || '');
+      const ordinalMatch = value.match(/(?:^|\s)([123])\s*[ºª](?=\s|$)/);
+      if (ordinalMatch) return Number(ordinalMatch[1]);
+      const numericMatch = value.match(/(?:^|\s)([123])(?=\s|$)/);
+      return numericMatch ? Number(numericMatch[1]) : Number.POSITIVE_INFINITY;
+    };
+    const unknownCourseFromName = (nome = '') => String(nome || '')
+      .replace(/^\s*[123]\s*[ºª]?\s*/u, '')
+      .replace(/\s+[123]\s*[ºª]?\s*$/u, '')
+      .trim();
+
+    return normalize(turmaIds).slice().sort((a, b) => {
+      const turmaA = byId(turmas, a);
+      const turmaB = byId(turmas, b);
+      const nameA = String(turmaA?.nome || '').trim();
+      const nameB = String(turmaB?.nome || '').trim();
+      const knownCourseA = catalogCourseFromTurma(nameA);
+      const knownCourseB = catalogCourseFromTurma(nameB);
+      const priorityA = Number.isInteger(coursePriority[knownCourseA]) ? coursePriority[knownCourseA] : 4;
+      const priorityB = Number.isInteger(coursePriority[knownCourseB]) ? coursePriority[knownCourseB] : 4;
+
+      if (priorityA !== priorityB) return priorityA - priorityB;
+
+      if (priorityA === 4) {
+        const unknownCourseA = normalizeCourseName(unknownCourseFromName(nameA));
+        const unknownCourseB = normalizeCourseName(unknownCourseFromName(nameB));
+        const courseResult = unknownCourseA.localeCompare(unknownCourseB, 'pt-BR', { sensitivity: 'base' });
+        if (courseResult !== 0) return courseResult;
+      }
+
+      const serieA = extractSerie(nameA);
+      const serieB = extractSerie(nameB);
+      if (serieA !== serieB) return serieA - serieB;
+
+      return nameA.localeCompare(nameB, 'pt-BR', { sensitivity: 'base' });
+    });
+  };
+
   const curriculumForTurmas = (turmaIds = []) => {
     const curriculums = turmaIds.map((turmaId) => getTurmaCurriculum(turmaId));
     if (!curriculums.length || curriculums.some((item) => !item.curso || !item.serie)) return null;
@@ -583,7 +629,7 @@ export const Horarios = () => {
       if (!professorIds.has(String(item.professor_id)) || Number(item.dia_semana) < 1 || Number(item.dia_semana) > 5) problems.push({ bloqueante: true, mensagem: 'Existe uma folga de professor inválida.' });
     });
     currentConfig.indisponibilidades.forEach((item) => {
-      if (!professorIds.has(String(item.professor_id)) || Number(item.dia_semana) < 1 || Number(item.dia_semana) > 5 || Number(item.aula_numero) < 1 || Number(item.aula_numero) > 9) problems.push({ bloqueante: true, mensagem: 'Existe uma indisponibilidade inválida.' });
+      if (!professorIds.has(String(item.professor_id)) || Number(item.dia_semana) < 1 || Number(item.dia_semana) > 5 || Number(item.aula_numero) < 1 || Number(item.aula_numero) > 9) problems.push({ bloqueante: true, mensagem: 'Existe uma indisponibilidade de professor inválida.' });
     });
     return problems;
   };
@@ -1107,6 +1153,7 @@ export const Horarios = () => {
       turmaIds = turmaIds.filter((turmaId) => getCourseStyle(byId(turmas, turmaId)?.nome).key === courseKey);
       if (!turmaIds.length) return notify.error('Nenhuma turma desse curso foi encontrada.');
     }
+    turmaIds = sortTurmasForPdf(turmaIds);
     setExportingPdf(true);
     try {
       const schoolName = schools.find((item) => String(item.id) === String(currentConfig.escola_id))?.nome || 'Escola';
@@ -1166,7 +1213,7 @@ export const Horarios = () => {
         const turmaNome = byId(turmas, turmaId)?.nome || 'Turma';
         const course = getCourseStyle(turmaNome);
         const aulas = generatedSchedule.grid[String(turmaId)] || [];
-        let sheetName = turmaNome.replace(/[\/*?:[\]]/g, ' ').trim().slice(0, 31) || 'Turma';
+        let sheetName = turmaNome.replace(/[\\/*?:[\\]]/g, ' ').trim().slice(0, 31) || 'Turma';
         let suffix = 2;
         while (usedSheetNames.has(sheetName.toLowerCase())) { sheetName = `${turmaNome.slice(0, 28)} ${suffix}`; suffix += 1; }
         usedSheetNames.add(sheetName.toLowerCase());
