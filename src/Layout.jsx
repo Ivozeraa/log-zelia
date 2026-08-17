@@ -1,7 +1,8 @@
 import { Suspense } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
+import { TeacherSchedule } from './components/dashboard/TeacherSchedule'
 
 function AppPageFallback() {
   return (
@@ -19,6 +20,9 @@ function AppPageFallback() {
 }
 
 function Layout() {
+  const location = useLocation()
+  const isHome = location.pathname === '/app' || location.pathname === '/app/'
+
   return (
     <div className="min-h-screen overflow-x-hidden font-inter bg-neutral-100 dark:bg-gray-950">
       <Header />
@@ -30,6 +34,7 @@ function Layout() {
 
         <main className="w-full min-w-0 md:ml-64 px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6 z-10 relative">
           <div className="mx-auto w-full max-w-[1600px] min-w-0">
+            {isHome && <TeacherSchedule />}
             <Suspense fallback={<AppPageFallback />}>
               <Outlet />
             </Suspense>
