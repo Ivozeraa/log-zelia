@@ -30,41 +30,39 @@ function ProtectedAppRoutes() {
 
 function App() {
   return (
-    <>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Suspense fallback={<PublicPageFallback />}><Landing /></Suspense>} />
-          <Route path="/consultar-ocorrencias" element={<Suspense fallback={<PublicPageFallback />}><StudentOccurrenceLookup /></Suspense>} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/app" element={<ProtectedAppRoutes />}>
-            <Route index element={<Home />} />
-            <Route path="advertencias" element={<Occurrences />} />
-            <Route path="gestao" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><Management /></ProtectedRoute>} />
-            <Route path="gestao/alunos" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><StudentManagement /></ProtectedRoute>} />
-            <Route path="feedbacks" element={<ProtectedRoute allowedRoles={[1]}><AdminFeedbacks /></ProtectedRoute>} />
-            <Route path="avisos" element={<ProtectedRoute allowedRoles={[1]}><AdminAvisos /></ProtectedRoute>} />
-            <Route path="configuracoes" element={<Settings />} />
-            <Route path="horarios" element={<Horarios />} />
-            <Route path="editar-perfil" element={<EditProfile />} />
-            <Route path="suporte" element={<Suporte />} />
-            <Route path="*" element={<h1 className="mt-20 text-center text-2xl">404 - Página Não Encontrada</h1>} />
-          </Route>
-          <Route path="/advertencias" element={<Navigate to="/app/advertencias" replace />} />
-          <Route path="/gestao" element={<Navigate to="/app/gestao" replace />} />
-          <Route path="/gestao/alunos" element={<Navigate to="/app/gestao/alunos" replace />} />
-          <Route path="/configuracoes" element={<Navigate to="/app/configuracoes" replace />} />
-          <Route path="/horarios" element={<Navigate to="/app/horarios" replace />} />
-          <Route path="/editar-perfil" element={<Navigate to="/app/editar-perfil" replace />} />
-          <Route path="/suporte" element={<Navigate to="/app/suporte" replace />} />
-          <Route path="/feedback" element={<Navigate to="/app/feedbacks" replace />} />
-          <Route path="/avisos" element={<Navigate to="/app/avisos" replace />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Suspense fallback={<PublicPageFallback />}><Landing /></Suspense>} />
+        <Route path="/consultar-ocorrencias" element={<Suspense fallback={<PublicPageFallback />}><StudentOccurrenceLookup /></Suspense>} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/app" element={<ProtectedAppRoutes />}>
+          <Route index element={<Home />} />
+          <Route path="advertencias" element={<Occurrences />} />
+          <Route path="gestao" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><Management /></ProtectedRoute>} />
+          <Route path="gestao/alunos" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><StudentManagement /></ProtectedRoute>} />
+          <Route path="feedbacks" element={<ProtectedRoute allowedRoles={[1]}><AdminFeedbacks /></ProtectedRoute>} />
+          <Route path="avisos" element={<ProtectedRoute allowedRoles={[1]}><AdminAvisos /></ProtectedRoute>} />
+          <Route path="configuracoes" element={<Settings />} />
+          <Route path="horarios" element={<Horarios />} />
+          <Route path="editar-perfil" element={<EditProfile />} />
+          <Route path="suporte" element={<Suporte />} />
+          <Route path="*" element={<h1 className="mt-20 text-center text-2xl">404 - Página Não Encontrada</h1>} />
+        </Route>
+        <Route path="/advertencias" element={<Navigate to="/app/advertencias" replace />} />
+        <Route path="/gestao" element={<Navigate to="/app/gestao" replace />} />
+        <Route path="/gestao/alunos" element={<Navigate to="/app/gestao/alunos" replace />} />
+        <Route path="/configuracoes" element={<Navigate to="/app/configuracoes" replace />} />
+        <Route path="/horarios" element={<Navigate to="/app/horarios" replace />} />
+        <Route path="/editar-perfil" element={<Navigate to="/app/editar-perfil" replace />} />
+        <Route path="/suporte" element={<Navigate to="/app/suporte" replace />} />
+        <Route path="/feedback" element={<Navigate to="/app/feedbacks" replace />} />
+        <Route path="/avisos" element={<Navigate to="/app/avisos" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
       <LegalAndFeedback />
       <AnnouncementPopup />
       <ToastProvider />
-    </>
+    </Router>
   );
 }
 
