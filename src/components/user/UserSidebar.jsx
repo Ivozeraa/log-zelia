@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "../../hooks/useAuth"
+import { useSchool } from "../../hooks/useSchool"
 import { FaRegUserCircle, FaUserEdit, FaSignOutAlt, FaArrowLeft } from "react-icons/fa"
 import { Modal } from "../ui/Modal"
 import { Button } from "../ui/Button"
@@ -47,6 +48,7 @@ const achievements = [
 
 export const UserSidebar = ({ open, setOpen }) => {
   const { user, logout } = useAuth()
+  const { school } = useSchool()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [ocorrenciasCount, setOcorrenciasCount] = useState(0)
 
@@ -113,7 +115,6 @@ export const UserSidebar = ({ open, setOpen }) => {
           Voltar
         </button>
 
-        {/* Avatar + nome */}
         <div className="flex flex-col items-center gap-3">
           <div className="relative">
             <div className="absolute inset-0 rounded-full bg-green-400 blur-md opacity-30" />
@@ -134,13 +135,18 @@ export const UserSidebar = ({ open, setOpen }) => {
             <p className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
               {user?.nome || "Usuário"}
             </p>
-            <span className="inline-block mt-1 text-xs font-medium px-3 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
+            <p
+              className="mt-1 max-w-[17rem] truncate text-xs font-medium text-slate-500 dark:text-slate-400"
+              title={school?.nome || ""}
+            >
+              {school?.nome || (user?.escola_id ? "Carregando escola…" : "Acesso global")}
+            </p>
+            <span className="inline-block mt-2 text-xs font-medium px-3 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
               {achievements.filter((a) => ocorrenciasCount >= a.threshold).length} / {achievements.length} conquistas
             </span>
           </div>
         </div>
 
-        {/* Botões */}
         <div className="flex flex-col gap-2 w-full">
           <Button
             type="button"
@@ -161,10 +167,8 @@ export const UserSidebar = ({ open, setOpen }) => {
           </Button>
         </div>
 
-        {/* Divisor */}
         <div className="w-full border-t border-slate-100 dark:border-slate-800" />
 
-        {/* Conquistas */}
         <div className="flex flex-col gap-3 w-full">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
@@ -187,7 +191,6 @@ export const UserSidebar = ({ open, setOpen }) => {
                       : "border-slate-100 bg-slate-50 opacity-50 dark:border-slate-800 dark:bg-slate-900/40"
                     }`}
                 >
-                  {/* Brilho decorativo no canto (só desbloqueado) */}
                   {unlocked && (
                     <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-white/40 dark:bg-white/5 blur-xl pointer-events-none" />
                   )}
@@ -224,7 +227,6 @@ export const UserSidebar = ({ open, setOpen }) => {
             })}
           </div>
 
-          {/* Barra de progresso */}
           {nextAchievement ? (
             <div className="mt-1 rounded-2xl border border-slate-100 bg-linear-to-br from-slate-50 to-white px-4 py-3 dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/60 shadow-sm">
               <div className="flex justify-between items-center mb-2">
