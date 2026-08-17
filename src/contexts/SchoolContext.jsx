@@ -9,6 +9,8 @@ export function SchoolProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const isGlobalAdmin = user?.role_id === 1 && !user?.escola_id;
+
   const loadSchool = useCallback(async () => {
     if (authLoading) return;
 
@@ -53,6 +55,7 @@ export function SchoolProvider({ children }) {
       value={{
         school,
         schoolId: school?.id ?? user?.escola_id ?? null,
+        isGlobalAdmin,
         loading: authLoading || loading,
         error,
         refreshSchool,
