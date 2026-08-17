@@ -4,6 +4,7 @@ import Layout from "./Layout";
 import ProtectedRoute from "./routers/ProtectedRoute";
 import { Login } from "./pages/Login";
 import { ToastProvider } from "./components/ui/ToastProvide";
+import { LegalAndFeedback } from "./components/ui/LegalAndFeedback";
 
 const Landing = lazy(() => import("./pages/Landing").then((module) => ({ default: module.Landing })));
 const StudentOccurrenceLookup = lazy(() => import("./pages/StudentOccurrenceLookup").then((module) => ({ default: module.StudentOccurrenceLookup })));
@@ -56,6 +57,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
+      <LegalAndFeedback />
       <ToastProvider />
     </>
   );
