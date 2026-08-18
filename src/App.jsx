@@ -13,6 +13,7 @@ const Home = lazy(() => import("./pages/Home").then((module) => ({ default: modu
 const Occurrences = lazy(() => import("./pages/Occurrences").then((module) => ({ default: module.Occurrences })));
 const Management = lazy(() => import("./pages/Management").then((module) => ({ default: module.Management })));
 const StudentManagement = lazy(() => import("./pages/StudentManagement").then((module) => ({ default: module.StudentManagement })));
+const StudentPasswordReset = lazy(() => import("./pages/StudentPasswordReset").then((module) => ({ default: module.StudentPasswordReset })));
 const Settings = lazy(() => import("./pages/Settings").then((module) => ({ default: module.Settings })));
 const EditProfile = lazy(() => import("./components/user/EditProfile").then((module) => ({ default: module.EditProfile })));
 const Suporte = lazy(() => import("./pages/Suport").then((module) => ({ default: module.Suporte })));
@@ -40,6 +41,7 @@ function App() {
           <Route path="advertencias" element={<Occurrences />} />
           <Route path="gestao" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><Management /></ProtectedRoute>} />
           <Route path="gestao/alunos" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><StudentManagement /></ProtectedRoute>} />
+          <Route path="gestao/senhas-alunos" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><StudentPasswordReset /></ProtectedRoute>} />
           <Route path="feedbacks" element={<ProtectedRoute allowedRoles={[1]}><AdminFeedbacks /></ProtectedRoute>} />
           <Route path="avisos" element={<ProtectedRoute allowedRoles={[1]}><AdminAvisos /></ProtectedRoute>} />
           <Route path="configuracoes" element={<Settings />} />
@@ -51,6 +53,7 @@ function App() {
         <Route path="/advertencias" element={<Navigate to="/app/advertencias" replace />} />
         <Route path="/gestao" element={<Navigate to="/app/gestao" replace />} />
         <Route path="/gestao/alunos" element={<Navigate to="/app/gestao/alunos" replace />} />
+        <Route path="/gestao/senhas-alunos" element={<Navigate to="/app/gestao/senhas-alunos" replace />} />
         <Route path="/configuracoes" element={<Navigate to="/app/configuracoes" replace />} />
         <Route path="/horarios" element={<Navigate to="/app/horarios" replace />} />
         <Route path="/editar-perfil" element={<Navigate to="/app/editar-perfil" replace />} />
