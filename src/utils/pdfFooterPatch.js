@@ -1,6 +1,7 @@
 import topoMiniImg from '../assets/images/topo_mini.png';
 
 const PDF_FOOTER_HEIGHT = 18;
+const REPORT_FILENAME_PATCH_VERSION = '2';
 
 const DISCIPLINE_ABBREVIATIONS = {
   EF: 'ED. FIS',
@@ -135,11 +136,11 @@ const getReportFilename = (doc, originalFilename) => {
 };
 
 const patchReportSaveFilename = (doc) => {
-  if (!doc || doc.__logviewReportSaveFilenamePatched || typeof doc.save !== 'function') return;
+  if (!doc || doc.__logviewReportSaveFilenamePatched === REPORT_FILENAME_PATCH_VERSION || typeof doc.save !== 'function') return;
 
   const originalSave = doc.save.bind(doc);
   doc.save = (filename, options) => originalSave(getReportFilename(doc, filename), options);
-  doc.__logviewReportSaveFilenamePatched = true;
+  doc.__logviewReportSaveFilenamePatched = REPORT_FILENAME_PATCH_VERSION;
 };
 
 export const addPdfFooter = async (doc) => {
