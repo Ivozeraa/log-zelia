@@ -75,7 +75,7 @@ const cellLabel = (aula) => !aula ? '—' : aula.tipo === 'FC' ? 'FC' : [aula.di
 const disciplineInitials = (nome = '') => String(nome).trim().split(/\s+/).filter(Boolean).map((word) => word[0]).join('').toUpperCase();
 const cellLabelPdf = (aula) => {
   if (!aula) return '—';
-  if (aula.tipo === 'FC') return 'FC';
+  if (aula.tipo === 'FC') return ['FC', firstName(aula.professor_nome)].filter(Boolean).join(' - ').toUpperCase();
   const disciplina = String(aula.disciplina || '').trim();
   const disciplinaPdf = disciplina.split(/\s+/).filter(Boolean).length > 1 ? disciplineInitials(disciplina) : disciplina;
   return [disciplinaPdf, firstName(aula.professor_nome)].filter(Boolean).join(' - ').toUpperCase();
