@@ -1,0 +1,178 @@
+name: Finalize users PDF source fix
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Replace users PDF source generator
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          management = Path('src/pages/Management.jsx')
+          text = management.read_text(encoding='utf-8')
+
+          new_function = r'''  async function handleExportPDF() {
+    try {
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 36;
+      const today = new Date().toLocaleDateString("pt-BR");
+      const schoolNames = [...new Set(filteredUsers.map((u) => getSchoolName(u.escola_id)).filter((name) => name && name !== "—"))];
+      const schoolName = schoolNames.length === 1 ? schoolNames[0] : "Todas as escolas";
+      const reportTitle = "RELATÓRIO DE USUÁRIOS";
+      const fit = (value, x, y, maxWidth, size, minSize, align = "left") => {
+        const textValue = String(value || "");
+        let current = size;
+        doc.setFontSize(current);
+        while (current > minSize && doc.getTextWidth(textValue) > maxWidth) {
+          current -= 0.5;
+          doc.setFontSize(current);
+        }
+        doc.text(textValue, x, y, { align, maxWidth });
+      };
+
+      doc.setFillColor(35, 146, 74);
+      doc.rect(0, 0, pageWidth, 8, "F");
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.8);
+      doc.line(margin, 92, pageWidth - margin, 92);
+
+      try {
+        doc.addImage(logoImg, "PNG", margin, 18, 56, 56);
+      } catch (error) {
+        console.warn("Logo da escola não pôde ser adicionada ao relatório:", error);
+      }
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(15, 23, 42);
+      fit(schoolName, margin + 70, 35, 225, 14, 9);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.text("LogView • Gestão escolar", margin + 70, 53);
+      doc.text(`Emitido em ${today}`, margin + 70, 69);
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(22, 101, 52);
+      fit(reportTitle, pageWidth - margin, 35, 220, 13, 10, "right");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`${filteredUsers.length} registro(s) no relatório`, pageWidth - margin, 53, { align: "right" });
+
+      const rows = filteredUsers.map((u) => [u.nome || "—", u.email || "—", getRoleLabel(u.role_id), getSchoolName(u.escola_id), u.pdt ? "Sim" : "Não", u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "—"]);
+
+      autoTable(doc, {
+        head: [["Nome", "E-mail", "Função", "Escola", "PDT", "Criado em"]],
+        body: rows,
+        startY: 108,
+        margin: { top: 108, left: margin, right: margin, bottom: 62 },
+        styles: { font: "helvetica", fontSize: 8.5, cellPadding: 5, lineColor: [226, 232, 240], lineWidth: 0.4, textColor: [30, 41, 59], overflow: "linebreak", valign: "middle" },
+        headStyles: { fillColor: [35, 146, 74], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8.5, halign: "left", cellPadding: 6 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        bodyStyles: { minCellHeight: 23 },
+        columnStyles: { 0: { cellWidth: 112, fontStyle: "bold" }, 1: { cellWidth: 145 }, 2: { cellWidth: 78 }, 3: { cellWidth: 105 }, 4: { cellWidth: 42, halign: "center", fontStyle: "bold" }, 5: { cellWidth: 62, halign: "center" } },
+        didParseCell: (data) => {
+          if (data.section === "body" && data.column.index === 4) {
+            const value = String(data.cell.raw || "").toLowerCase();
+            data.cell.styles.textColor = value === "sim" ? [21, 128, 61] : [100, 116, 139];
+          }
+        },
+        willDrawPage: (data) => {
+          if (data.pageNumber > 1) {
+            doc.setFillColor(35, 146, 74);
+            doc.rect(0, 0, pageWidth, 8, "F");
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(71, 85, 105);
+            fit(schoolName, margin, 28, 235, 9, 7);
+            fit(reportTitle, pageWidth - margin, 28, 220, 9, 7, "right");
+            doc.setDrawColor(226, 232, 240);
+            doc.line(margin, 38, pageWidth - margin, 38);
+          }
+        },
+      });
+
+      await addPdfFooter(doc);
+      doc.save(`relatorio-usuarios-${new Date().toISOString().split("T")[0]}.pdf`);
+      notify.success("PDF exportado.");
+    } catch (err) {
+      console.error(err);
+      notify.error("Erro ao exportar PDF.");
+    }
+  }'''
+
+          pattern = r'  async function handleExportPDF\(\) \{.*?\n  \}\n\n  async function loadTurmas'
+          updated, count = re.subn(pattern, new_function + '\n\n  async function loadTurmas', text, count=1, flags=re.S)
+          if count != 1:
+              raise SystemExit('handleExportPDF não localizado')
+          management.write_text(updated, encoding='utf-8')
+
+          notify = Path('src/utils/notify.js')
+          notify.write_text(r'''import { toast } from 'react-toastify'
+import { jsPDF } from 'jspdf'
+
+const getTableCellRaw = (row, index) => {
+  if (Array.isArray(row?.raw)) return row.raw[index]
+  return row?.cells?.[index]?.raw ?? row?.cells?.[String(index)]?.raw ?? ''
+}
+
+const getFinalReportFilename = (doc, filename) => {
+  const original = String(filename || '')
+  const body = Array.isArray(doc?.lastAutoTable?.body) ? doc.lastAutoTable.body : []
+  const year = new Date().getFullYear()
+
+  if (original.startsWith('relatorio-alunos-')) {
+    const turmas = [...new Set(body.map((row) => String(getTableCellRaw(row, 2) || '').trim()).filter((turma) => turma && turma !== '—'))]
+    const turmaLabel = turmas.length === 1 ? turmas[0] : 'Todas as Turmas'
+    return `Relatório de Ocorrências - ${turmaLabel} - ${year}.pdf`
+  }
+
+  if (original === 'usuarios.pdf') {
+    const escolas = [...new Set(body.map((row) => String(getTableCellRaw(row, 3) || '').trim()).filter((escola) => escola && escola !== '—'))]
+    const escolaLabel = escolas.length === 1 ? escolas[0] : 'Todas as Escolas'
+    return `Relatório de Usuários - ${escolaLabel}.pdf`
+  }
+
+  return original
+}
+
+const patchJsPdfSaveFilename = () => {
+  if (!jsPDF?.API?.save || jsPDF.API.__logviewFilenamePatch) return
+  const originalSave = jsPDF.API.save
+  jsPDF.API.save = function patchedSave(filename, options) {
+    return originalSave.call(this, getFinalReportFilename(this, filename), options)
+  }
+  jsPDF.API.__logviewFilenamePatch = true
+}
+
+patchJsPdfSaveFilename()
+
+export const notify = {
+  success: (msg) => toast.success(msg),
+  error: (msg) => toast.error(msg),
+  warning: (msg) => toast.warning(msg),
+  info: (msg) => toast.info(msg),
+}
+''', encoding='utf-8')
+          PY
+
+          rm -f .github/workflows/finalize-users-pdf.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/Management.jsx src/utils/notify.js .github/workflows/finalize-users-pdf.yml
+          git commit -m 'fix: gerar PDF de usuários diretamente no gerenciamento [skip ci]'
+          git push
