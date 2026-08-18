@@ -190,7 +190,7 @@ export const StudentPasswordReset = () => {
         </div>
       </section>
 
-      <Modal open={!!selectedStudent} onClose={closeReset} title="Redefinir senha do aluno">
+      <Modal isOpen={!!selectedStudent} onClose={closeReset} title="Redefinir senha do aluno">
         <form onSubmit={handleReset} className="space-y-5">
           <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950">
             <p className="text-sm font-bold">{selectedStudent?.aluno_nome}</p>
