@@ -97,8 +97,54 @@ const loadImageAsDataUrl = async (url) => {
   return canvas.toDataURL('image/png');
 };
 
+const getTableCellRaw = (row, index) => {
+  if (Array.isArray(row?.raw)) return row.raw[index];
+  return row?.cells?.[index]?.raw ?? row?.cells?.[String(index)]?.raw ?? '';
+};
+
+const getReportFilename = (doc, originalFilename) => {
+  const filename = String(originalFilename || '');
+  const tableBody = Array.isArray(doc?.lastAutoTable?.body)
+    ? doc.lastAutoTable.body
+    : [];
+  const currentYear = new Date().getFullYear();
+
+  if (filename.startsWith('relatorio-alunos-')) {
+    const turmaNames = [...new Set(
+      tableBody
+        .map((row) => String(getTableCellRaw(row, 2) || '').trim())
+        .filter((turma) => turma && turma !== '—'),
+    )];
+
+    const turmaLabel = turmaNames.length === 1 ? turmaNames[0] : 'Todas as Turmas';
+    return `Relatório de Ocorrências - ${turmaLabel} - ${currentYear}.pdf`;
+  }
+
+  if (filename === 'usuarios.pdf') {
+    const schoolNames = [...new Set(
+      tableBody
+        .map((row) => String(getTableCellRaw(row, 3) || '').trim())
+        .filter((school) => school && school !== '—'),
+    )];
+
+    const schoolLabel = schoolNames.length === 1 ? schoolNames[0] : 'Todas as Escolas';
+    return `Relatório de Usuários - ${schoolLabel}.pdf`;
+  }
+
+  return filename;
+};
+
+const patchReportSaveFilename = (doc) => {
+  if (!doc || doc.__logviewReportSaveFilenamePatched || typeof doc.save !== 'function') return;
+
+  const originalSave = doc.save.bind(doc);
+  doc.save = (filename, options) => originalSave(getReportFilename(doc, filename), options);
+  doc.__logviewReportSaveFilenamePatched = true;
+};
+
 export const addPdfFooter = async (doc) => {
   patchPdfDisciplineLabels(doc);
+  patchReportSaveFilename(doc);
 
   const footerDataUrl = await loadImageAsDataUrl(topoMiniImg);
   if (!footerDataUrl) throw new Error('Imagem topo_mini.png não foi carregada.');
