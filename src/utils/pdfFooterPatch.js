@@ -1,4 +1,3 @@
-import { jsPDF } from 'jspdf';
 import topoMiniImg from '../assets/images/topo_mini.png';
 
 const PDF_FOOTER_HEIGHT = 18;
@@ -53,51 +52,6 @@ export const abbreviateDiscipline = (nome = '') => {
   const parts = source.map((word) => word.slice(0, 3));
   return parts.join('. ');
 };
-
-// Corrige o cabeçalho dos relatórios antigos que enviavam o nome da escola
-// com uma largura excessiva para o jsPDF. Nomes longos passam a ocupar uma
-// única linha dentro da área reservada, evitando que invadam o subtítulo.
-const patchSchoolNameHeader = () => {
-  if (jsPDF.API.__logviewSchoolNameHeaderPatched) return;
-
-  const originalText = jsPDF.API.text;
-
-  jsPDF.API.text = function patchedText(...args) {
-    const [text, x, y, options] = args;
-    const isReportSchoolName =
-      typeof text === 'string' &&
-      text.trim().length > 20 &&
-      Number.isFinite(x) &&
-      Number.isFinite(y) &&
-      y === 35 &&
-      x >= 90 &&
-      x <= 125 &&
-      options &&
-      typeof options === 'object' &&
-      options.maxWidth;
-
-    if (isReportSchoolName) {
-      const targetWidth = 250;
-      let fontSize = Math.min(this.getFontSize(), 12);
-
-      this.setFont('helvetica', 'bold');
-      this.setFontSize(fontSize);
-
-      while (fontSize > 8 && this.getTextWidth(text) > targetWidth) {
-        fontSize -= 0.5;
-        this.setFontSize(fontSize);
-      }
-
-      args[3] = { ...options, maxWidth: targetWidth };
-    }
-
-    return originalText.apply(this, args);
-  };
-
-  jsPDF.API.__logviewSchoolNameHeaderPatched = true;
-};
-
-patchSchoolNameHeader();
 
 const patchPdfDisciplineLabels = (doc) => {
   const pages = doc?.internal?.pages;
