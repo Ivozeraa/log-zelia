@@ -100,6 +100,20 @@ const copyToClipboard = async (text) => {
   }
 };
 
+const drawFittedPdfText = (doc, text, { x, y, maxWidth, fontSize, minFontSize = 8, align = "left" }) => {
+  const value = String(text || "");
+  let currentSize = fontSize;
+
+  doc.setFontSize(currentSize);
+  while (currentSize > minFontSize && doc.getTextWidth(value) > maxWidth) {
+    currentSize -= 0.5;
+    doc.setFontSize(currentSize);
+  }
+
+  doc.text(value, x, y, { align, maxWidth });
+  return currentSize;
+};
+
 export const StudentManagement = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -245,7 +259,6 @@ export const StudentManagement = () => {
     const schoolName = rows[0]?.escola || "Instituição de ensino";
     const reportTitle = "RELATÓRIO DE ALUNOS E OCORRÊNCIAS";
 
-    // Cabeçalho institucional no mesmo espírito dos PDFs de horários.
     doc.setFillColor(35, 146, 74);
     doc.rect(0, 0, pageWidth, 8, "F");
     doc.setDrawColor(226, 232, 240);
@@ -260,8 +273,13 @@ export const StudentManagement = () => {
 
     doc.setTextColor(15, 23, 42);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text(schoolName, margin + 70, 35, { maxWidth: pageWidth - margin * 2 - 70 });
+    drawFittedPdfText(doc, schoolName, {
+      x: margin + 70,
+      y: 35,
+      maxWidth: 225,
+      fontSize: 14,
+      minFontSize: 9,
+    });
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
@@ -270,9 +288,15 @@ export const StudentManagement = () => {
     doc.text(`Emitido em ${today}`, margin + 70, 69);
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
     doc.setTextColor(22, 101, 52);
-    doc.text(reportTitle, pageWidth - margin, 35, { align: "right" });
+    drawFittedPdfText(doc, reportTitle, {
+      x: pageWidth - margin,
+      y: 35,
+      maxWidth: 220,
+      fontSize: 13,
+      minFontSize: 10,
+      align: "right",
+    });
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
@@ -354,15 +378,27 @@ export const StudentManagement = () => {
           doc.setFont("helvetica", "bold");
           doc.setFontSize(9);
           doc.setTextColor(71, 85, 105);
-          doc.text(schoolName, margin, 28);
-          doc.text(reportTitle, pageWidth - margin, 28, { align: "right" });
+          drawFittedPdfText(doc, schoolName, {
+            x: margin,
+            y: 28,
+            maxWidth: 235,
+            fontSize: 9,
+            minFontSize: 7,
+          });
+          drawFittedPdfText(doc, reportTitle, {
+            x: pageWidth - margin,
+            y: 28,
+            maxWidth: 220,
+            fontSize: 9,
+            minFontSize: 7,
+            align: "right",
+          });
           doc.setDrawColor(226, 232, 240);
           doc.line(margin, 38, pageWidth - margin, 38);
         }
       },
     });
 
-    // Footer institucional compartilhado com os demais PDFs.
     await addPdfFooter(doc);
 
     doc.save(`relatorio-alunos-${new Date().toISOString().split("T")[0]}.pdf`);
@@ -739,7 +775,6 @@ export const StudentManagement = () => {
               : "Selecione a turma para baixar"}
           </Button>
         </div>
-        {/* Edit Aluno Modal */}
         <Modal
           isOpen={editModalOpen}
           onClose={() => {
@@ -804,7 +839,6 @@ export const StudentManagement = () => {
           )}
         </Modal>
 
-        {/* Delete Aluno Modal */}
         <Modal
           isOpen={deleteAlunoModalOpen}
           onClose={() => { setDeleteAlunoModalOpen(false); setAlunoToDelete(null); setDeleteAlunoConfirmText(""); }}
@@ -836,7 +870,6 @@ export const StudentManagement = () => {
           </div>
         </Modal>
 
-        {/* Delete Batch Modal */}
         <Modal
           isOpen={deleteModalOpen}
           onClose={() => { setDeleteModalOpen(false); setConfirmDeleteText(""); }}
@@ -867,7 +900,6 @@ export const StudentManagement = () => {
             </div>
           </div>
         </Modal>
-
       </div>
 
       <div className="space-y-4">
