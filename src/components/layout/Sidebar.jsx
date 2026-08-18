@@ -1,5 +1,5 @@
 import { SidebarOptions as So } from '../ui/SidebarOptions'
-import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn } from 'react-icons/fa'
+import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey } from 'react-icons/fa'
 import { useAuth } from '../../hooks/useAuth'
 import { SectionTitle } from '../ui/SectionTitle'
 
@@ -43,7 +43,10 @@ export const Sidebar = ({ open, setOpen }) => {
         )}
 
         {canSeeManagement && (
-          <So to="/app/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
+          <>
+            <So to="/app/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
+            <So to="/app/gestao/senhas-alunos" icon={FaKey} text="Senhas dos alunos" onClick={handleClick} />
+          </>
         )}
 
         {canManageAnnouncements && (
