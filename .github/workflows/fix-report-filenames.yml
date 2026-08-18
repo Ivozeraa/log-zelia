@@ -1,0 +1,69 @@
+name: Fix report filenames
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch filenames
+        shell: python
+        run: |
+          from pathlib import Path
+
+          student = Path("src/pages/StudentManagement.jsx")
+          text = student.read_text(encoding="utf-8")
+          old = '''    doc.save(`relatorio-alunos-${new Date().toISOString().split("T")[0]}.pdf`);'''
+          new = '''    const turmaNames = [
+      ...new Set(
+        rows
+          .map((row) => String(row.turma || "").trim())
+          .filter((turma) => turma && turma !== "—"),
+      ),
+    ];
+    const turmaLabel = turmaNames.length === 1 ? turmaNames[0] : "Todas as Turmas";
+    const reportYear = new Date().getFullYear();
+
+    doc.save(`Relatório de Ocorrências - ${turmaLabel} - ${reportYear}.pdf`);'''
+          if old not in text:
+              raise SystemExit("StudentManagement.jsx: trecho esperado não encontrado")
+          student.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          management = Path("src/pages/Management.jsx")
+          text = management.read_text(encoding="utf-8")
+          old = '''      doc.save("usuarios.pdf");'''
+          new = '''      const schoolNames = [
+        ...new Set(
+          filteredUsers
+            .map((u) => getSchoolName(u.escola_id))
+            .map((name) => String(name || "").trim())
+            .filter((name) => name && name !== "—"),
+        ),
+      ];
+      const schoolLabel = schoolNames.length === 1 ? schoolNames[0] : "Todas as Escolas";
+
+      doc.save(`Relatório de Usuários - ${schoolLabel}.pdf`);'''
+          if old not in text:
+              raise SystemExit("Management.jsx: trecho esperado não encontrado")
+          management.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          workflow = Path(".github/workflows/fix-report-filenames.yml")
+          workflow.unlink()
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/StudentManagement.jsx src/pages/Management.jsx .github/workflows/fix-report-filenames.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: restaurar nomes descritivos dos PDFs"
+          git push
