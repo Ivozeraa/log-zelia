@@ -8,6 +8,31 @@ import { useAuth } from "../../hooks/useAuth";
 const SEEN_PREFIX = "logview_announcement_seen_v1";
 const icons = { aviso: FaBell, novidade: FaRocket, atualizacao: FaSyncAlt };
 const labels = { aviso: "Aviso", novidade: "Novidade", atualizacao: "Atualização" };
+const ALLOWED_TAGS = new Set(["B", "STRONG", "I", "EM", "U", "BR", "P", "UL", "OL", "LI"]);
+
+const sanitizeRichText = (value) => {
+  if (!value || typeof document === "undefined") return value || "";
+  const doc = new DOMParser().parseFromString(value, "text/html");
+  const sanitizeNode = (node) => {
+    if (node.nodeType === Node.TEXT_NODE) return;
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      node.remove();
+      return;
+    }
+    if (!ALLOWED_TAGS.has(node.tagName)) {
+      const parent = node.parentNode;
+      if (parent) {
+        while (node.firstChild) parent.insertBefore(node.firstChild, node);
+        node.remove();
+      }
+      return;
+    }
+    Array.from(node.attributes).forEach((attribute) => node.removeAttribute(attribute.name));
+    Array.from(node.childNodes).forEach(sanitizeNode);
+  };
+  Array.from(doc.body.childNodes).forEach(sanitizeNode);
+  return doc.body.innerHTML;
+};
 
 export function AnnouncementPopup() {
   const { user, loading } = useAuth();
@@ -51,6 +76,7 @@ export function AnnouncementPopup() {
   if (!announcement || !user) return null;
 
   const Icon = icons[announcement.tipo] || FaBullhorn;
+  const contentHtml = sanitizeRichText(announcement.conteudo);
 
   const close = () => {
     const key = `${SEEN_PREFIX}_${user.id}`;
@@ -102,9 +128,10 @@ export function AnnouncementPopup() {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-6 sm:py-5">
-          <p className="whitespace-pre-wrap text-sm leading-6 text-slate-600 dark:text-slate-300 sm:text-[15px] sm:leading-7">
-            {announcement.conteudo}
-          </p>
+          <div
+            className="text-sm leading-6 text-slate-600 dark:text-slate-300 sm:text-[15px] sm:leading-7 [&_p]:m-0 [&_p+_p]:mt-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1"
+            dangerouslySetInnerHTML={{ __html: contentHtml }}
+          />
         </div>
 
         <div className="shrink-0 border-t border-slate-200 bg-white px-5 py-3 dark:border-slate-800 dark:bg-slate-950 sm:px-6">
