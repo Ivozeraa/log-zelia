@@ -1,1 +1,0 @@
-Role protection migration is applied in Supabase and tracked in the repository.
