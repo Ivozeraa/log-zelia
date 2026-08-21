@@ -9,7 +9,8 @@ export const useNotificacoes = () => {
 
   const naoLidas = notificacoes.filter((n) => !n.lida).length;
 
-  // Carrega notificações iniciais
+  // Carrega notificações iniciais. Notificações com usuario_id são privadas
+  // e ficam visíveis somente para o destinatário (ou para o administrador global).
   const carregar = useCallback(async () => {
     if (!user) return;
 
@@ -34,12 +35,13 @@ export const useNotificacoes = () => {
     carregar();
   }, [carregar]);
 
-  // Escuta inserções em tempo real
+  // Escuta inserções em tempo real. A RLS do banco garante que uma
+  // notificação destinada a um PDT não seja entregue a outro professor.
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
-      .channel("notificacoes-realtime")
+      .channel(`notificacoes-realtime-${user.id}`)
       .on(
         "postgres_changes",
         {
@@ -51,7 +53,22 @@ export const useNotificacoes = () => {
             : {}),
         },
         (payload) => {
-          setNotificacoes((prev) => [payload.new, ...prev]);
+          const notification = payload.new;
+
+          // Camada extra no cliente para manter a regra de destinatário
+          // mesmo caso a configuração de Realtime esteja mais permissiva.
+          if (
+            user.role_id !== 1 &&
+            notification.usuario_id &&
+            String(notification.usuario_id) !== String(user.id)
+          ) {
+            return;
+          }
+
+          setNotificacoes((prev) => {
+            if (prev.some((item) => item.id === notification.id)) return prev;
+            return [notification, ...prev].slice(0, 30);
+          });
         },
       )
       .subscribe();
