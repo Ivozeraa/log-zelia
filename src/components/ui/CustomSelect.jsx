@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useAuth } from "../../hooks/useAuth";
 
 export const CustomSelect = ({
   label,
@@ -14,6 +15,7 @@ export const CustomSelect = ({
   multiple = false,
   showSelectedValues = true,
 }) => {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [menuMinWidth, setMenuMinWidth] = useState(240);
@@ -22,11 +24,19 @@ export const CustomSelect = ({
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
 
+  const isGlobalAdmin = Number(user?.role_id) === 1;
+  const visibleOptions = useMemo(
+    () => (!isGlobalAdmin && label === "Função *"
+      ? options.filter((option) => Number(option.value) !== 1)
+      : options),
+    [isGlobalAdmin, label, options],
+  );
+
   useEffect(() => {
-    const labels = [placeholder, ...options.map((option) => option.label)];
+    const labels = [placeholder, ...visibleOptions.map((option) => option.label)];
     const maxLength = Math.max(0, ...labels.map((item) => String(item || "").length));
     setMenuMinWidth(Math.min(Math.max(240, Math.round(maxLength * 7.2 + 72)), 720));
-  }, [options, placeholder]);
+  }, [visibleOptions, placeholder]);
 
   useEffect(() => {
     const handlePointerDown = (event) => {
@@ -62,7 +72,7 @@ export const CustomSelect = ({
 
       const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - viewportPadding - gap);
       const spaceAbove = Math.max(0, rect.top - viewportPadding - gap);
-      const optionCount = Math.max(0, options.length - (multiple ? options.filter((option) => option.value === "").length : 0));
+      const optionCount = Math.max(0, visibleOptions.length - (multiple ? visibleOptions.filter((option) => option.value === "").length : 0));
       const estimatedContentHeight = Math.min(
         380,
         Math.max(48, optionCount * 44 + (showSearch ? 60 : 0) + (multiple ? 58 : 0)),
@@ -77,6 +87,7 @@ export const CustomSelect = ({
         ? Math.max(viewportPadding, rect.top - maxHeight - gap)
         : rect.bottom + gap;
 
+      void estimatedContentHeight;
       setMenuPosition({ top, left, width, maxHeight });
     };
 
@@ -88,7 +99,7 @@ export const CustomSelect = ({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [open, menuMinWidth, options, showSearch, multiple]);
+  }, [open, menuMinWidth, visibleOptions, showSearch, multiple]);
 
   const selectedValues = multiple ? (Array.isArray(value) ? value : []) : null;
 
@@ -96,11 +107,11 @@ export const CustomSelect = ({
     if (multiple) {
       if (!selectedValues?.length) return placeholder;
       if (selectedValues.length === 1) {
-        return options.find((option) => option.value === selectedValues[0])?.label ?? placeholder;
+        return visibleOptions.find((option) => option.value === selectedValues[0])?.label ?? placeholder;
       }
       return `${selectedValues.length} itens selecionados`;
     }
-    return options.find((option) => option.value === value)?.label ?? placeholder;
+    return visibleOptions.find((option) => option.value === value)?.label ?? placeholder;
   };
 
   const handleOptionClick = (optionValue) => {
@@ -121,12 +132,12 @@ export const CustomSelect = ({
   };
 
   const filteredOptions = showSearch
-    ? options.filter(
+    ? visibleOptions.filter(
         (option) =>
           option.value === "" ||
           option.label.toLowerCase().includes(searchTerm.toLowerCase()),
       )
-    : options;
+    : visibleOptions;
 
   const displayedOptions = multiple
     ? filteredOptions.filter((option) => option.value !== "")
@@ -135,6 +146,8 @@ export const CustomSelect = ({
   const searchHeight = showSearch ? 60 : 0;
   const footerHeight = multiple ? 58 : 0;
   const listMaxHeight = Math.max(120, menuPosition?.maxHeight - searchHeight - footerHeight || 120);
+
+  if (label === "Filtrar escola" && !isGlobalAdmin) return null;
 
   return (
     <div ref={rootRef} className={`relative flex flex-col gap-2 ${className}`}>
@@ -165,7 +178,7 @@ export const CustomSelect = ({
       {multiple && showSelectedValues && selectedValues?.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {selectedValues.map((valueItem) => {
-            const option = options.find((item) => item.value === valueItem);
+            const option = visibleOptions.find((item) => item.value === valueItem);
             return (
               <span
                 key={valueItem}
