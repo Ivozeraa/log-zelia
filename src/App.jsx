@@ -6,6 +6,7 @@ import { Login } from "./pages/Login";
 import { ToastProvider } from "./components/ui/ToastProvide";
 import { LegalAndFeedback } from "./components/ui/LegalAndFeedback";
 import { AnnouncementPopup } from "./components/ui/AnnouncementPopup";
+import "./utils/landingMotion";
 
 const Landing = lazy(() => import("./pages/Landing").then((module) => ({ default: module.Landing })));
 const StudentOccurrenceLookup = lazy(() => import("./pages/StudentOccurrenceLookup").then((module) => ({ default: module.StudentOccurrenceLookup })));
