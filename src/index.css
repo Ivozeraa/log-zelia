@@ -6,14 +6,24 @@
   --font-poppins: "Poppins", sans-serif;
   --font-montserrat: "Montserrat", sans-serif;
   --font-inter: "Inter", sans-serif;
+
+  --animate-landing-reveal: landing-reveal 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-:root {
-  color-scheme: light;
-  text-rendering: optimizeLegibility;
-  -webkit-text-size-adjust: 100%;
+@keyframes landing-reveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 48px, 0) scale(0.985);
+    filter: blur(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
 }
 
+:root { color-scheme: light; text-rendering: optimizeLegibility; -webkit-text-size-adjust: 100%; }
 html { min-width: 320px; overflow-x: hidden; scroll-behavior: smooth; }
 body { min-width: 320px; margin: 0; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
 *, *::before, *::after { box-sizing: border-box; }
@@ -29,23 +39,9 @@ main div.mb-6.grid.gap-2[class*="md:grid-cols-7"] > button {
   letter-spacing: -0.01em;
 }
 
-input, select, textarea {
-  background-color: #f8fafc !important;
-  border-color: #cbd5e1 !important;
-  color: #0f172a !important;
-  outline: none !important;
-  box-shadow: none !important;
-  min-width: 0;
-}
-input:focus, select:focus, textarea:focus {
-  border-color: #94a3b8 !important;
-  box-shadow: 0 0 0 3px rgb(148 163 184 / 0.14) !important;
-}
-.dark input, .dark select, .dark textarea {
-  background-color: #0f172a !important;
-  border-color: #374151 !important;
-  color: #f8fafc !important;
-}
+input, select, textarea { background-color: #f8fafc !important; border-color: #cbd5e1 !important; color: #0f172a !important; outline: none !important; box-shadow: none !important; min-width: 0; }
+input:focus, select:focus, textarea:focus { border-color: #94a3b8 !important; box-shadow: 0 0 0 3px rgb(148 163 184 / 0.14) !important; }
+.dark input, .dark select, .dark textarea { background-color: #0f172a !important; border-color: #374151 !important; color: #f8fafc !important; }
 select { -webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: none !important; }
 select option { background-color: #ffffff !important; color: #0f172a !important; }
 .dark select option { background-color: #0f172a !important; color: #f8fafc !important; }
@@ -60,35 +56,16 @@ select option:hover, select option:focus { background-color: #f1f5f9 !important;
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
 /* Avaliações da landing */
 #feedback { position: relative; overflow: hidden; }
-#feedback::before {
-  content: ""; position: absolute; top: -8rem; right: -8rem; width: 22rem; height: 22rem;
-  border-radius: 9999px; background: rgb(34 197 94 / 0.08); filter: blur(50px); pointer-events: none;
-}
-#feedback .space-y-3 > div {
-  position: relative; overflow: hidden; border-radius: 1.5rem !important; padding: 1.25rem 1.35rem !important;
-  border: 1px solid rgb(226 232 240) !important;
-  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%) !important;
-  box-shadow: 0 8px 25px rgb(15 23 42 / 0.06) !important;
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
-}
-#feedback .space-y-3 > div::before {
-  content: "“"; position: absolute; top: -0.2rem; right: 1rem; font-family: Georgia, serif; font-size: 5rem;
-  line-height: 1; font-weight: 900; color: rgb(22 163 74 / 0.10); pointer-events: none;
-}
+#feedback::before { content: ""; position: absolute; top: -8rem; right: -8rem; width: 22rem; height: 22rem; border-radius: 9999px; background: rgb(34 197 94 / 0.08); filter: blur(50px); pointer-events: none; }
+#feedback .space-y-3 > div { position: relative; overflow: hidden; border-radius: 1.5rem !important; padding: 1.25rem 1.35rem !important; border: 1px solid rgb(226 232 240) !important; background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%) !important; box-shadow: 0 8px 25px rgb(15 23 42 / 0.06) !important; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
+#feedback .space-y-3 > div::before { content: "“"; position: absolute; top: -0.2rem; right: 1rem; font-family: Georgia, serif; font-size: 5rem; line-height: 1; font-weight: 900; color: rgb(22 163 74 / 0.10); pointer-events: none; }
 #feedback .space-y-3 > div:hover { transform: translateY(-3px); border-color: rgb(134 239 172) !important; box-shadow: 0 16px 35px rgb(15 23 42 / 0.10) !important; }
-#feedback .space-y-3 > div .text-amber-400 {
-  display: inline-flex; align-items: center; gap: 0.18rem; padding: 0.35rem 0.55rem; border-radius: 9999px;
-  background: rgb(245 158 11 / 0.10); width: fit-content;
-}
+#feedback .space-y-3 > div .text-amber-400 { display: inline-flex; align-items: center; gap: 0.18rem; padding: 0.35rem 0.55rem; border-radius: 9999px; background: rgb(245 158 11 / 0.10); width: fit-content; }
 #feedback .space-y-3 > div p { position: relative; z-index: 1; }
 .dark #feedback .space-y-3 > div { border-color: rgb(51 65 85) !important; background: linear-gradient(145deg, #0f172a 0%, #111827 100%) !important; box-shadow: 0 10px 30px rgb(0 0 0 / 0.18) !important; }
 .dark #feedback .space-y-3 > div:hover { border-color: rgb(34 197 94 / 0.55) !important; box-shadow: 0 18px 38px rgb(0 0 0 / 0.25) !important; }
@@ -98,44 +75,44 @@ select option:hover, select option:focus { background-color: #f1f5f9 !important;
   #feedback .space-y-3 > div { padding: 1.1rem !important; border-radius: 1.25rem !important; }
 }
 
-/* Landing: elementos aparecem conforme entram na viewport. */
+/*
+ * Landing motion usando a animação registrada no Tailwind v4.
+ * O View Timeline faz a animação acompanhar a entrada do elemento na viewport.
+ * Os seletores apontam diretamente para os blocos reais da Landing.jsx.
+ */
 @supports (animation-timeline: view()) {
-  @keyframes logzelia-reveal {
-    from { opacity: 0; transform: translateY(42px) scale(0.985); filter: blur(4px); }
-    to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  #recursos > div,
+  #como-funciona > div,
+  #portal > div,
+  #feedback > div,
+  main > section:last-of-type > div {
+    animation: var(--animate-landing-reveal);
+    animation-timeline: view(block);
+    animation-range: entry 5% cover 35%;
   }
 
-  main.min-h-screen.overflow-x-hidden > section > div,
-  main.min-h-screen.overflow-x-hidden > section > div > div,
-  main.min-h-screen.overflow-x-hidden > section > div > article {
-    animation-name: logzelia-reveal;
-    animation-duration: 1ms;
-    animation-fill-mode: both;
-    animation-timing-function: ease-out;
-    animation-timeline: view();
-    animation-range: entry 0% cover 34%;
+  #recursos .grid > article,
+  #como-funciona .space-y-3 > div,
+  #portal .grid > div,
+  #feedback .space-y-3 > div {
+    animation: var(--animate-landing-reveal);
+    animation-timeline: view(block);
+    animation-range: entry 0% cover 28%;
   }
 
-  /* Hero entra na abertura, enquanto o restante acompanha a rolagem. */
-  main.min-h-screen.overflow-x-hidden > section#inicio > div > div {
-    animation-timeline: auto;
-    animation-duration: 700ms;
-    animation-delay: 80ms;
-    animation-iteration-count: 1;
-  }
-
-  #recursos .grid > article:nth-child(1), #como-funciona .space-y-3 > div:nth-child(1), #portal .grid > div:nth-child(1), #feedback .space-y-3 > div:nth-child(1) { animation-delay: 0ms; }
-  #recursos .grid > article:nth-child(2), #como-funciona .space-y-3 > div:nth-child(2), #portal .grid > div:nth-child(2), #feedback .space-y-3 > div:nth-child(2) { animation-delay: 70ms; }
-  #recursos .grid > article:nth-child(3), #como-funciona .space-y-3 > div:nth-child(3), #portal .grid > div:nth-child(3), #feedback .space-y-3 > div:nth-child(3) { animation-delay: 140ms; }
-  #recursos .grid > article:nth-child(4), #feedback .space-y-3 > div:nth-child(4) { animation-delay: 210ms; }
-  #recursos .grid > article:nth-child(5) { animation-delay: 280ms; }
-  #recursos .grid > article:nth-child(6) { animation-delay: 350ms; }
+  #recursos .grid > article:nth-child(2), #como-funciona .space-y-3 > div:nth-child(2), #portal .grid > div:nth-child(2), #feedback .space-y-3 > div:nth-child(2) { animation-delay: 80ms; }
+  #recursos .grid > article:nth-child(3), #como-funciona .space-y-3 > div:nth-child(3), #portal .grid > div:nth-child(3), #feedback .space-y-3 > div:nth-child(3) { animation-delay: 160ms; }
+  #recursos .grid > article:nth-child(4), #feedback .space-y-3 > div:nth-child(4) { animation-delay: 240ms; }
+  #recursos .grid > article:nth-child(5) { animation-delay: 320ms; }
+  #recursos .grid > article:nth-child(6) { animation-delay: 400ms; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  main.min-h-screen.overflow-x-hidden > section > div,
-  main.min-h-screen.overflow-x-hidden > section > div > div,
-  main.min-h-screen.overflow-x-hidden > section > div > article {
-    animation: none !important; opacity: 1 !important; transform: none !important; filter: none !important;
+  #recursos > div, #como-funciona > div, #portal > div, #feedback > div, main > section:last-of-type > div,
+  #recursos .grid > article, #como-funciona .space-y-3 > div, #portal .grid > div, #feedback .space-y-3 > div {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
   }
 }
