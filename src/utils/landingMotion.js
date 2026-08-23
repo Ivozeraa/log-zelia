@@ -11,14 +11,7 @@ const SELECTORS = [
 ];
 
 const READY_ATTRIBUTE = 'data-landing-motion-ready';
-const FALLBACK_STYLES = {
-  opacity: '0',
-  transform: 'translate3d(0, 40px, 0) scale(0.985)',
-};
-const VISIBLE_STYLES = {
-  opacity: '1',
-  transform: 'translate3d(0, 0, 0) scale(1)',
-};
+const TRANSITION = 'opacity 700ms cubic-bezier(0.22, 1, 0.36, 1), transform 700ms cubic-bezier(0.22, 1, 0.36, 1)';
 
 const getElements = () => [
   ...new Set(SELECTORS.flatMap((selector) => [...document.querySelectorAll(selector)])),
@@ -31,15 +24,17 @@ const prepareElement = (element) => {
 
   element.setAttribute(READY_ATTRIBUTE, 'true');
   element.classList.add('landing-reveal');
-
-  Object.assign(element.style, FALLBACK_STYLES);
+  element.style.transition = TRANSITION;
+  element.style.willChange = 'opacity, transform';
+  element.style.opacity = '0';
+  element.style.transform = 'translate3d(0, 40px, 0) scale(0.985)';
 };
 
 const revealElement = (element) => {
-  // Force the browser to commit the initial state before switching to the final state.
+  // Force a layout pass so the browser cannot collapse the initial and final states.
   void element.offsetHeight;
-
-  Object.assign(element.style, VISIBLE_STYLES);
+  element.style.opacity = '1';
+  element.style.transform = 'translate3d(0, 0, 0) scale(1)';
   element.classList.add('landing-reveal-visible');
 };
 
@@ -60,11 +55,11 @@ const enhance = () => {
   }
 
   if (!observer) {
-    observer = new IntersectionObserver((entries) => {
+    observer = new IntersectionObserver((entries, currentObserver) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
         revealElement(entry.target);
-        observer.unobserve(entry.target);
+        currentObserver.unobserve(entry.target);
       });
     }, {
       threshold: 0.08,
