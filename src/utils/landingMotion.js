@@ -10,51 +10,82 @@ const SELECTORS = [
   '#feedback .space-y-3 > div',
 ];
 
-const REVEAL = 'landing-reveal';
-const VISIBLE = 'landing-reveal-visible';
+const READY_ATTRIBUTE = 'data-landing-motion-ready';
+const FALLBACK_STYLES = {
+  opacity: '0',
+  transform: 'translate3d(0, 40px, 0) scale(0.985)',
+};
+const VISIBLE_STYLES = {
+  opacity: '1',
+  transform: 'translate3d(0, 0, 0) scale(1)',
+};
 
-function enhance() {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+const getElements = () => [
+  ...new Set(SELECTORS.flatMap((selector) => [...document.querySelectorAll(selector)])),
+];
 
-  const elements = [...new Set(SELECTORS.flatMap((selector) => [...document.querySelectorAll(selector)]))];
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const prepareElement = (element) => {
+  if (element.hasAttribute(READY_ATTRIBUTE)) return;
+
+  element.setAttribute(READY_ATTRIBUTE, 'true');
+  element.classList.add('landing-reveal');
+
+  Object.assign(element.style, FALLBACK_STYLES);
+};
+
+const revealElement = (element) => {
+  // Force the browser to commit the initial state before switching to the final state.
+  void element.offsetHeight;
+
+  Object.assign(element.style, VISIBLE_STYLES);
+  element.classList.add('landing-reveal-visible');
+};
+
+let observer = null;
+let rafId = null;
+
+const enhance = () => {
+  if (reducedMotion()) return;
+
+  const elements = getElements();
   if (!elements.length) return;
 
-  elements.forEach((element) => {
-    if (element.dataset.motionReady === 'true') return;
-    element.dataset.motionReady = 'true';
-    element.classList.add(REVEAL);
-    element.classList.add('translate-y-8', 'opacity-0', 'scale-[0.985]');
-    element.classList.add('transition-all', 'duration-700', 'ease-out', 'will-change-transform');
-  });
+  elements.forEach(prepareElement);
 
   if (!('IntersectionObserver' in window)) {
-    elements.forEach((element) => element.classList.add(VISIBLE, 'translate-y-0', 'opacity-100', 'scale-100'));
+    elements.forEach(revealElement);
     return;
   }
 
-  const observer = new IntersectionObserver((entries, currentObserver) => {
-    entries.forEach((entry) => {
-      if (!entry.isIntersecting) return;
-      entry.target.classList.remove('translate-y-8', 'opacity-0', 'scale-[0.985]');
-      entry.target.classList.add(VISIBLE, 'translate-y-0', 'opacity-100', 'scale-100');
-      currentObserver.unobserve(entry.target);
+  if (!observer) {
+    observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        revealElement(entry.target);
+        observer.unobserve(entry.target);
+      });
+    }, {
+      threshold: 0.08,
+      rootMargin: '0px 0px -10% 0px',
     });
-  }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+  }
 
   elements.forEach((element) => observer.observe(element));
-}
+};
 
-let scheduled = false;
 const scheduleEnhance = () => {
-  if (scheduled) return;
-  scheduled = true;
-  requestAnimationFrame(() => {
-    scheduled = false;
+  if (rafId !== null) return;
+
+  rafId = window.requestAnimationFrame(() => {
+    rafId = null;
     enhance();
   });
 };
 
 enhance();
 window.addEventListener('load', scheduleEnhance, { once: true });
+
 const mutationObserver = new MutationObserver(scheduleEnhance);
 mutationObserver.observe(document.body, { childList: true, subtree: true });
