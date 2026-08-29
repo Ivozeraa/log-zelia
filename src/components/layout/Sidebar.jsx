@@ -1,7 +1,6 @@
 import { SidebarOptions as So } from '../ui/SidebarOptions'
-import { FaHome, FaExclamationCircle, FaPaste, FaCog } from 'react-icons/fa'
+import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey } from 'react-icons/fa'
 import { useAuth } from '../../hooks/useAuth'
-
 import { SectionTitle } from '../ui/SectionTitle'
 
 export const Sidebar = ({ open, setOpen }) => {
@@ -14,22 +13,21 @@ export const Sidebar = ({ open, setOpen }) => {
   }
 
   const canSeeManagement = [1, 2, 3].includes(user?.role_id)
+  const canManageAnnouncements = Number(user?.role_id) === 1
+  const canSeeSchedules = Number(user?.role_id) !== 4
 
   return (
     <>
       <div
         onClick={() => setOpen(false)}
-        className={`fixed inset-0 bg-black/50 z-990 md:hidden ${open ? "block" : "hidden"
-          }`}
+        className={`fixed inset-0 bg-black/50 z-990 md:hidden ${open ? 'block' : 'hidden'}`}
       />
 
       <aside
         className={`
-          fixed top-0 left-0 h-full w-64 bg-white dark:bg-slate-950 border-r-2 border-gray-300 dark:border-slate-700 p-6 gap-5 flex flex-col z-1000
+          fixed top-0 left-0 h-full w-64 bg-white dark:bg-slate-950 border-r-2 border-gray-300 dark:border-slate-700 p-6 pb-4 gap-5 flex flex-col z-1000
           transform transition-transform duration-300
-
-          ${open ? "translate-x-0" : "-translate-x-full"}
-
+          ${open ? 'translate-x-0' : '-translate-x-full'}
           md:translate-x-0 md:top-16 md:h-[calc(100vh-4rem)]
         `}
       >
@@ -37,15 +35,28 @@ export const Sidebar = ({ open, setOpen }) => {
           <SectionTitle text="Menu" />
         </div>
 
-        <So to="/" icon={FaHome} text="Início" onClick={handleClick} />
-        <So to="/advertencias" icon={FaExclamationCircle} text="Advertências" onClick={handleClick} />
+        <So to="/app" end icon={FaHome} text="Início" onClick={handleClick} />
+        <So to="/app/advertencias" icon={FaExclamationCircle} text="Advertências" onClick={handleClick} />
 
-        {canSeeManagement && (
-          <So to="/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
+        {canSeeSchedules && (
+          <So to="/app/horarios" icon={FaCalendarAlt} text="Horários" onClick={handleClick} />
         )}
 
-        <div className="mt-auto">
-          <So to="/configuracoes" icon={FaCog} text="Configurações" onClick={handleClick} />
+        {canSeeManagement && (
+          <>
+            <So to="/app/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
+            <So to="/app/gestao/senhas-alunos" icon={FaKey} text="Senhas dos alunos" onClick={handleClick} />
+          </>
+        )}
+
+        {canManageAnnouncements && (
+          <So to="/app/avisos" icon={FaBullhorn} text="Avisos" onClick={handleClick} />
+        )}
+
+        <So to="/app/suporte" icon={FaWrench} text="Suporte" onClick={handleClick} />
+
+        <div className="mt-auto border-t-2 border-gray-300 dark:border-slate-700 pt-4">
+          <So to="/app/configuracoes" icon={FaCog} text="Configurações" onClick={handleClick} />
         </div>
       </aside>
     </>

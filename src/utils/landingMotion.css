@@ -1,0 +1,25 @@
+/* O reveal é dirigido pelo IntersectionObserver. Desliga apenas a tentativa anterior
+   baseada em View Timeline para evitar que as duas animações disputem opacity/transform. */
+@supports (animation-timeline: view()) {
+  #recursos > div,
+  #como-funciona > div,
+  #portal > div,
+  #feedback > div,
+  main > section:last-of-type > div,
+  #recursos .grid > article,
+  #como-funciona .space-y-3 > div,
+  #portal .grid > div,
+  #feedback .space-y-3 > div {
+    animation: none !important;
+    animation-timeline: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    transition: none !important;
+  }
+}

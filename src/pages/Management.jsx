@@ -13,9 +13,9 @@ import autoTable from "jspdf-autotable";
 
 import { PageTitle } from "../components/ui/PageTitle";
 import { FormInput } from "../components/ui/FormInput";
-import { FormSelect } from "../components/ui/FormSelect";
 import { Card } from "../components/ui/Card";
 import { Table } from "../components/ui/Table";
+import { Pagination } from "../components/ui/Pagination";
 
 const ROLES = [
   { id: 1, label: "Super Admin" },
@@ -523,13 +523,10 @@ export const Management = () => {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-semibold text-slate-700">
-            Buscar usuário
-          </label>
-          <input
-            type="text"
+          <FormInput
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            label="Buscar usuário"
             placeholder="Nome ou e-mail"
             className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
           />
@@ -566,40 +563,11 @@ export const Management = () => {
 
       <Table columns={columns} data={paginatedUsers} loading={loading} />
 
-      {totalPages > 1 && (
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="xs"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-          >
-            ←
-          </Button>
-
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <Button
-              key={page}
-              size="xs"
-              variant={currentPage === page ? "default" : "outline"}
-              onClick={() => setCurrentPage(page)}
-            >
-              {page}
-            </Button>
-          ))}
-
-          <Button
-            variant="outline"
-            size="xs"
-            disabled={currentPage === totalPages}
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-            }
-          >
-            →
-          </Button>
-        </div>
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
 
       <Modal
         isOpen={addModalOpen}
@@ -609,39 +577,38 @@ export const Management = () => {
         <div className="flex flex-col gap-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Nome *</label>
-              <input
-                type="text"
+              <FormInput
+                label="Nome *"
                 value={addForm.nome}
                 onChange={(e) =>
                   setAddForm((f) => ({ ...f, nome: e.target.value }))
                 }
-                className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
                 placeholder="Nome completo"
+                className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">E-mail *</label>
-              <input
+              <FormInput
                 type="email"
+                label="E-mail *"
                 value={addForm.email}
                 onChange={(e) =>
                   setAddForm((f) => ({ ...f, email: e.target.value }))
                 }
-                className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
                 placeholder="email@exemplo.com"
+                className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Senha *</label>
-              <input
+              <FormInput
                 type="password"
+                label="Senha *"
                 value={addForm.password}
                 onChange={(e) =>
                   setAddForm((f) => ({ ...f, password: e.target.value }))
                 }
-                className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
                 placeholder="Senha inicial"
+                className="h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
               />
             </div>
             <CustomSelect
@@ -673,7 +640,7 @@ export const Management = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <input
+            <FormInput
               type="checkbox"
               checked={addForm.pdt}
               onChange={(e) =>
@@ -714,9 +681,8 @@ export const Management = () => {
           <div className="flex flex-col gap-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium">Nome *</label>
-                <input
-                  type="text"
+                <FormInput
+                  label="Nome *"
                   value={editForm.nome || ""}
                   onChange={(e) =>
                     setEditForm((f) => ({ ...f, nome: e.target.value }))
@@ -725,9 +691,9 @@ export const Management = () => {
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium">E-mail *</label>
-                <input
+                <FormInput
                   type="email"
+                  label="E-mail *"
                   value={editForm.email || ""}
                   onChange={(e) =>
                     setEditForm((f) => ({ ...f, email: e.target.value }))
@@ -764,7 +730,7 @@ export const Management = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <input
+              <FormInput
                 type="checkbox"
                 checked={editForm.pdt}
                 onChange={(e) =>
@@ -956,7 +922,7 @@ export const Management = () => {
             <label className="text-sm font-medium">
               Confirme com sua senha
             </label>
-            <input
+            <FormInput
               type="password"
               value={deleteConfirmSenha}
               onChange={(e) => setDeleteConfirmSenha(e.target.value)}

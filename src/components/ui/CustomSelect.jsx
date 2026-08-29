@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useAuth } from "../../hooks/useAuth";
 
 export const CustomSelect = ({
   label,
@@ -10,85 +12,276 @@ export const CustomSelect = ({
   className = "",
   emptyLabel = "Nenhum item encontrado",
   showSearch = false,
+  multiple = false,
+  showSelectedValues = true,
 }) => {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [menuMinWidth, setMenuMinWidth] = useState(240);
+  const [menuPosition, setMenuPosition] = useState(null);
   const rootRef = useRef(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  const isGlobalAdmin = Number(user?.role_id) === 1;
+  const visibleOptions = useMemo(
+    () => (!isGlobalAdmin && label === "Função *"
+      ? options.filter((option) => Number(option.value) !== 1)
+      : options),
+    [isGlobalAdmin, label, options],
+  );
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (rootRef.current && !rootRef.current.contains(event.target)) {
-        setOpen(false);
+    const labels = [placeholder, ...visibleOptions.map((option) => option.label)];
+    const maxLength = Math.max(0, ...labels.map((item) => String(item || "").length));
+    setMenuMinWidth(Math.min(Math.max(240, Math.round(maxLength * 7.2 + 72)), 720));
+  }, [visibleOptions, placeholder]);
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (
+        rootRef.current?.contains(event.target) ||
+        menuRef.current?.contains(event.target)
+      ) {
+        return;
       }
+      setOpen(false);
+      setSearchTerm("");
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
 
-  const selectedOption = options.find((option) => option.value === value);
+  useEffect(() => {
+    if (!open || !triggerRef.current) return undefined;
+
+    const updatePosition = () => {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const viewportPadding = 12;
+      const gap = 8;
+      const width = Math.min(
+        Math.max(rect.width, menuMinWidth),
+        window.innerWidth - viewportPadding * 2,
+      );
+      const left = Math.max(
+        viewportPadding,
+        Math.min(rect.left, window.innerWidth - width - viewportPadding),
+      );
+
+      const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - viewportPadding - gap);
+      const spaceAbove = Math.max(0, rect.top - viewportPadding - gap);
+      const optionCount = Math.max(0, visibleOptions.length - (multiple ? visibleOptions.filter((option) => option.value === "").length : 0));
+      const estimatedContentHeight = Math.min(
+        380,
+        Math.max(48, optionCount * 44 + (showSearch ? 60 : 0) + (multiple ? 58 : 0)),
+      );
+      const minimumSpaceBelow = 120;
+      const canOpenBelow = spaceBelow >= minimumSpaceBelow;
+      const openAbove = !canOpenBelow && spaceAbove > spaceBelow;
+      const maxHeight = openAbove
+        ? Math.max(120, Math.min(380, spaceAbove))
+        : Math.max(120, Math.min(380, spaceBelow));
+      const top = openAbove
+        ? Math.max(viewportPadding, rect.top - maxHeight - gap)
+        : rect.bottom + gap;
+
+      void estimatedContentHeight;
+      setMenuPosition({ top, left, width, maxHeight });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, menuMinWidth, visibleOptions, showSearch, multiple]);
+
+  const selectedValues = multiple ? (Array.isArray(value) ? value : []) : null;
+
+  const getDisplayLabel = () => {
+    if (multiple) {
+      if (!selectedValues?.length) return placeholder;
+      if (selectedValues.length === 1) {
+        return visibleOptions.find((option) => option.value === selectedValues[0])?.label ?? placeholder;
+      }
+      return `${selectedValues.length} itens selecionados`;
+    }
+    return visibleOptions.find((option) => option.value === value)?.label ?? placeholder;
+  };
+
+  const handleOptionClick = (optionValue) => {
+    if (multiple) {
+      if (optionValue === "") return;
+      const current = Array.isArray(value) ? value : [];
+      onChange(
+        current.includes(optionValue)
+          ? current.filter((item) => item !== optionValue)
+          : [...current, optionValue],
+      );
+      return;
+    }
+
+    onChange(optionValue);
+    setOpen(false);
+    setSearchTerm("");
+  };
 
   const filteredOptions = showSearch
-    ? options.filter((option) =>
-        option.value === "" || option.label.toLowerCase().includes(searchTerm.toLowerCase())
+    ? visibleOptions.filter(
+        (option) =>
+          option.value === "" ||
+          option.label.toLowerCase().includes(searchTerm.toLowerCase()),
       )
-    : options;
+    : visibleOptions;
+
+  const displayedOptions = multiple
+    ? filteredOptions.filter((option) => option.value !== "")
+    : filteredOptions;
+
+  const searchHeight = showSearch ? 60 : 0;
+  const footerHeight = multiple ? 58 : 0;
+  const listMaxHeight = Math.max(120, menuPosition?.maxHeight - searchHeight - footerHeight || 120);
+
+  if (label === "Filtrar escola" && !isGlobalAdmin) return null;
 
   return (
-    <div className={`relative flex flex-col gap-2 ${className}`} ref={rootRef}>
+    <div ref={rootRef} className={`relative flex flex-col gap-2 ${className}`}>
       {label && (
-        <label className="text-sm font-semibold text-slate-700">{label}</label>
+        <label className="text-sm font-semibold text-slate-700 dark:text-slate-400">
+          {label}
+        </label>
       )}
+
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         onClick={() => {
-          setOpen((prev) => !prev);
-          if (open) setSearchTerm("");
+          if (!open) setSearchTerm("");
+          setOpen((previous) => !previous);
         }}
-        className={`flex h-12 w-full items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0 ${disabled ? "cursor-not-allowed bg-slate-100 text-slate-400" : ""
-          }`}
+        className={`flex h-12 w-full items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white ${
+          disabled ? "cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-slate-800" : ""
+        }`}
       >
         <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-          {selectedOption ? selectedOption.label : placeholder}
+          {getDisplayLabel()}
         </span>
-        <span className="text-slate-500">▾</span>
+        <span className="ml-2 shrink-0 text-slate-500">▾</span>
       </button>
 
-      {open && !disabled && (
-        <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
+      {multiple && showSelectedValues && selectedValues?.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {selectedValues.map((valueItem) => {
+            const option = visibleOptions.find((item) => item.value === valueItem);
+            return (
+              <span
+                key={valueItem}
+                className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800"
+              >
+                {option?.label ?? valueItem}
+                <button
+                  type="button"
+                  onClick={() => handleOptionClick(valueItem)}
+                  className="ml-0.5 text-green-600 hover:text-green-900"
+                  aria-label={`Remover ${option?.label}`}
+                >
+                  ×
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {open && !disabled && menuPosition && typeof document !== "undefined" && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[10050] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+          style={{
+            top: menuPosition.top,
+            left: menuPosition.left,
+            width: menuPosition.width,
+            maxHeight: menuPosition.maxHeight,
+          }}
+          onMouseDown={(event) => event.stopPropagation()}
+          onWheel={(event) => event.stopPropagation()}
+        >
           {showSearch && (
-            <div className="sticky top-0 border-b border-slate-200 bg-white p-2">
+            <div className="border-b border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
               <input
+                autoFocus
                 type="text"
                 placeholder="Pesquisar..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none focus:border-slate-400 focus:ring-0"
+                onChange={(event) => setSearchTerm(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
               />
             </div>
           )}
-          {filteredOptions.length > 0 ? (
-            filteredOptions.map((option) => (
+
+          <div
+            className="overflow-y-auto overscroll-contain"
+            style={{
+              maxHeight: listMaxHeight,
+              WebkitOverflowScrolling: "touch",
+              scrollbarGutter: displayedOptions.length > 8 ? "stable" : "auto",
+              touchAction: "pan-y",
+            }}
+          >
+            {displayedOptions.length > 0 ? (
+              displayedOptions.map((option) => {
+                const isSelected = multiple && selectedValues?.includes(option.value);
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleOptionClick(option.value)}
+                    className={`flex w-full items-center gap-2 px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100 dark:text-white dark:hover:bg-slate-800 ${
+                      isSelected ? "bg-green-50 dark:bg-green-950" : ""
+                    }`}
+                  >
+                    {multiple && (
+                      <span
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                          isSelected
+                            ? "border-green-600 bg-green-600 text-white"
+                            : "border-slate-300"
+                        }`}
+                      >
+                        {isSelected && "✓"}
+                      </span>
+                    )}
+                    <span className="min-w-0 truncate">{option.label}</span>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="px-3 py-3 text-sm text-slate-500">{emptyLabel}</div>
+            )}
+          </div>
+
+          {multiple && (
+            <div className="border-t border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
               <button
-                key={option.value}
                 type="button"
                 onClick={() => {
-                  onChange(option.value);
                   setOpen(false);
                   setSearchTerm("");
                 }}
-                className="w-full px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100"
+                className="w-full rounded-xl bg-green-700 py-2 text-sm font-semibold text-white transition hover:bg-green-800"
               >
-                {option.label}
+                Confirmar
               </button>
-            ))
-          ) : (
-            <div className="px-3 py-3 text-sm text-slate-500">{emptyLabel}</div>
+            </div>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

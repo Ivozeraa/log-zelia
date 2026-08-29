@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /consultar-ocorrencias
+Disallow: /login
+Disallow: /app
+Disallow: /advertencias
+Disallow: /gestao
+Disallow: /configuracoes
+Disallow: /editar-perfil
+Disallow: /suporte
+Disallow: /feedback
+
+Sitemap: https://log-zelia.vercel.app/sitemap.xml

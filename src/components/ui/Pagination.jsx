@@ -29,7 +29,7 @@ export const Pagination = ({
           rounded-full
           border
           border-slate-300
-          bg-white
+          bg-slate-500
           text-slate-700
           hover:bg-green-50
           dark:border-slate-700
@@ -58,7 +58,7 @@ export const Pagination = ({
                 rounded-full
                 border
                 border-slate-300
-                bg-white
+                bg-slate-500
                 text-slate-700
                 hover:bg-green-50
                 dark:border-slate-700
@@ -81,7 +81,7 @@ export const Pagination = ({
           rounded-full
           border
           border-slate-300
-          bg-white
+          bg-slate-500
           text-slate-700
           hover:bg-green-50
           dark:border-slate-700
