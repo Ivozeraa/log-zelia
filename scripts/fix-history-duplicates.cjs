@@ -93,7 +93,7 @@ const newOrder = `const ordenarESinalizarSuspensoes = (lista) => {
       return {
         ...occ,
         descricao: origem
-          ? `O aluno atingiu ${ocorrenciasAteOrigem || 3} ocorrências. Motivo do professor: ${motivo}.`
+          ? \`O aluno atingiu \${ocorrenciasAteOrigem || 3} ocorrências. Motivo do professor: \${motivo}.\`
           : occ.descricao || "Suspensão registrada.",
         professor_nome: professor,
         suspensaoGerada: { numero: numeroSuspensao, origem: "aplicada" },
