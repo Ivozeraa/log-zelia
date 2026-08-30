@@ -1,0 +1,35 @@
+name: Fix discipline marker regex
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-discipline-marker-regex.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use regex marker
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess
+          p = Path('scripts/apply-discipline-refinement.cjs')
+          t = p.read_text(encoding='utf-8')
+          old = "const marker = '    </Modal>\\n  );\\n}';"
+          new = "const marker = /\\n[ ]{4}</Modal>\\n[ ]{2}\\);\\n}\\s*$/;"
+          if old not in t:
+              raise SystemExit('Marcador literal não encontrado')
+          p.write_text(t.replace(old, new, 1), encoding='utf-8')
+          wf = Path('.github/workflows/fix-discipline-marker-regex.yml')
+          subprocess.run(['git','config','user.name','github-actions[bot]'],check=True)
+          subprocess.run(['git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com'],check=True)
+          subprocess.run(['git','add','scripts/apply-discipline-refinement.cjs'],check=True)
+          wf.unlink(missing_ok=True)
+          subprocess.run(['git','add','-u','.github/workflows/fix-discipline-marker-regex.yml'],check=True)
+          subprocess.run(['git','commit','-m','fix: tornar marcador do popup resiliente'],check=True)
+          subprocess.run(['git','push'],check=True)
