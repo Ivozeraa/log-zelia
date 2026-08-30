@@ -1,0 +1,39 @@
+name: Fix discipline patch line
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-discipline-line.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rewrite marker line
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess
+          p = Path('scripts/apply-discipline-refinement.cjs')
+          lines = p.read_text(encoding='utf-8').splitlines()
+          changed = False
+          for i, line in enumerate(lines):
+              if 'const marker =' in line and 'Fim do popup não encontrado' not in line:
+                  lines[i] = "    const marker = '\\n    </Modal>\\n  );\\n}';"
+                  changed = True
+                  break
+          if not changed:
+              raise SystemExit('marker line not found')
+          p.write_text('\\n'.join(lines) + '\\n', encoding='utf-8')
+          wf = Path('.github/workflows/fix-discipline-line.yml')
+          subprocess.run(['git','config','user.name','github-actions[bot]'],check=True)
+          subprocess.run(['git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com'],check=True)
+          subprocess.run(['git','add','scripts/apply-discipline-refinement.cjs'],check=True)
+          wf.unlink(missing_ok=True)
+          subprocess.run(['git','add','-u','.github/workflows/fix-discipline-line.yml'],check=True)
+          subprocess.run(['git','commit','-m','fix: normalizar marcador do popup disciplinar'],check=True)
+          subprocess.run(['git','push'],check=True)
