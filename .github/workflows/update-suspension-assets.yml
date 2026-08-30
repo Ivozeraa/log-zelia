@@ -1,0 +1,54 @@
+name: Update suspension image assets
+
+on:
+  push:
+    paths:
+      - '.github/workflows/update-suspension-assets.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update suspension image assets
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          import subprocess
+
+          path = Path('src/components/ui/SuspensionDecisionPopup.jsx')
+          text = path.read_text(encoding='utf-8')
+
+          text = text.replace(
+              'import logo from "../../assets/images/logo.png";\n',
+              'import logoLogin from "../../assets/images/logo-login.png";\nimport topoMini from "../../assets/images/topo_mini.png";\n'
+          )
+
+          text = text.replace('image.src = logo;', 'image.src = logoLogin;')
+
+          old_footer = '''    ctx.fillStyle = "#166534";\n    ctx.fillRect(0, 930, 470, 50);\n    ctx.fillStyle = "#0f766e";\n    ctx.fillRect(470, 930, 470, 50);\n    ctx.fillStyle = "#f59e0b";\n    ctx.fillRect(940, 930, 460, 50);'''
+
+          new_footer = '''    try {\n      const footerImage = new Image();\n      footerImage.crossOrigin = "anonymous";\n      footerImage.src = topoMini;\n      await new Promise((resolve) => {\n        footerImage.onload = resolve;\n        footerImage.onerror = resolve;\n      });\n      if (footerImage.naturalWidth) {\n        ctx.drawImage(footerImage, 0, 900, 1400, 80);\n      }\n    } catch {}'''
+
+          if old_footer in text:
+              text = text.replace(old_footer, new_footer, 1)
+
+          path.write_text(text, encoding='utf-8')
+
+          workflow = Path('.github/workflows/update-suspension-assets.yml')
+          subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
+          subprocess.run(['git', 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'], check=True)
+          subprocess.run(['git', 'add', 'src/components/ui/SuspensionDecisionPopup.jsx'], check=True)
+          result = subprocess.run(['git', 'diff', '--cached', '--quiet'])
+          if result.returncode == 0:
+              workflow.unlink(missing_ok=True)
+              subprocess.run(['git', 'add', '-u', '.github/workflows/update-suspension-assets.yml'], check=True)
+              subprocess.run(['git', 'commit', '-m', 'fix: usar logo de login e footer mini na arte de suspensao'], check=True)
+          else:
+              subprocess.run(['git', 'commit', '-m', 'fix: usar logo de login e footer mini na arte de suspensao'], check=True)
+          subprocess.run(['git', 'push'], check=True)
