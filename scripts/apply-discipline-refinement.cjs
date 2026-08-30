@@ -70,7 +70,7 @@ function patchPopup() {
     text = text.replace(marker, modal);
   }
 
-  popup.writeText(text, 'utf8');
+  write(file, text);
 }
 
 function patchHistory() {
