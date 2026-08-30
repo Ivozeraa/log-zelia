@@ -43,3 +43,5 @@ jobs:
             git commit -m "fix: permitir apagar duração da suspensão no mobile"
             git push
           fi
+
+      # Re-run this workflow when the workflow source itself is updated so the patch is applied immediately.
