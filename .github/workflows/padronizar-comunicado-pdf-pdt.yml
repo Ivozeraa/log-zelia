@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/padronizar-comunicado-pdf-pdt.yml'
+      - 'src/components/ui/SuspensionDecisionPopup.jsx'
 
 permissions:
   contents: write
@@ -95,6 +96,3 @@ jobs:
           if subprocess.run(['git', 'diff', '--cached', '--quiet']).returncode == 0: raise SystemExit(0)
           subprocess.run(['git', 'commit', '-m', 'feat: padronizar comunicado e exibir PDT'], check=True)
           subprocess.run(['git', 'push'], check=True)
-
-# execução manual/CI
-# atualização solicitada em 30/08/2026
