@@ -1,0 +1,243 @@
+name: Padronizar comunicado PDF e PDT
+
+on:
+  push:
+    paths:
+      - '.github/workflows/padronizar-comunicado-pdf-pdt.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Atualizar comunicado
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          import subprocess
+
+          path = Path('src/components/ui/SuspensionDecisionPopup.jsx')
+          text = path.read_text(encoding='utf-8')
+
+          # Usa o brasão institucional, o mesmo padrão visual dos PDFs.
+          if 'logoEEEP' not in text:
+              text = text.replace(
+                  'import logoLogin from "../../assets/images/logo-login.png";',
+                  'import logoLogin from "../../assets/images/logo-login.png";\nimport logoEEEP from "../../assets/images/logoEEEP.png";',
+                  1,
+              )
+
+          # Estado e consulta do PDT da turma.
+          if 'const [pdtName, setPdtName]' not in text:
+              anchor = '  const [schoolName, setSchoolName] = useState("Escola");\n'
+              addition = anchor + '''\n  const [pdtName, setPdtName] = useState("Não identificado");\n\n  useEffect(() => {\n    let cancelled = false;\n    const turmaId = pending?.turma?.id || pending?.occurrence?.turma_id;\n\n    const loadPdt = async () => {\n      if (!turmaId) {\n        setPdtName("Não identificado");\n        return;\n      }\n\n      try {\n        const { data: configs } = await supabase\n          .from("horario_config_turmas")\n          .select("id")\n          .eq("turma_id", turmaId);\n\n        const configIds = (configs || []).map((item) => item.id).filter(Boolean);\n        if (!configIds.length) {\n          if (!cancelled) setPdtName("Não identificado");\n          return;\n        }\n\n        const { data: pdtRows } = await supabase\n          .from("horario_pdt")\n          .select("professor_id")\n          .in("config_turma_id", configIds);\n\n        const professorIds = (pdtRows || []).map((item) => item.professor_id).filter(Boolean);\n        if (!professorIds.length) {\n          if (!cancelled) setPdtName("Não identificado");\n          return;\n        }\n\n        const { data: professores } = await supabase\n          .from("horario_professores")\n          .select("id, nome, usuario_id")\n          .in("id", professorIds);\n\n        const professor = (professores || []).find((item) => item.nome);\n        if (!cancelled) setPdtName(professor?.nome || "Não identificado");\n      } catch (error) {\n        console.error("Erro ao carregar PDT:", error);\n        if (!cancelled) setPdtName("Não identificado");\n      }\n    };\n\n    loadPdt();\n    return () => { cancelled = true; };\n  }, [pending?.turma?.id, pending?.occurrence?.turma_id]);\n'''
+              text = text.replace(anchor, addition, 1)
+
+          # Substitui somente a função de geração da imagem.
+          new_image = r'''  const createImageBlob = async (isExpulsion = false, details = {}) => {
+    if (!pending) return null;
+
+    const currentDays = Number(details.days ?? days);
+    const currentStart = details.startDate ?? startDate;
+    const currentEnd = details.endDate ?? endDate;
+    const canvas = document.createElement("canvas");
+    canvas.width = 1400;
+    canvas.height = 1080;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    const font = '"Segoe UI", Arial, sans-serif';
+    const green = isExpulsion ? "#991b1b" : "#166534";
+    const greenText = isExpulsion ? "#b91c1c" : "#166534";
+    const pagePadding = 70;
+    const contentWidth = canvas.width - pagePadding * 2;
+
+    const roundedRect = (x, y, width, height, radius) => {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + width, y, x + width, y + height, r);
+      ctx.arcTo(x + width, y + height, x, y + height, r);
+      ctx.arcTo(x, y + height, x, y, r);
+      ctx.arcTo(x, y, x + width, y, r);
+      ctx.closePath();
+    };
+
+    const wrapLines = (value, maxWidth, maxLines = 2) => {
+      const words = String(value || "—").split(/\s+/);
+      const lines = [];
+      let line = "";
+      for (const word of words) {
+        const candidate = line ? `${line} ${word}` : word;
+        if (line && ctx.measureText(candidate).width > maxWidth) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = candidate;
+        }
+      }
+      if (line) lines.push(line);
+      if (lines.length <= maxLines) return lines;
+      const clipped = lines.slice(0, maxLines);
+      clipped[maxLines - 1] = `${clipped[maxLines - 1].replace(/[.…]+$/, "")}…`;
+      return clipped;
+    };
+
+    const drawWrapped = (value, x, y, maxWidth, lineHeight = 30, maxLines = 2) => {
+      wrapLines(value, maxWidth, maxLines).forEach((line, index) => {
+        ctx.fillText(line, x, y + index * lineHeight);
+      });
+    };
+
+    const label = (value, x, y) => {
+      ctx.fillStyle = "#64748b";
+      ctx.font = `700 16px ${font}`;
+      ctx.fillText(value.toUpperCase(), x, y);
+    };
+
+    ctx.fillStyle = "#f8fafc";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Header seguindo o padrão dos relatórios PDF: branco, faixa verde e brasão institucional.
+    ctx.fillStyle = green;
+    ctx.fillRect(0, 0, canvas.width, 14);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 14, canvas.width, 178);
+
+    const headerLogo = await loadImage(logoEEEP);
+    if (headerLogo?.naturalWidth) {
+      const logoHeight = 132;
+      const logoWidth = Math.min(155, (headerLogo.naturalWidth / headerLogo.naturalHeight) * logoHeight);
+      ctx.drawImage(headerLogo, 78, 35, logoWidth, logoHeight);
+    }
+
+    ctx.fillStyle = "#0f172a";
+    let schoolFontSize = 36;
+    ctx.font = `700 ${schoolFontSize}px ${font}`;
+    const schoolText = String(schoolName || "Escola");
+    while (ctx.measureText(schoolText).width > 760 && schoolFontSize > 25) {
+      schoolFontSize -= 1;
+      ctx.font = `700 ${schoolFontSize}px ${font}`;
+    }
+    ctx.fillText(schoolText, 270, 73);
+
+    ctx.fillStyle = greenText;
+    ctx.font = `700 24px ${font}`;
+    ctx.fillText(isExpulsion ? "COMUNICADO DE EXPULSÃO" : "COMUNICADO DE SUSPENSÃO", 270, 122);
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = `500 19px ${font}`;
+    ctx.fillText("LogZélia • Gestão escolar", 270, 157);
+    ctx.textAlign = "right";
+    ctx.fillText(`Emitido em ${formatDate(today())}`, 1320, 157);
+    ctx.textAlign = "left";
+
+    // Identificação.
+    roundedRect(pagePadding, 225, contentWidth, 165, 22);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    label("Aluno", 100, 265);
+    label("Turma", 850, 265);
+    ctx.fillStyle = "#0f172a";
+    ctx.font = `700 30px ${font}`;
+    drawWrapped(pending.aluno?.nome || "Aluno", 100, 305, 680, 36, 2);
+    ctx.font = `700 26px ${font}`;
+    drawWrapped(pending.turma?.nome || "—", 850, 305, 390, 32, 2);
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = `500 16px ${font}`;
+    if (pending.aluno?.matricula) ctx.fillText(`Matrícula: ${pending.aluno.matricula}`, 100, 360);
+
+    // Medida.
+    roundedRect(pagePadding, 415, contentWidth, 135, 22);
+    ctx.fillStyle = isExpulsion ? "#fef2f2" : "#fff7ed";
+    ctx.fill();
+    ctx.strokeStyle = isExpulsion ? "#fecaca" : "#fed7aa";
+    ctx.stroke();
+
+    ctx.fillStyle = isExpulsion ? "#b91c1c" : "#b45309";
+    ctx.font = `700 16px ${font}`;
+    ctx.fillText(isExpulsion ? "MEDIDA DISCIPLINAR" : "SUSPENSÃO", 100, 450);
+    ctx.fillStyle = "#0f172a";
+    ctx.font = `700 29px ${font}`;
+    ctx.fillText(isExpulsion ? "3ª suspensão — expulsão" : `${numeroSuspensao}ª suspensão`, 100, 495);
+
+    if (!isExpulsion) {
+      ctx.textAlign = "right";
+      ctx.font = `700 28px ${font}`;
+      ctx.fillText(`${currentDays} ${plural(currentDays, "dia", "dias")}`, 1260, 490);
+      ctx.font = `500 16px ${font}`;
+      ctx.fillStyle = "#64748b";
+      ctx.fillText(`${formatDate(currentStart)} até ${formatDate(currentEnd)}`, 1260, 520);
+      ctx.textAlign = "left";
+    }
+
+    label("Motivo", 90, 600);
+    ctx.fillStyle = "#334155";
+    ctx.font = `600 20px ${font}`;
+    drawWrapped(
+      isExpulsion ? "O aluno atingiu a 3ª suspensão, resultando em expulsão." : `O aluno atingiu ${ocorrenciasAteLimite} ocorrências.`,
+      90,
+      635,
+      1220,
+      28,
+      2,
+    );
+
+    label("Ocorrência que gerou a medida", 90, 705);
+    ctx.fillStyle = "#334155";
+    ctx.font = `500 19px ${font}`;
+    drawWrapped(pending.occurrence?.descricao || "Não informado", 90, 740, 1220, 27, 2);
+
+    ctx.fillStyle = "#475569";
+    ctx.font = `600 18px ${font}`;
+    ctx.fillText(`👨‍🏫 Professor responsável: ${professorResponsavel}`, 90, 810);
+    ctx.fillText(`🎓 PDT da turma: ${pdtName}`, 90, 850);
+
+    // Footer oficial do sistema.
+    const footer = await loadImage(topoMini);
+    if (footer?.naturalWidth) {
+      ctx.drawImage(footer, 0, 915, canvas.width, 165);
+    }
+
+    return new Promise((resolve) => canvas.toBlob(resolve, "image/png", 0.98));
+  };
+'''
+
+          text, count = re.subn(
+              r'  const createImageBlob = async \(isExpulsion = false, details = \{\}\) => \{.*?\n  \};\n\n  const copyText',
+              new_image + '\n  const copyText',
+              text,
+              count=1,
+              flags=re.S,
+          )
+          if count != 1:
+              raise SystemExit('Não foi possível localizar createImageBlob')
+
+          # Exibe o PDT também no modal antes da confirmação.
+          marker = '''          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">\n            <div className="grid gap-4 sm:grid-cols-3">'''
+          replacement = '''          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">\n            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">'''
+          text = text.replace(marker, replacement, 1)
+          pdt_old = '''              <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Professor</p><p className="mt-1 text-sm font-bold text-slate-900">{professorResponsavel}</p></div>'''
+          pdt_new = pdt_old + '''\n              <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">PDT da turma</p><p className="mt-1 text-sm font-bold text-slate-900">{pdtName}</p></div>'''
+          if pdt_old in text and 'PDT da turma</p>' not in text:
+              text = text.replace(pdt_old, pdt_new, 1)
+
+          path.write_text(text, encoding='utf-8')
+          subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
+          subprocess.run(['git', 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'], check=True)
+          subprocess.run(['git', 'add', str(path)], check=True)
+          if subprocess.run(['git', 'diff', '--cached', '--quiet']).returncode == 0:
+              print('Nenhuma alteração necessária.')
+              raise SystemExit(0)
+          subprocess.run(['git', 'commit', '-m', 'feat: padronizar comunicado e exibir PDT'], check=True)
+          subprocess.run(['git', 'push'], check=True)
