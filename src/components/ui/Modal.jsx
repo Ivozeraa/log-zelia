@@ -20,6 +20,26 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
     return () => clearTimeout(timeout);
   }, [isOpen]);
 
+  // No iOS, o teclado virtual altera o visual viewport. Usamos a altura real
+  // disponível para impedir que o conteúdo inferior do modal fique atrás do teclado.
+  useEffect(() => {
+    const updateViewportHeight = () => {
+      const height = window.visualViewport?.height || window.innerHeight;
+      document.documentElement.style.setProperty("--modal-viewport-height", `${height}px`);
+    };
+
+    updateViewportHeight();
+    window.visualViewport?.addEventListener("resize", updateViewportHeight);
+    window.visualViewport?.addEventListener("scroll", updateViewportHeight);
+    window.addEventListener("resize", updateViewportHeight);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", updateViewportHeight);
+      window.visualViewport?.removeEventListener("scroll", updateViewportHeight);
+      window.removeEventListener("resize", updateViewportHeight);
+    };
+  }, []);
+
   useEffect(() => () => { document.body.style.overflow = ""; }, []);
 
   if (!show) return null;
@@ -31,10 +51,14 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
         className={`fixed inset-0 z-[9998] bg-black/50 backdrop-blur-sm transition-opacity duration-200 ${animate ? "opacity-100" : "opacity-0"}`}
       />
 
-      <div className="relative z-[9999] flex min-h-full w-full items-start justify-center overflow-y-auto overscroll-contain px-2 py-3 sm:px-4 sm:py-6 sm:items-center">
+      <div
+        className="relative z-[9999] flex w-full items-start justify-center overflow-y-auto overscroll-contain px-2 py-2 sm:px-4 sm:py-6 sm:items-center"
+        style={{ minHeight: "var(--modal-viewport-height, 100dvh)" }}
+      >
         <div
           onClick={(event) => event.stopPropagation()}
-          className={`my-auto flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] min-w-0 max-w-[56rem] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-950 sm:max-h-[calc(100dvh-2rem)] sm:w-full transform transition-all duration-200 ${animate ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4"}`}
+          className={`my-auto flex w-[calc(100vw-1rem)] min-w-0 max-w-[56rem] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-950 sm:w-full transform transition-all duration-200 ${animate ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4"}`}
+          style={{ maxHeight: "calc(var(--modal-viewport-height, 100dvh) - 1rem)" }}
         >
           {title && (
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-700 sm:px-6 sm:py-4">
@@ -49,7 +73,7 @@ export const Modal = ({ isOpen, onClose, children, title }) => {
               </button>
             </div>
           )}
-          <div className="min-h-0 w-full min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4 pt-3 sm:px-6 sm:pb-6 sm:pt-4">
+          <div className="min-h-0 w-full min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 pt-3 sm:px-6 sm:pb-6 sm:pt-4">
             <div className="min-w-0 w-full">{children}</div>
           </div>
         </div>
