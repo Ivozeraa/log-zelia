@@ -6,6 +6,7 @@ import { Login } from "./pages/Login";
 import { ToastProvider } from "./components/ui/ToastProvide";
 import { LegalAndFeedback } from "./components/ui/LegalAndFeedback";
 import { AnnouncementPopup } from "./components/ui/AnnouncementPopup";
+import { SuspensionDecisionPopup } from "./components/ui/SuspensionDecisionPopup";
 import "./utils/landingMotion.css";
 import "./utils/landingMotion";
 
@@ -66,6 +67,7 @@ function App() {
       </Routes>
       <LegalAndFeedback />
       <AnnouncementPopup />
+      <SuspensionDecisionPopup />
       <ToastProvider />
     </Router>
   );
