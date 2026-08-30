@@ -6,7 +6,8 @@ import {
   FaExclamationTriangle,
   FaShareAlt,
 } from "react-icons/fa";
-import logo from "../../assets/images/logo.png";
+import logoLogin from "../../assets/images/logo-login.png";
+import topoMini from "../../assets/images/topo_mini.png";
 import { Modal } from "./Modal";
 
 const formatDate = (value) => {
@@ -67,7 +68,7 @@ export function SuspensionDecisionPopup({ items = [], onConfirm, onDismiss }) {
     try {
       const image = new Image();
       image.crossOrigin = "anonymous";
-      image.src = logo;
+      image.src = logoLogin;
       await new Promise((resolve) => {
         image.onload = resolve;
         image.onerror = resolve;
@@ -129,12 +130,18 @@ export function SuspensionDecisionPopup({ items = [], onConfirm, onDismiss }) {
     ctx.fillStyle = "#64748b";
     ctx.font = "500 18px Arial";
     ctx.fillText("Registro gerado pelo LogZélia • Sistema de gestão escolar", 90, 885);
-    ctx.fillStyle = "#166534";
-    ctx.fillRect(0, 930, 470, 50);
-    ctx.fillStyle = "#0f766e";
-    ctx.fillRect(470, 930, 470, 50);
-    ctx.fillStyle = "#f59e0b";
-    ctx.fillRect(940, 930, 460, 50);
+    try {
+      const footerImage = new Image();
+      footerImage.crossOrigin = "anonymous";
+      footerImage.src = topoMini;
+      await new Promise((resolve) => {
+        footerImage.onload = resolve;
+        footerImage.onerror = resolve;
+      });
+      if (footerImage.naturalWidth) {
+        ctx.drawImage(footerImage, 0, 900, 1400, 80);
+      }
+    } catch {}
 
     return new Promise((resolve) => canvas.toBlob(resolve, "image/png", 0.95));
   };
