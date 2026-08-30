@@ -1,0 +1,88 @@
+name: Fix student disciplinary history
+
+on: push
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch history
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess
+
+          path = Path('src/pages/Occurrences.jsx')
+          text = path.read_text(encoding='utf-8')
+
+          start = text.find('const contarSuspensoes = (ocorrenciasDoAluno) => {')
+          end = text.find('const ordenarESinalizarSuspensoes = (lista) => {', start)
+          if start < 0 or end < 0:
+              raise SystemExit('Funções de histórico não encontradas')
+
+          counting = '''const contarSuspensoes = (ocorrenciasDoAluno) => {
+  if (!ocorrenciasDoAluno || ocorrenciasDoAluno.length === 0) return 0;
+  return ocorrenciasDoAluno.filter((item) => item.categoria === "suspensao").length;
+};
+
+'''
+
+          ordering_start = end
+          ordering_end = text.find('};', ordering_start)
+          if ordering_end < 0:
+              raise SystemExit('Fim da função de ordenação não encontrado')
+          ordering_end += 3
+          ordering = '''const ordenarESinalizarSuspensoes = (lista) => {
+  const ascendente = [...lista].sort((a, b) =>
+    (a.data_ocorrido || "").localeCompare(b.data_ocorrido || ""),
+  );
+  const origemIds = new Set(
+    ascendente
+      .filter((item) => item.categoria === "suspensao" && item.ocorrencia_origem_id)
+      .map((item) => item.ocorrencia_origem_id),
+  );
+  let numeroSuspensao = 0;
+  return ascendente
+    .filter((item) => !(item.categoria === "ocorrencia" && origemIds.has(item.id)))
+    .map((item) => {
+      if (item.categoria !== "suspensao") return { ...item, suspensaoGerada: null };
+      numeroSuspensao += 1;
+      const origem = item.ocorrencia_origem_id
+        ? ascendente.find((row) => row.id === item.ocorrencia_origem_id)
+        : null;
+      const totalOcorrencias = origem
+        ? ascendente.filter(
+            (row) =>
+              row.categoria === "ocorrencia" &&
+              (row.data_ocorrido || "") <= (origem.data_ocorrido || ""),
+          ).length
+        : numeroSuspensao * 3;
+      return {
+        ...item,
+        descricao: origem
+          ? `O aluno atingiu ${totalOcorrencias} ocorrências. Motivo do professor: ${origem.descricao || "Não informado"}.`
+          : item.descricao || "Suspensão registrada.",
+        suspensaoGerada: { numero: numeroSuspensao, origem: "aplicada" },
+      };
+    })
+    .sort((a, b) => (b.data_ocorrido || "").localeCompare(a.data_ocorrido || ""));
+};
+
+'''
+
+          text = text[:start] + counting + ordering + text[ordering_end:]
+          path.write_text(text, encoding='utf-8')
+
+          wf = Path('.github/workflows/fix-history-final.yml')
+          subprocess.run(['git','config','user.name','github-actions[bot]'],check=True)
+          subprocess.run(['git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com'],check=True)
+          subprocess.run(['git','add','src/pages/Occurrences.jsx'],check=True)
+          if wf.exists():
+              wf.unlink()
+              subprocess.run(['git','add','-u','.github/workflows/fix-history-final.yml'],check=True)
+          subprocess.run(['git','commit','-m','fix: consolidar suspensoes no historico do aluno'],check=True)
+          subprocess.run(['git','push'],check=True)
