@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "predev": "node scripts/fix-history-duplicates.cjs",
+    "prebuild": "node scripts/fix-history-duplicates.cjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -23,6 +25,7 @@
     "react-dom": "^19.2.0",
     "react-icons": "^5.6.0",
     "react-router-dom": "^7.13.1",
+    "react-icons": "^5.6.0",
     "react-toastify": "^11.1.0",
     "recharts": "^3.8.1",
     "tailwindcss": "^4.2.1",
