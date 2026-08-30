@@ -13,6 +13,7 @@ import { CustomSelect } from "../components/ui/CustomSelect";
 import { PageTitle } from "../components/ui/PageTitle";
 import { SectionTitle } from "../components/ui/SectionTitle";
 import { RankingOcorrencias } from "../components/ui/Ranking";
+import { SuspensionDecisionPopup } from "../components/ui/SuspensionDecisionPopup";
 import { notify } from "../utils/notify";
 
 export const Home = () => {
@@ -37,6 +38,7 @@ export const Home = () => {
   const [formMessage, setFormMessage] = useState("");
   const [graficoData, setGraficoData] = useState([]);
   const [stats, setStats] = useState({ total: 0, mes: 0, semana: 0 });
+  const [suspensionQueue, setSuspensionQueue] = useState([]);
 
   const activeSchoolId = isGlobalAdmin ? selectedEscola : schoolId || "";
 
@@ -70,20 +72,21 @@ export const Home = () => {
         return;
       }
 
-      const total = data.length;
+      const total = data?.length || 0;
       const hoje = new Date();
       const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
       const inicioSemana = new Date(hoje);
       inicioSemana.setDate(hoje.getDate() - hoje.getDay());
       inicioSemana.setHours(0, 0, 0, 0);
-      const mes = data.filter((o) => new Date(o.data_ocorrido) >= inicioMes).length;
-      const semana = data.filter((o) => new Date(o.data_ocorrido) >= inicioSemana).length;
+      const mes = (data || []).filter((o) => new Date(o.data_ocorrido) >= inicioMes).length;
+      const semana = (data || []).filter((o) => new Date(o.data_ocorrido) >= inicioSemana).length;
 
       setStats({ total, mes, semana });
 
       const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
       const dadosSemana = diasSemana.map((name) => ({ name, ocorrencias: 0 }));
-      data.forEach((ocorrencia) => {
+      (data || []).forEach((ocorrencia) => {
+        if (!ocorrencia.data_ocorrido) return;
         const [ano, mesOcorrencia, dia] = ocorrencia.data_ocorrido.split("-").map(Number);
         const dataOcorrencia = new Date(ano, mesOcorrencia - 1, dia);
         dataOcorrencia.setHours(0, 0, 0, 0);
@@ -100,7 +103,6 @@ export const Home = () => {
   useEffect(() => {
     const loadEscolas = async () => {
       if (!user) return;
-
       const query = supabase.from("escolas").select("id, nome").order("nome", { ascending: true });
 
       if (isGlobalAdmin) {
@@ -112,9 +114,7 @@ export const Home = () => {
           return;
         }
         setEscolas(data || []);
-        if (data?.length > 0 && !selectedEscola) {
-          setSelectedEscola(data[0].id);
-        }
+        if (data?.length > 0 && !selectedEscola) setSelectedEscola(data[0].id);
         return;
       }
 
@@ -131,11 +131,9 @@ export const Home = () => {
         setEscolas([]);
         return;
       }
-
       setEscolas(data ? [data] : []);
       setSelectedEscola(schoolId);
     };
-
     loadEscolas();
   }, [user, schoolId, isGlobalAdmin, selectedEscola]);
 
@@ -148,23 +146,20 @@ export const Home = () => {
         setSelectedAlunos([]);
         return;
       }
-
       setLoadingTurmas(true);
-      const { data: turmasData, error } = await supabase
+      const { data, error } = await supabase
         .from("turmas")
         .select("id, nome")
         .eq("escola_id", activeSchoolId)
         .order("nome", { ascending: true });
-
       if (error) {
         console.error(error);
         setTurmas([]);
       } else {
-        setTurmas(turmasData || []);
+        setTurmas(data || []);
       }
       setLoadingTurmas(false);
     };
-
     loadTurmas();
   }, [activeSchoolId]);
 
@@ -175,31 +170,63 @@ export const Home = () => {
         setSelectedAlunos([]);
         return;
       }
-
       setLoadingAlunos(true);
-      const { data: alunosData, error } = await supabase
+      const { data, error } = await supabase
         .from("alunos")
         .select("id, nome, matricula")
         .eq("turma_id", selectedTurma)
         .order("nome", { ascending: true });
-
       if (error) {
         console.error(error);
         setAlunos([]);
       } else {
-        setAlunos(alunosData || []);
+        setAlunos(data || []);
       }
       setLoadingAlunos(false);
     };
-
     loadAlunos();
   }, [selectedTurma]);
 
   useEffect(() => {
-    if (!isGlobalAdmin && selectedEscola !== schoolId) {
-      setSelectedEscola(schoolId || "");
-    }
+    if (!isGlobalAdmin && selectedEscola !== schoolId) setSelectedEscola(schoolId || "");
   }, [isGlobalAdmin, schoolId, selectedEscola]);
+
+  const handleConfirmSuspension = async (pending, details) => {
+    const { days, startDate, endDate } = details;
+    const occurrence = pending.occurrence;
+
+    const { error } = await supabase.from("ocorrencias").insert({
+      escola_id: occurrence.escola_id || activeSchoolId,
+      aluno_id: occurrence.aluno_id,
+      professor_id: user.id,
+      professor_nome: user.nome,
+      turma_id: occurrence.turma_id || selectedTurma,
+      data_ocorrido: occurrence.data_ocorrido,
+      data_aplicacao: new Date().toISOString(),
+      data_inicio: startDate,
+      data_fim: endDate,
+      tipo: occurrence.tipo,
+      categoria: "suspensao",
+      descricao: `Suspensão decorrente da ocorrência: ${occurrence.descricao || "Não informado"}`,
+      ocorrencia_origem_id: occurrence.id,
+    });
+
+    if (error) {
+      console.error(error);
+      notify.error("Não foi possível registrar a suspensão.");
+      throw error;
+    }
+
+    notify.success(`${pending.aluno?.nome || "Aluno"} foi suspenso por ${days} ${days === 1 ? "dia" : "dias"}.`);
+  };
+
+  const handleDismissSuspension = (occurrenceId) => {
+    if (!occurrenceId) {
+      setSuspensionQueue([]);
+      return;
+    }
+    setSuspensionQueue((current) => current.filter((item) => item.occurrence.id !== occurrenceId));
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -217,8 +244,23 @@ export const Home = () => {
 
     setSubmitting(true);
     setFormMessage("");
+    const suspensoesPendentes = [];
 
     for (const alunoId of selectedAlunos) {
+      let totalOcorrenciasAntes = 0;
+      let totalSuspensoes = 0;
+
+      if (tipoAdvertencia === "ocorrencia") {
+        const [ocorrenciasResult, suspensoesResult] = await Promise.all([
+          supabase.from("ocorrencias").select("id", { count: "exact", head: true }).eq("aluno_id", alunoId).eq("categoria", "ocorrencia"),
+          supabase.from("ocorrencias").select("id", { count: "exact", head: true }).eq("aluno_id", alunoId).eq("categoria", "suspensao"),
+        ]);
+        if (ocorrenciasResult.error) console.error(ocorrenciasResult.error);
+        if (suspensoesResult.error) console.error(suspensoesResult.error);
+        totalOcorrenciasAntes = ocorrenciasResult.count || 0;
+        totalSuspensoes = suspensoesResult.count || 0;
+      }
+
       let payload = {
         escola_id: activeSchoolId,
         aluno_id: alunoId,
@@ -238,22 +280,12 @@ export const Home = () => {
 
       payload = scopePayload(payload, { schoolId, isGlobalAdmin });
 
-      let willSuspend = tipoAdvertencia === "suspensao";
-      if (tipoAdvertencia === "ocorrencia") {
-        const { count, error: countError } = await supabase
-          .from("ocorrencias")
-          .select("id", { count: "exact", head: true })
-          .eq("aluno_id", alunoId)
-          .eq("categoria", "ocorrencia");
+      const { data: insertedOccurrence, error } = await supabase
+        .from("ocorrencias")
+        .insert(payload)
+        .select("*")
+        .single();
 
-        if (countError) {
-          console.error(countError);
-        } else {
-          willSuspend = (count || 0) + 1 >= 3;
-        }
-      }
-
-      const { error } = await supabase.from("ocorrencias").insert(payload);
       if (error) {
         console.error(error);
         notify.error("Erro ao registrar ocorrência");
@@ -262,35 +294,19 @@ export const Home = () => {
         return;
       }
 
-      if (willSuspend) {
-        const aluno = alunos.find((a) => String(a.id) === String(alunoId));
-        let notificationPayload = {
-          escola_id: activeSchoolId,
-          aluno_id: alunoId,
-          aluno_nome: aluno?.nome || "Aluno",
-          mensagem: `${aluno?.nome} foi suspenso.`,
-          lida: false,
-        };
-
-        notificationPayload = scopePayload(notificationPayload, { schoolId, isGlobalAdmin });
-
-        const { error: notificationError } = await supabase
-          .from("notificacoes")
-          .insert(notificationPayload);
-
-        if (notificationError) console.error(notificationError);
-      }
-
-      const { error: updateError } = await supabase
-        .from("alunos")
-        .update({ status: willSuspend ? "suspenso" : "normal" })
-        .eq("id", alunoId);
-
-      if (updateError) {
-        console.error(updateError);
-        notify.error("Erro ao atualizar status do aluno");
-        setSubmitting(false);
-        return;
+      if (tipoAdvertencia === "ocorrencia") {
+        const totalDepois = totalOcorrenciasAntes + 1;
+        const deveAbrirSuspensao = totalDepois >= 3 && totalDepois % 3 === 0 && totalSuspensoes < 3;
+        if (deveAbrirSuspensao) {
+          const aluno = alunos.find((item) => String(item.id) === String(alunoId));
+          const turma = turmas.find((item) => String(item.id) === String(selectedTurma));
+          suspensoesPendentes.push({
+            occurrence: insertedOccurrence,
+            aluno: aluno || { id: alunoId, nome: "Aluno" },
+            turma: turma || { id: selectedTurma, nome: "—" },
+            suspensoes: totalSuspensoes,
+          });
+        }
       }
     }
 
@@ -300,9 +316,9 @@ export const Home = () => {
         ? `Ocorrência registrada para ${selectedAlunos.length} alunos com sucesso!`
         : "Ocorrência registrada com sucesso!",
     );
-    setFormMessage("Ocorrência registrada com sucesso!");
     resetForm();
     setOpen(false);
+    if (suspensoesPendentes.length > 0) setSuspensionQueue(suspensoesPendentes);
   };
 
   const fluxoAlto = stats.semana > stats.mes * 0.4;
@@ -391,9 +407,7 @@ export const Home = () => {
           ) : (
             <div className="sm:col-span-1 flex flex-col gap-2">
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-400">Escola</span>
-              <div className="min-h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                Ambiente da escola atual
-              </div>
+              <div className="min-h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">Ambiente da escola atual</div>
             </div>
           )}
           <CustomSelect label="Turma" value={selectedTurma} disabled={!activeSchoolId || loadingTurmas} onChange={(val) => { setSelectedTurma(val); setSelectedAlunos([]); }} options={[{ value: "", label: "Selecionar turma" }, ...turmas.map((t) => ({ value: String(t.id), label: t.nome })).sort((a, b) => a.label.localeCompare(b.label))]} placeholder="Selecionar turma" />
@@ -409,6 +423,12 @@ export const Home = () => {
           </div>
         </form>
       </Modal>
+
+      <SuspensionDecisionPopup
+        items={suspensionQueue}
+        onConfirm={handleConfirmSuspension}
+        onDismiss={handleDismissSuspension}
+      />
     </div>
   );
 };
