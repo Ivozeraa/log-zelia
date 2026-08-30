@@ -459,7 +459,7 @@ export function SuspensionDecisionPopup({ items = [], onConfirm, onDismiss }) {
                   step="1"
                   inputMode="numeric"
                   value={days}
-                  onChange={(e) => setDays(Math.max(1, Number(e.target.value) || 1))}
+                  onChange={(e) => setDays(e.target.value === "" ? "" : Math.max(1, Number(e.target.value) || 1))}
                   className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-4 font-medium outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100"
                 />
               </div>
