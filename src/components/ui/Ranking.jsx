@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../utils/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { consolidarOcorrencias } from '../../utils/disciplinaryMetrics'
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
@@ -132,7 +133,7 @@ const RankingProfessores = ({ escolaId, mesLabel, userId, userName }) => {
 
       const { data, error } = await supabase
         .from('ocorrencias')
-        .select('professor_id, professor_nome')
+        .select('professor_id, professor_nome, id, categoria, ocorrencia_origem_id')
         .eq('escola_id', escolaId)
         .gte('data_ocorrido', inicioMes)
 
@@ -142,8 +143,12 @@ const RankingProfessores = ({ escolaId, mesLabel, userId, userName }) => {
         return
       }
 
+      // A ocorrência que gerou uma suspensão é substituída pela suspensão
+      // no indicador. Assim o mesmo evento disciplinar não soma duas vezes.
+      const registros = consolidarOcorrencias(data || [])
       const contagem = {}
-      ;(data || []).forEach(({ professor_id, professor_nome }) => {
+
+      registros.forEach(({ professor_id, professor_nome }) => {
         if (!professor_id) return
         if (!contagem[professor_id]) {
           contagem[professor_id] = {
@@ -282,7 +287,7 @@ const RankingTurmas = ({ escolaId, mesLabel }) => {
 
       const { data, error } = await supabase
         .from('ocorrencias')
-        .select('turma_id, turmas(nome)')
+        .select('turma_id, turmas(nome), id, categoria, ocorrencia_origem_id')
         .eq('escola_id', escolaId)
         .gte('data_ocorrido', inicioMes)
 
@@ -292,8 +297,9 @@ const RankingTurmas = ({ escolaId, mesLabel }) => {
         return
       }
 
+      const registros = consolidarOcorrencias(data || [])
       const contagem = {}
-      ;(data || []).forEach(({ turma_id, turmas }) => {
+      registros.forEach(({ turma_id, turmas }) => {
         if (!turma_id) return
         const nome = turmas?.nome || 'Turma'
         if (!contagem[turma_id]) contagem[turma_id] = { id: turma_id, nome, total: 0 }
