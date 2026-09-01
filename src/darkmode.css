@@ -173,6 +173,19 @@ button {
   background-color: #0f172a !important;
 }
 
+/* User preference: disable application animations/transitions. */
+html.reduce-motion {
+  scroll-behavior: auto !important;
+}
+
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
 /* Smooth theme changes without taking control of transform/animation timings. */
 body,
 header,
