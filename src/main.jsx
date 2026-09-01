@@ -1,4 +1,5 @@
 import './index.css'
+import './darkmode.css'
 import App from './App.jsx'
 import { AuthProvider } from "./contexts/AuthContext.jsx"
 import { SchoolProvider } from "./contexts/SchoolContext.jsx"
