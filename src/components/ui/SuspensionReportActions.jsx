@@ -63,6 +63,7 @@ export function SuspensionReportActions({
   const motivo = originOccurrence?.descricao || "Não informado";
   const periodoFim = endDate || addDays(startDate, days);
 
+  // Mesma formatação usada no copiar do pós-ocorrência.
   const text = `🚨 *COMUNICADO DE SUSPENSÃO*\n\n*Aluno:* ${aluno?.nome || "Aluno"}\n*Turma:* ${turmaName || "—"}\n\n*Suspensão:* ${numeroSuspensao}ª\n*Duração:* ${days} ${plural(days, "dia", "dias")}\n\n📅 *Período: ${formatDate(startDate)} até ${formatDate(periodoFim)}*\n\n*Motivo:* O aluno atingiu ${totalOcorrencias} ocorrências.\n\n*Ocorrência que gerou a suspensão:* ${motivo}\n\n👨‍🏫 *Professor responsável:* ${professorResponsavel}\n\n_Registro realizado pelo LogZélia – Sistema de Gestão Escolar._`;
 
   const createImageBlob = async () => {
@@ -126,7 +127,6 @@ export function SuspensionReportActions({
       ctx.drawImage(logo, 58, 17, w, h);
     }
 
-    ctx.fillStyle = "#fff";
     ctx.fillStyle = "#ffffff";
     let schoolFontSize = 36;
     ctx.font = `700 ${schoolFontSize}px ${font}`;
@@ -139,7 +139,7 @@ export function SuspensionReportActions({
     ctx.fillText("COMUNICADO DE SUSPENSÃO", 285, 116);
 
     roundedRect(padding, 205, width, 190, 24);
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = "#ffffff";
     ctx.fill();
     ctx.strokeStyle = "#e2e8f0";
     ctx.lineWidth = 2;
