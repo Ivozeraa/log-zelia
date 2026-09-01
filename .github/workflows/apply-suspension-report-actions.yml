@@ -1,60 +1,10 @@
-name: Apply suspension report actions
+name: Temporary migration placeholder
 
 on:
-  push:
-    branches: [main]
-
-permissions:
-  contents: write
+  workflow_dispatch:
 
 jobs:
-  patch:
-    if: "!contains(github.event.head_commit.message, 'feat: add suspension report actions to warnings') && !contains(github.event.head_commit.message, 'chore: remove one-time suspension report workflow')"
+  placeholder:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Patch warnings history
-        run: node <<'NODE'
-          const fs = require('fs');
-          const path = 'src/pages/Occurrences.jsx';
-          let text = fs.readFileSync(path, 'utf8');
-
-          const importAnchor = 'import { Button } from "../components/ui/Button";';
-          const importLine = 'import { SuspensionReportActions } from "../components/ui/SuspensionReportActions";';
-          if (!text.includes(importLine)) {
-            if (!text.includes(importAnchor)) throw new Error('Button import anchor not found');
-            text = text.replace(importAnchor, `${importAnchor}\n${importLine}`);
-          }
-
-          if (!text.includes('<SuspensionReportActions')) {
-            const mapRegex = /(                    \{selectedAlunoOccurrencesSorted\.map\(\(occ, idx\) => \{\n                      const ehSuspensao = occ\.categoria === "suspensao";)/;
-            if (!mapRegex.test(text)) throw new Error('Occurrence map anchor not found');
-            text = text.replace(mapRegex, `$1\n                      const origemSuspensao =\n                        ehSuspensao && occ.ocorrencia_origem_id\n                          ? selectedAlunoOccurrences.find(\n                              (item) => String(item.id) === String(occ.ocorrencia_origem_id),\n                            )\n                          : null;\n                      const ocorrenciasAteLimite = origemSuspensao\n                        ? selectedAlunoOccurrences.filter(\n                            (item) =>\n                              item.categoria === "ocorrencia" &&\n                              (item.data_ocorrido || "") <= (origemSuspensao.data_ocorrido || ""),\n                          ).length\n                        : 3;`);
-
-            const actionsRegex = /(                          <div className="flex justify-end gap-2 pt-1 border-t border-slate-100 dark:border-slate-700">\n                            <Button)/;
-            if (!actionsRegex.test(text)) throw new Error('Actions anchor not found');
-            const report = `                          {ehSuspensao && (\n                            <SuspensionReportActions\n                              suspension={occ}\n                              aluno={selectedAluno}\n                              turmaName={turmas.find((t) => t.id === selectedAluno.turma_id)?.nome || "—"}\n                              originOccurrence={origemSuspensao}\n                              ocorrenciasAteLimite={ocorrenciasAteLimite}\n                              numeroSuspensao={occ.suspensaoGerada?.numero || 1}\n                            />\n                          )}\n\n`;
-            text = text.replace(actionsRegex, `${report}$1`);
-          }
-
-          fs.writeFileSync(path, text);
-          console.log('Suspension report actions patch applied');
-        NODE
-
-      - name: Commit page change
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/pages/Occurrences.jsx
-          git diff --cached --quiet && exit 0
-          git commit -m "feat: add suspension report actions to warnings"
-          git push
-
-      - name: Remove one-time workflow
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/apply-suspension-report-actions.yml
-          git commit -m "chore: remove one-time suspension report workflow"
-          git push
+      - run: echo "No automatic action."
