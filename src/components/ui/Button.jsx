@@ -23,10 +23,10 @@ const variantClasses = {
 }
 
 const sizeClasses = {
-  default: "h-10 gap-2 px-4",
-  xs: "h-8 gap-1 rounded-md px-2.5 text-xs",
-  sm: "h-9 gap-2 px-3",
-  lg: "h-11 gap-2 px-5",
+  default: "h-10 gap-2 px-4 text-sm",
+  xs: "h-8 gap-1 rounded-md px-2.5 !text-xs leading-4",
+  sm: "h-9 gap-2 px-3 text-sm",
+  lg: "h-11 gap-2 px-5 text-base",
   icon: "h-10 w-10 p-0",
   "icon-xs": "h-8 w-8 p-0",
   "icon-sm": "h-9 w-9 p-0",
@@ -35,7 +35,7 @@ const sizeClasses = {
 
 function Button({ className, variant = "default", size = "default", ...props }) {
   const baseClasses =
-    "inline-flex items-center justify-center rounded-lg border border-transparent text-sm font-medium transition-all outline-none select-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-600 disabled:pointer-events-none disabled:opacity-50"
+    "inline-flex items-center justify-center rounded-lg border border-transparent font-medium transition-all outline-none select-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-600 disabled:pointer-events-none disabled:opacity-50"
 
   return (
     <button
@@ -44,7 +44,5 @@ function Button({ className, variant = "default", size = "default", ...props }) 
     />
   )
 }
-
-// teste
 
 export { Button }
