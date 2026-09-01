@@ -1,3 +1,4 @@
+// Relatorio reutilizavel de suspensao para o historico de advertencias.
 import { useMemo, useState } from "react";
 import { FaCopy, FaDownload, FaShareAlt } from "react-icons/fa";
 import logoLogin from "../../assets/images/logo-login.png";
@@ -114,8 +115,7 @@ export function SuspensionReportActions({
     }
 
     ctx.fillStyle = "#fff";
-    let schoolFontSize = 36;
-    ctx.font = `700 ${schoolFontSize}px ${font}`;
+    ctx.font = `700 36px ${font}`;
     ctx.fillText("COMUNICADO DE SUSPENSÃO", 285, 116);
     ctx.font = `600 23px ${font}`;
     ctx.fillText("LogZélia • Gestão Escolar", 285, 67);
