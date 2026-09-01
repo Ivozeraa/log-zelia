@@ -15,7 +15,40 @@ export const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
-  const { signIn } = useAuth()
+  const { signIn, refreshUser } = useAuth()
+
+  async function verifyExistingSession() {
+    // getSession() lê a sessão persistida e, quando necessário, o SDK tenta
+    // renová-la automaticamente. Em seguida, getUser() confirma a sessão
+    // diretamente no Auth server, em vez de confiar apenas no localStorage.
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+
+    if (sessionError) {
+      throw sessionError
+    }
+
+    let session = sessionData?.session
+
+    if (session) {
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+
+      if (!refreshError && refreshData?.session) {
+        session = refreshData.session
+      }
+    }
+
+    if (!session?.user) return null
+
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !userData?.user) {
+      // Se o token local estiver inválido, a sessão não deve ser reutilizada.
+      await supabase.auth.signOut({ scope: "local" })
+      return null
+    }
+
+    return userData.user
+  }
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -24,37 +57,33 @@ export const Login = () => {
     setSubmitting(true)
 
     try {
-      // O clique no botão sempre faz uma verificação real da sessão atual.
-      // Se houver uma sessão persistida e válida, não pedimos as credenciais novamente.
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      // O VERIFICADOR acontece sempre no clique do botão.
+      const existingUser = await verifyExistingSession()
 
-      if (sessionError) {
-        console.error("Erro verificando sessão:", sessionError)
-      }
-
-      if (session?.user) {
-        notify.success("Sessão encontrada. Entrando no sistema...")
+      if (existingUser) {
+        // Recarrega o perfil da tabela usuarios para manter role, escola e PDT.
+        await refreshUser()
+        notify.success("Sessão válida encontrada. Entrando no sistema...")
         navigate("/app", { replace: true })
         return
       }
 
-      // Sem sessão válida, realiza o login normalmente com as credenciais informadas.
-      if (!email || !senha) {
+      if (!email.trim() || !senha) {
         notify.error("Informe seu e-mail e sua senha")
         return
       }
 
-      const { error } = await signIn(email, senha)
+      const { error } = await signIn(email.trim(), senha)
 
       if (error) {
         notify.error("E-mail ou senha inválidos")
         return
       }
 
-      // Confirma que a sessão foi criada antes de liberar o acesso.
-      const { data: { session: newSession } } = await supabase.auth.getSession()
+      // Confirma no servidor que o login realmente criou uma sessão válida.
+      const authenticatedUser = await verifyExistingSession()
 
-      if (!newSession?.user) {
+      if (!authenticatedUser) {
         notify.error("Não foi possível confirmar sua sessão. Tente novamente.")
         return
       }
@@ -62,8 +91,8 @@ export const Login = () => {
       notify.success("Login realizado com sucesso!")
       navigate("/app", { replace: true })
     } catch (error) {
-      console.error("Erro no login:", error)
-      notify.error("Não foi possível verificar seu acesso")
+      console.error("Erro verificando autenticação:", error)
+      notify.error("Não foi possível verificar seu acesso. Verifique sua conexão e tente novamente.")
     } finally {
       setSubmitting(false)
     }
@@ -111,8 +140,8 @@ export const Login = () => {
               <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Use suas credenciais para acessar o ambiente da sua escola.</p>
             </div>
             <form onSubmit={handleLogin} className="space-y-4">
-              <div><label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">E-mail</label><FormInput type="email" placeholder="seu@email.com" onChange={(e) => setEmail(e.target.value)} className="w-full" disabled={submitting} /></div>
-              <div><label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Senha</label><div className="relative"><FormInput type={showPassword ? "text" : "password"} placeholder="Sua senha" onChange={(e) => setSenha(e.target.value)} className="w-full pr-12" disabled={submitting} /><button type="button" disabled={submitting} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed dark:hover:bg-slate-800 dark:hover:text-slate-200">{showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}</button></div></div>
+              <div><label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">E-mail</label><FormInput type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" disabled={submitting} /></div>
+              <div><label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Senha</label><div className="relative"><FormInput type={showPassword ? "text" : "password"} placeholder="Sua senha" value={senha} onChange={(e) => setSenha(e.target.value)} className="w-full pr-12" disabled={submitting} /><button type="button" disabled={submitting} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed dark:hover:bg-slate-800 dark:hover:text-slate-200">{showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}</button></div></div>
               <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-500 dark:bg-slate-950 dark:text-slate-400"><FaLock className="shrink-0 text-green-600" /><span>Seu acesso é protegido pelas permissões da sua conta e da escola.</span></div>
               <Button className="mt-2 w-full rounded-xl py-3.5 text-sm font-bold sm:py-3" type="submit" disabled={submitting}>{submitting ? "Verificando acesso..." : "Entrar no sistema"}{!submitting && <FaArrowRight className="ml-1 text-xs" />}</Button>
             </form>
