@@ -8,8 +8,11 @@ import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 
 import { applyTheme } from './theme'
+import { installSuspensionReportBridge } from './utils/suspensionReportBridge'
 
 applyTheme()
+
+installSuspensionReportBridge()
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <AuthProvider>
