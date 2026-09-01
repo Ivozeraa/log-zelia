@@ -7,7 +7,6 @@ import logo from "../assets/images/logo-login.png"
 import { notify } from "../utils/notify"
 import { FormInput } from "../components/ui/FormInput"
 import { useAuth } from "../hooks/useAuth"
-import { supabase } from "../utils/supabase"
 
 export const Login = () => {
   const [email, setEmail] = useState("")
@@ -15,40 +14,7 @@ export const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
-  const { signIn, refreshUser } = useAuth()
-
-  async function verifyExistingSession() {
-    // getSession() lê a sessão persistida e, quando necessário, o SDK tenta
-    // renová-la automaticamente. Em seguida, getUser() confirma a sessão
-    // diretamente no Auth server, em vez de confiar apenas no localStorage.
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-
-    if (sessionError) {
-      throw sessionError
-    }
-
-    let session = sessionData?.session
-
-    if (session) {
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
-
-      if (!refreshError && refreshData?.session) {
-        session = refreshData.session
-      }
-    }
-
-    if (!session?.user) return null
-
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-
-    if (userError || !userData?.user) {
-      // Se o token local estiver inválido, a sessão não deve ser reutilizada.
-      await supabase.auth.signOut({ scope: "local" })
-      return null
-    }
-
-    return userData.user
-  }
+  const { signIn, verifySession } = useAuth()
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -57,17 +23,17 @@ export const Login = () => {
     setSubmitting(true)
 
     try {
-      // O VERIFICADOR acontece sempre no clique do botão.
-      const existingUser = await verifyExistingSession()
+      // A VERIFICAÇÃO SEMPRE acontece no clique do botão.
+      // Primeiro tenta recuperar/renovar e validar uma sessão já salva.
+      const existingUser = await verifySession()
 
       if (existingUser) {
-        // Recarrega o perfil da tabela usuarios para manter role, escola e PDT.
-        await refreshUser()
-        notify.success("Sessão válida encontrada. Entrando no sistema...")
+        notify.success("Acesso verificado. Entrando no sistema...")
         navigate("/app", { replace: true })
         return
       }
 
+      // Sem uma sessão válida, segue para o login normal.
       if (!email.trim() || !senha) {
         notify.error("Informe seu e-mail e sua senha")
         return
@@ -80,11 +46,11 @@ export const Login = () => {
         return
       }
 
-      // Confirma no servidor que o login realmente criou uma sessão válida.
-      const authenticatedUser = await verifyExistingSession()
+      // Confirma novamente a sessão criada antes de permitir a entrada.
+      const authenticatedUser = await verifySession()
 
       if (!authenticatedUser) {
-        notify.error("Não foi possível confirmar sua sessão. Tente novamente.")
+        notify.error("Não foi possível confirmar seu acesso. Tente novamente.")
         return
       }
 
