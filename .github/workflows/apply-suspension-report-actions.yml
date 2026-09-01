@@ -15,64 +15,32 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Patch warnings history
-        run: |
-          python3 <<'PY'
-          from pathlib import Path
+        run: node <<'NODE'
+          const fs = require('fs');
+          const path = 'src/pages/Occurrences.jsx';
+          let text = fs.readFileSync(path, 'utf8');
 
-          path = Path('src/pages/Occurrences.jsx')
-          text = path.read_text(encoding='utf-8')
+          const importAnchor = 'import { Button } from "../components/ui/Button";';
+          const importLine = 'import { SuspensionReportActions } from "../components/ui/SuspensionReportActions";';
+          if (!text.includes(importLine)) {
+            if (!text.includes(importAnchor)) throw new Error('Button import anchor not found');
+            text = text.replace(importAnchor, `${importAnchor}\n${importLine}`);
+          }
 
-          import_anchor = 'import { Button } from "../components/ui/Button";'
-          import_line = 'import { SuspensionReportActions } from "../components/ui/SuspensionReportActions";'
-          if import_line not in text:
-              if import_anchor not in text:
-                  raise SystemExit('Button import anchor not found')
-              text = text.replace(import_anchor, import_anchor + '\n' + import_line, 1)
+          if (!text.includes('<SuspensionReportActions')) {
+            const mapRegex = /(                    \{selectedAlunoOccurrencesSorted\.map\(\(occ, idx\) => \{\n                      const ehSuspensao = occ\.categoria === "suspensao";)/;
+            if (!mapRegex.test(text)) throw new Error('Occurrence map anchor not found');
+            text = text.replace(mapRegex, `$1\n                      const origemSuspensao =\n                        ehSuspensao && occ.ocorrencia_origem_id\n                          ? selectedAlunoOccurrences.find(\n                              (item) => String(item.id) === String(occ.ocorrencia_origem_id),\n                            )\n                          : null;\n                      const ocorrenciasAteLimite = origemSuspensao\n                        ? selectedAlunoOccurrences.filter(\n                            (item) =>\n                              item.categoria === "ocorrencia" &&\n                              (item.data_ocorrido || "") <= (origemSuspensao.data_ocorrido || ""),\n                          ).length\n                        : 3;`);
 
-          map_anchor = '''                    {selectedAlunoOccurrencesSorted.map((occ, idx) => {
-                      const ehSuspensao = occ.categoria === "suspensao";'''
-          map_replacement = '''                    {selectedAlunoOccurrencesSorted.map((occ, idx) => {
-                      const ehSuspensao = occ.categoria === "suspensao";
-                      const origemSuspensao =
-                        ehSuspensao && occ.ocorrencia_origem_id
-                          ? selectedAlunoOccurrences.find(
-                              (item) => String(item.id) === String(occ.ocorrencia_origem_id),
-                            )
-                          : null;
-                      const ocorrenciasAteLimite = origemSuspensao
-                        ? selectedAlunoOccurrences.filter(
-                            (item) =>
-                              item.categoria === "ocorrencia" &&
-                              (item.data_ocorrido || "") <= (origemSuspensao.data_ocorrido || ""),
-                          ).length
-                        : 3;'''
-          if 'const origemSuspensao =' not in text:
-              if map_anchor not in text:
-                  raise SystemExit('Occurrence map anchor not found')
-              text = text.replace(map_anchor, map_replacement, 1)
+            const actionsRegex = /(                          <div className="flex justify-end gap-2 pt-1 border-t border-slate-100 dark:border-slate-700">\n                            <Button)/;
+            if (!actionsRegex.test(text)) throw new Error('Actions anchor not found');
+            const report = `                          {ehSuspensao && (\n                            <SuspensionReportActions\n                              suspension={occ}\n                              aluno={selectedAluno}\n                              turmaName={turmas.find((t) => t.id === selectedAluno.turma_id)?.nome || "—"}\n                              originOccurrence={origemSuspensao}\n                              ocorrenciasAteLimite={ocorrenciasAteLimite}\n                              numeroSuspensao={occ.suspensaoGerada?.numero || 1}\n                            />\n                          )}\n\n`;
+            text = text.replace(actionsRegex, `${report}$1`);
+          }
 
-          actions_anchor = '''                          <div className="flex justify-end gap-2 pt-1 border-t border-slate-100 dark:border-slate-700">
-                            <Button'''
-          actions_replacement = '''                          {ehSuspensao && (
-                            <SuspensionReportActions
-                              suspension={occ}
-                              aluno={selectedAluno}
-                              turmaName={turmas.find((t) => t.id === selectedAluno.turma_id)?.nome || "—"}
-                              originOccurrence={origemSuspensao}
-                              ocorrenciasAteLimite={ocorrenciasAteLimite}
-                              numeroSuspensao={occ.suspensaoGerada?.numero || 1}
-                            />
-                          )}
-
-                          <div className="flex justify-end gap-2 pt-1 border-t border-slate-100 dark:border-slate-700">
-                            <Button'''
-          if '<SuspensionReportActions' not in text:
-              if actions_anchor not in text:
-                  raise SystemExit('Actions anchor not found')
-              text = text.replace(actions_anchor, actions_replacement, 1)
-
-          path.write_text(text, encoding='utf-8')
-          PY
+          fs.writeFileSync(path, text);
+          console.log('Suspension report actions patch applied');
+        NODE
 
       - name: Commit page change
         run: |
