@@ -5,6 +5,7 @@ import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { useSchool } from "../hooks/useSchool";
 import { scopePayload } from "../utils/schoolScope";
+import { consolidarOcorrencias } from "../utils/disciplinaryMetrics";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
@@ -72,20 +73,24 @@ export const Home = () => {
         return;
       }
 
-      const total = data?.length || 0;
+      // Uma suspensão automática aponta para a ocorrência que atingiu o limite.
+      // Para os indicadores, essa ocorrência de origem não é contada novamente:
+      // o evento passa a ser representado pela suspensão uma única vez.
+      const registros = consolidarOcorrencias(data || []);
+      const total = registros.length;
       const hoje = new Date();
       const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
       const inicioSemana = new Date(hoje);
       inicioSemana.setDate(hoje.getDate() - hoje.getDay());
       inicioSemana.setHours(0, 0, 0, 0);
-      const mes = (data || []).filter((o) => new Date(o.data_ocorrido) >= inicioMes).length;
-      const semana = (data || []).filter((o) => new Date(o.data_ocorrido) >= inicioSemana).length;
+      const mes = registros.filter((o) => new Date(o.data_ocorrido) >= inicioMes).length;
+      const semana = registros.filter((o) => new Date(o.data_ocorrido) >= inicioSemana).length;
 
       setStats({ total, mes, semana });
 
       const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
       const dadosSemana = diasSemana.map((name) => ({ name, ocorrencias: 0 }));
-      (data || []).forEach((ocorrencia) => {
+      registros.forEach((ocorrencia) => {
         if (!ocorrencia.data_ocorrido) return;
         const [ano, mesOcorrencia, dia] = ocorrencia.data_ocorrido.split("-").map(Number);
         const dataOcorrencia = new Date(ano, mesOcorrencia - 1, dia);
