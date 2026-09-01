@@ -1,8 +1,9 @@
 // Relatorio reutilizavel de suspensao para o historico de advertencias.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FaCopy, FaDownload, FaShareAlt } from "react-icons/fa";
 import logoLogin from "../../assets/images/logo-login.png";
 import topoMini from "../../assets/images/topo_mini.png";
+import { supabase } from "../../utils/supabase";
 
 const formatDate = (value) => {
   if (!value) return "—";
@@ -36,6 +37,17 @@ export function SuspensionReportActions({
 }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [schoolName, setSchoolName] = useState("Escola");
+
+  useEffect(() => {
+    let cancelled = false;
+    const escolaId = suspension?.escola_id || originOccurrence?.escola_id;
+    if (!escolaId) return undefined;
+    supabase.from("escolas").select("nome").eq("id", escolaId).maybeSingle().then(({ data }) => {
+      if (!cancelled) setSchoolName(data?.nome || "Escola");
+    });
+    return () => { cancelled = true; };
+  }, [suspension?.escola_id, originOccurrence?.escola_id]);
 
   const startDate = suspension?.data_inicio || suspension?.data_ocorrido || "";
   const endDate = suspension?.data_fim || startDate;
@@ -51,7 +63,7 @@ export function SuspensionReportActions({
   const motivo = originOccurrence?.descricao || "Não informado";
   const periodoFim = endDate || addDays(startDate, days);
 
-  const text = `🚨 *COMUNICADO DE SUSPENSÃO*\n\n*Aluno:* ${aluno?.nome || "Aluno"}\n*Turma:* ${turmaName || "—"}\n\n*Suspensão:* ${numeroSuspensao}ª\n*Duração:* ${days} ${plural(days, "dia", "dias")}\n\n📅 *Período:* ${formatDate(startDate)} até ${formatDate(periodoFim)}\n\n*Motivo:* O aluno atingiu ${totalOcorrencias} ocorrências.\n\n*Ocorrência que gerou a suspensão:* ${motivo}\n\n👨‍🏫 *Professor responsável:* ${professorResponsavel}\n\n_Registro realizado pelo LogZélia – Sistema de Gestão Escolar._`;
+  const text = `🚨 *COMUNICADO DE SUSPENSÃO*\n\n*Aluno:* ${aluno?.nome || "Aluno"}\n*Turma:* ${turmaName || "—"}\n\n*Suspensão:* ${numeroSuspensao}ª\n*Duração:* ${days} ${plural(days, "dia", "dias")}\n\n📅 *Período: ${formatDate(startDate)} até ${formatDate(periodoFim)}*\n\n*Motivo:* O aluno atingiu ${totalOcorrencias} ocorrências.\n\n*Ocorrência que gerou a suspensão:* ${motivo}\n\n👨‍🏫 *Professor responsável:* ${professorResponsavel}\n\n_Registro realizado pelo LogZélia – Sistema de Gestão Escolar._`;
 
   const createImageBlob = async () => {
     const canvas = document.createElement("canvas");
@@ -115,10 +127,16 @@ export function SuspensionReportActions({
     }
 
     ctx.fillStyle = "#fff";
-    ctx.font = `700 36px ${font}`;
-    ctx.fillText("COMUNICADO DE SUSPENSÃO", 285, 116);
+    ctx.fillStyle = "#ffffff";
+    let schoolFontSize = 36;
+    ctx.font = `700 ${schoolFontSize}px ${font}`;
+    while (ctx.measureText(String(schoolName || "Escola")).width > 1010 && schoolFontSize > 24) {
+      schoolFontSize -= 2;
+      ctx.font = `700 ${schoolFontSize}px ${font}`;
+    }
+    ctx.fillText(String(schoolName || "Escola"), 285, 67);
     ctx.font = `600 23px ${font}`;
-    ctx.fillText("LogZélia • Gestão Escolar", 285, 67);
+    ctx.fillText("COMUNICADO DE SUSPENSÃO", 285, 116);
 
     roundedRect(padding, 205, width, 190, 24);
     ctx.fillStyle = "#fff";
