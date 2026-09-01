@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { FaArrowLeft, FaArrowRight, FaEye, FaEyeSlash, FaLock, FaSignInAlt } from "react-icons/fa"
 import { Button } from "../components/ui/Button"
@@ -7,14 +7,76 @@ import logo from "../assets/images/logo-login.png"
 import { notify } from "../utils/notify"
 import { FormInput } from "../components/ui/FormInput"
 import { useAuth } from "../hooks/useAuth"
+import { supabase } from "../utils/supabase"
 
 export const Login = () => {
   const [email, setEmail] = useState("")
   const [senha, setSenha] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(true)
   const navigate = useNavigate()
-  const { signIn, verifySession } = useAuth()
+  const { signIn, refreshUser } = useAuth()
+
+  async function verifyExistingSession() {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+
+    if (sessionError) throw sessionError
+
+    let session = sessionData?.session ?? null
+
+    // Quando existe uma sessão persistida, tenta renová-la explicitamente.
+    if (session?.refresh_token) {
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession({
+        refresh_token: session.refresh_token,
+      })
+
+      if (refreshError || !refreshData?.session) {
+        await supabase.auth.signOut({ scope: "local" })
+        return null
+      }
+
+      session = refreshData.session
+    }
+
+    if (!session?.user) return null
+
+    // Confirma a sessão diretamente no Auth Server.
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !userData?.user) {
+      await supabase.auth.signOut({ scope: "local" })
+      return null
+    }
+
+    return userData.user
+  }
+
+  useEffect(() => {
+    let mounted = true
+
+    const checkPersistedSession = async () => {
+      try {
+        const existingUser = await verifyExistingSession()
+
+        if (existingUser && mounted) {
+          await refreshUser()
+          navigate("/app", { replace: true })
+          return
+        }
+      } catch (error) {
+        console.error("Erro verificando sessão persistida:", error)
+      } finally {
+        if (mounted) setCheckingSession(false)
+      }
+    }
+
+    void checkPersistedSession()
+
+    return () => {
+      mounted = false
+    }
+  }, [navigate, refreshUser])
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -23,17 +85,16 @@ export const Login = () => {
     setSubmitting(true)
 
     try {
-      // A VERIFICAÇÃO SEMPRE acontece no clique do botão.
-      // Primeiro tenta recuperar/renovar e validar uma sessão já salva.
-      const existingUser = await verifySession()
+      // Também verifica a sessão no clique/submit do botão.
+      const existingUser = await verifyExistingSession()
 
       if (existingUser) {
-        notify.success("Acesso verificado. Entrando no sistema...")
+        await refreshUser()
+        notify.success("Sessão válida encontrada. Entrando no sistema...")
         navigate("/app", { replace: true })
         return
       }
 
-      // Sem uma sessão válida, segue para o login normal.
       if (!email.trim() || !senha) {
         notify.error("Informe seu e-mail e sua senha")
         return
@@ -46,11 +107,10 @@ export const Login = () => {
         return
       }
 
-      // Confirma novamente a sessão criada antes de permitir a entrada.
-      const authenticatedUser = await verifySession()
+      const authenticatedUser = await verifyExistingSession()
 
       if (!authenticatedUser) {
-        notify.error("Não foi possível confirmar seu acesso. Tente novamente.")
+        notify.error("Não foi possível confirmar sua sessão. Tente novamente.")
         return
       }
 
@@ -62,6 +122,19 @@ export const Login = () => {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (checkingSession) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6">
+        <div className="w-full max-w-sm rounded-3xl border border-slate-800 bg-slate-900 p-8 text-center shadow-2xl">
+          <img src={logo} alt="LogView" className="mx-auto mb-6 h-16 w-16 object-contain" />
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-green-500" />
+          <h1 className="text-lg font-bold text-white">Verificando seu acesso...</h1>
+          <p className="mt-2 text-sm text-slate-400">Estamos procurando uma sessão salva neste dispositivo.</p>
+        </div>
+      </main>
+    )
   }
 
   return (
