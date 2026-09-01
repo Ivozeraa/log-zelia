@@ -1,0 +1,229 @@
+/* Base global theme corrections */
+:root {
+  color-scheme: light;
+  --lv-bg: #f1f5f9;
+  --lv-surface: #ffffff;
+  --lv-surface-soft: #f8fafc;
+  --lv-text: #0f172a;
+  --lv-text-muted: #64748b;
+  --lv-border: #e2e8f0;
+}
+
+html.dark {
+  color-scheme: dark;
+  --lv-bg: #020617;
+  --lv-surface: #0f172a;
+  --lv-surface-soft: #111827;
+  --lv-text: #f8fafc;
+  --lv-text-muted: #94a3b8;
+  --lv-border: #334155;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html,
+body {
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+body {
+  background-color: var(--lv-bg);
+  color: var(--lv-text);
+}
+
+html.dark body {
+  background-color: var(--lv-bg);
+  color: var(--lv-text);
+}
+
+/* Native controls must follow the active color scheme. */
+input,
+select,
+textarea,
+button {
+  color-scheme: inherit;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: #475569 !important;
+  box-shadow: 0 0 0 3px rgb(71 85 105 / 0.22) !important;
+}
+
+/* Browser autofill can otherwise flash/force a light background. */
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark textarea:-webkit-autofill,
+.dark select:-webkit-autofill {
+  -webkit-text-fill-color: #f8fafc !important;
+  -webkit-box-shadow: 0 0 0 1000px #0f172a inset !important;
+  box-shadow: 0 0 0 1000px #0f172a inset !important;
+  caret-color: #f8fafc;
+}
+
+/* Native scrollbars */
+* {
+  scrollbar-color: #94a3b8 transparent;
+  scrollbar-width: thin;
+}
+
+.dark * {
+  scrollbar-color: #475569 #020617;
+}
+
+/* Selection */
+::selection {
+  background: rgb(22 163 74 / 0.20);
+  color: inherit;
+}
+
+.dark ::selection {
+  background: rgb(74 222 128 / 0.22);
+}
+
+/* Common surfaces that are easy to leave stuck in light mode. */
+.dark .bg-white\/95 {
+  background-color: rgb(15 23 42 / 0.95) !important;
+}
+
+.dark .bg-white\/90 {
+  background-color: rgb(15 23 42 / 0.90) !important;
+}
+
+.dark .bg-white\/80 {
+  background-color: rgb(15 23 42 / 0.80) !important;
+}
+
+.dark .border-gray-200 {
+  border-color: #334155 !important;
+}
+
+.dark .border-slate-200 {
+  border-color: #334155 !important;
+}
+
+.dark .border-slate-300 {
+  border-color: #475569 !important;
+}
+
+.dark .text-black {
+  color: #f8fafc !important;
+}
+
+.dark .text-gray-900,
+.dark .text-slate-900 {
+  color: #f8fafc !important;
+}
+
+.dark .text-gray-800,
+.dark .text-slate-800 {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-gray-700,
+.dark .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-gray-600,
+.dark .text-slate-600 {
+  color: #94a3b8 !important;
+}
+
+.dark .text-gray-500,
+.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+.dark .bg-gray-50,
+.dark .bg-slate-50 {
+  background-color: #111827 !important;
+}
+
+.dark .bg-gray-100,
+.dark .bg-slate-100 {
+  background-color: #0f172a !important;
+}
+
+.dark .bg-gray-200,
+.dark .bg-slate-200 {
+  background-color: #1e293b !important;
+}
+
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-gray-50:hover {
+  background-color: #1e293b !important;
+}
+
+/* Light-only utility leftovers used for cards and menus. */
+.dark .bg-white {
+  background-color: #0f172a !important;
+}
+
+/* Preserve intentionally white text and white controls. */
+.dark .text-white {
+  color: #ffffff !important;
+}
+
+/* Config surfaces */
+.dark [class*="bg-slate-300"] {
+  background-color: #0f172a !important;
+}
+
+/* Smooth theme changes for the app shell without affecting transforms/animations. */
+body,
+header,
+aside,
+main,
+section,
+article,
+form,
+nav,
+footer,
+input,
+select,
+textarea,
+button {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 180ms;
+  transition-timing-function: ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html,
+  body,
+  body,
+  header,
+  aside,
+  main,
+  section,
+  article,
+  form,
+  nav,
+  footer,
+  input,
+  select,
+  textarea,
+  button {
+    transition: none !important;
+  }
+}
