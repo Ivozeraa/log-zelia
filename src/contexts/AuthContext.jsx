@@ -64,11 +64,61 @@ export function AuthProvider({ children }) {
         avatar_url: authUser.user_metadata?.avatar_url || null,
       };
 
-      // Mantém a sessão disponível mesmo que a consulta ao perfil falhe.
       setUser(fallbackUser);
       return fallbackUser;
     }
   }, []);
+
+  const verifySession = useCallback(async () => {
+    const { data: sessionData, error: sessionError } = await withTimeout(
+      supabase.auth.getSession(),
+      AUTH_INIT_TIMEOUT_MS,
+      "Tempo limite ao verificar a sessão.",
+    );
+
+    if (sessionError) throw sessionError;
+
+    let session = sessionData?.session ?? null;
+
+    // Há uma sessão armazenada: tente renovar o token antes da validação.
+    if (session?.refresh_token) {
+      const { data: refreshData, error: refreshError } = await withTimeout(
+        supabase.auth.refreshSession({
+          refresh_token: session.refresh_token,
+        }),
+        AUTH_INIT_TIMEOUT_MS,
+        "Tempo limite ao renovar a sessão.",
+      );
+
+      if (refreshError || !refreshData?.session) {
+        await supabase.auth.signOut({ scope: "local" });
+        setUser(null);
+        return null;
+      }
+
+      session = refreshData.session;
+    }
+
+    if (!session?.user) {
+      setUser(null);
+      return null;
+    }
+
+    // getUser() consulta o Auth Server e confirma que a sessão ainda é válida.
+    const { data: userData, error: userError } = await withTimeout(
+      supabase.auth.getUser(),
+      AUTH_INIT_TIMEOUT_MS,
+      "Tempo limite ao confirmar o usuário.",
+    );
+
+    if (userError || !userData?.user) {
+      await supabase.auth.signOut({ scope: "local" });
+      setUser(null);
+      return null;
+    }
+
+    return await loadUser(userData.user);
+  }, [loadUser]);
 
   const signIn = useCallback(async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -80,9 +130,6 @@ export function AuthProvider({ children }) {
       return { data, error };
     }
 
-    // O Supabase atualiza a sessão imediatamente, mas o evento de auth
-    // pode chegar antes ou depois da navegação. Carregamos o perfil aqui
-    // e só devolvemos sucesso quando o AuthContext já conhece o usuário.
     await loadUser(data.user);
 
     return { data, error: null };
@@ -104,10 +151,7 @@ export function AuthProvider({ children }) {
           error,
         } = result;
 
-        if (error) {
-          console.error("Erro obtendo sessão:", error);
-        }
-
+        if (error) console.error("Erro obtendo sessão:", error);
         if (!mounted) return;
 
         initialized = true;
@@ -166,7 +210,7 @@ export function AuthProvider({ children }) {
   }, [loadUser, user]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, refreshUser, logout }}>
+    <AuthContext.Provider value={{ user, loading, signIn, verifySession, refreshUser, logout }}>
       {children}
     </AuthContext.Provider>
   );
