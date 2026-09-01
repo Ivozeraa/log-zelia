@@ -7,6 +7,7 @@ import logo from "../assets/images/logo-login.png"
 import { notify } from "../utils/notify"
 import { FormInput } from "../components/ui/FormInput"
 import { useAuth } from "../hooks/useAuth"
+import { supabase } from "../utils/supabase"
 
 export const Login = () => {
   const [email, setEmail] = useState("")
@@ -20,12 +21,29 @@ export const Login = () => {
     e.preventDefault()
     if (submitting) return
     setSubmitting(true)
+
     try {
+      // Verifica a sessão persistida no momento em que o usuário
+      // clica em "Entrar no sistema".
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+
+      if (sessionError) {
+        console.error("Erro verificando sessão existente:", sessionError)
+      }
+
+      if (sessionData?.session?.user) {
+        notify.success("Sessão encontrada. Entrando no sistema...")
+        navigate("/app", { replace: true })
+        return
+      }
+
+      // Não existe sessão persistida: realiza o login normalmente.
       const { error } = await signIn(email, senha)
       if (error) {
         notify.error("Erro no login")
         return
       }
+
       notify.success("Login realizado com sucesso!")
       navigate("/app", { replace: true })
     } catch (error) {
@@ -81,7 +99,7 @@ export const Login = () => {
               <div><label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">E-mail</label><FormInput type="email" placeholder="seu@email.com" onChange={(e) => setEmail(e.target.value)} className="w-full" disabled={submitting} /></div>
               <div><label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Senha</label><div className="relative"><FormInput type={showPassword ? "text" : "password"} placeholder="Sua senha" onChange={(e) => setSenha(e.target.value)} className="w-full pr-12" disabled={submitting} /><button type="button" disabled={submitting} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed dark:hover:bg-slate-800 dark:hover:text-slate-200">{showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}</button></div></div>
               <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-500 dark:bg-slate-950 dark:text-slate-400"><FaLock className="shrink-0 text-green-600" /><span>Seu acesso é protegido pelas permissões da sua conta e da escola.</span></div>
-              <Button className="mt-2 w-full rounded-xl py-3.5 text-sm font-bold sm:py-3" type="submit" disabled={submitting}>{submitting ? "Entrando..." : "Entrar no sistema"}{!submitting && <FaArrowRight className="ml-1 text-xs" />}</Button>
+              <Button className="mt-2 w-full rounded-xl py-3.5 text-sm font-bold sm:py-3" type="submit" disabled={submitting}>{submitting ? "Verificando acesso..." : "Entrar no sistema"}{!submitting && <FaArrowRight className="ml-1 text-xs" />}</Button>
             </form>
             <div className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">LogView · Gestão escolar</div>
           </div>
