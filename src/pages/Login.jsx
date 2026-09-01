@@ -20,27 +20,42 @@ export const Login = () => {
   async function handleLogin(e) {
     e.preventDefault()
     if (submitting) return
+
     setSubmitting(true)
 
     try {
-      // Verifica a sessão persistida no momento em que o usuário
-      // clica em "Entrar no sistema".
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      // O clique no botão sempre faz uma verificação real da sessão atual.
+      // Se houver uma sessão persistida e válida, não pedimos as credenciais novamente.
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
       if (sessionError) {
-        console.error("Erro verificando sessão existente:", sessionError)
+        console.error("Erro verificando sessão:", sessionError)
       }
 
-      if (sessionData?.session?.user) {
+      if (session?.user) {
         notify.success("Sessão encontrada. Entrando no sistema...")
         navigate("/app", { replace: true })
         return
       }
 
-      // Não existe sessão persistida: realiza o login normalmente.
+      // Sem sessão válida, realiza o login normalmente com as credenciais informadas.
+      if (!email || !senha) {
+        notify.error("Informe seu e-mail e sua senha")
+        return
+      }
+
       const { error } = await signIn(email, senha)
+
       if (error) {
-        notify.error("Erro no login")
+        notify.error("E-mail ou senha inválidos")
+        return
+      }
+
+      // Confirma que a sessão foi criada antes de liberar o acesso.
+      const { data: { session: newSession } } = await supabase.auth.getSession()
+
+      if (!newSession?.user) {
+        notify.error("Não foi possível confirmar sua sessão. Tente novamente.")
         return
       }
 
@@ -48,7 +63,7 @@ export const Login = () => {
       navigate("/app", { replace: true })
     } catch (error) {
       console.error("Erro no login:", error)
-      notify.error("Não foi possível realizar o login")
+      notify.error("Não foi possível verificar seu acesso")
     } finally {
       setSubmitting(false)
     }
