@@ -100,7 +100,7 @@ button {
   background: rgb(74 222 128 / 0.22);
 }
 
-/* Common surfaces that are easy to leave stuck in light mode. */
+/* Common translucent surfaces that otherwise tend to remain too bright. */
 .dark .bg-white\/95 {
   background-color: rgb(15 23 42 / 0.95) !important;
 }
@@ -113,10 +113,7 @@ button {
   background-color: rgb(15 23 42 / 0.80) !important;
 }
 
-.dark .border-gray-200 {
-  border-color: #334155 !important;
-}
-
+.dark .border-gray-200,
 .dark .border-slate-200 {
   border-color: #334155 !important;
 }
@@ -145,10 +142,7 @@ button {
 }
 
 .dark .text-gray-600,
-.dark .text-slate-600 {
-  color: #94a3b8 !important;
-}
-
+.dark .text-slate-600,
 .dark .text-gray-500,
 .dark .text-slate-500 {
   color: #94a3b8 !important;
@@ -174,22 +168,12 @@ button {
   background-color: #1e293b !important;
 }
 
-/* Light-only utility leftovers used for cards and menus. */
-.dark .bg-white {
-  background-color: #0f172a !important;
-}
-
-/* Preserve intentionally white text and white controls. */
-.dark .text-white {
-  color: #ffffff !important;
-}
-
-/* Config surfaces */
+/* Settings surfaces */
 .dark [class*="bg-slate-300"] {
   background-color: #0f172a !important;
 }
 
-/* Smooth theme changes for the app shell without affecting transforms/animations. */
+/* Smooth theme changes without taking control of transform/animation timings. */
 body,
 header,
 aside,
@@ -210,7 +194,6 @@ button {
 
 @media (prefers-reduced-motion: reduce) {
   html,
-  body,
   body,
   header,
   aside,
