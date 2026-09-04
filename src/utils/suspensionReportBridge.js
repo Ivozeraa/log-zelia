@@ -97,7 +97,7 @@ const drawImageContain = (ctx, image, x, y, width, height) => {
 const createReportBlob = async (data) => {
   const canvas = document.createElement("canvas");
   canvas.width = 1400;
-  canvas.height = 1220;
+  canvas.height = 1260;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
@@ -112,16 +112,16 @@ const createReportBlob = async (data) => {
   ctx.fillStyle = "#166534";
   ctx.fillRect(0, 0, canvas.width, 175);
 
-  // Logo maior para manter a identidade visual mais presente.
+  // Logo ampliada.
   if (logo) {
-    drawImageContain(ctx, logo, 45, 12, 225, 150);
+    drawImageContain(ctx, logo, 30, 5, 260, 165);
   }
 
   ctx.fillStyle = "#ffffff";
   ctx.font = `800 38px ${font}`;
-  ctx.fillText("COMUNICADO DE SUSPENSÃO", 300, 74);
+  ctx.fillText("COMUNICADO DE SUSPENSÃO", 315, 74);
   ctx.font = `600 23px ${font}`;
-  ctx.fillText("LogZélia • Gestão Escolar", 300, 117);
+  ctx.fillText("LogZélia • Gestão Escolar", 315, 117);
 
   const box = (x, y, w, h, fill = "#ffffff", stroke = "#e2e8f0") => {
     ctx.fillStyle = fill;
@@ -211,9 +211,9 @@ const createReportBlob = async (data) => {
   ctx.font = `600 18px ${font}`;
   drawWrapped(`👨‍🏫 Professor responsável: ${data.professor}`, 100, 1005, 1180, 25, 2);
 
-  // O rodapé é exclusivamente a arte topo_mini, sem fundo verde adicional.
+  // Rodapé: somente a arte original topo_mini, posicionada mais abaixo.
   if (footer) {
-    drawImageContain(ctx, footer, 0, 1060, canvas.width, 160);
+    drawImageContain(ctx, footer, 0, 1100, canvas.width, 160);
   }
 
   return new Promise((resolve) => canvas.toBlob(resolve, "image/png", 0.98));
