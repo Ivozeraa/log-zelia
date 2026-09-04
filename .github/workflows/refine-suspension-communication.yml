@@ -13,184 +13,52 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Refine suspension communication
+
+      - name: Aplicar ajuste visual final
         shell: python
         run: |
           from pathlib import Path
-          import re
-          import subprocess
 
-          path = Path('src/components/ui/SuspensionDecisionPopup.jsx')
+          path = Path('src/utils/suspensionReportBridge.js')
           text = path.read_text(encoding='utf-8')
 
-          if 'from "../../utils/supabase"' not in text:
-              text = text.replace(
-                  'import topoMini from "../../assets/images/topo_mini.png";\n',
-                  'import topoMini from "../../assets/images/topo_mini.png";\nimport { supabase } from "../../utils/supabase";\n',
-                  1,
-              )
+          replacements = [
+              (
+                  'drawImageContain(ctx, logo, 20, 0, 295, 175);',
+                  'drawImageContain(ctx, logo, 5, -10, 350, 210);',
+              ),
+              (
+                  'ctx.fillText("COMUNICADO DE SUSPENSÃO", 335, 74);',
+                  'ctx.fillText("COMUNICADO DE SUSPENSÃO", 375, 74);',
+              ),
+              (
+                  'ctx.fillText("LogZélia • Gestão Escolar", 335, 117);',
+                  'ctx.fillText("LogZélia • Gestão Escolar", 375, 117);',
+              ),
+              (
+                  'drawImageCoverBottom(ctx, footer, 0, canvas.height, canvas.width, 160);',
+                  'drawImageCoverBottom(ctx, footer, 0, canvas.height, canvas.width, 110);',
+              ),
+          ]
 
-          if 'const [schoolName, setSchoolName]' not in text:
-              anchor = '  const [expulsionNotice, setExpulsionNotice] = useState(null);\n'
-              addition = anchor + '''\n  const [schoolName, setSchoolName] = useState("Escola");\n\n  useEffect(() => {\n    let cancelled = false;\n    const escolaId = pending?.occurrence?.escola_id;\n    if (!escolaId) {\n      setSchoolName("Escola");\n      return () => { cancelled = true; };\n    }\n\n    supabase\n      .from("escolas")\n      .select("nome")\n      .eq("id", escolaId)\n      .maybeSingle()\n      .then(({ data }) => {\n        if (!cancelled) setSchoolName(data?.nome || "Escola");\n      });\n\n    return () => { cancelled = true; };\n  }, [pending?.occurrence?.escola_id]);\n'''
-              text = text.replace(anchor, addition, 1)
+          changed = False
+          for old, new in replacements:
+              if old in text:
+                  text = text.replace(old, new, 1)
+                  changed = True
 
-          text = re.sub(
-              r'  const textoCompartilhamento = pending\n    \? `.*?`\n    : "";\n  const textoExpulsao = expulsionNotice\n    \? `.*?`\n    : "";\n',
-              '''  const textoCompartilhamento = pending\n    ? `🚨 COMUNICADO DE SUSPENSÃO\\n\\n👤 Aluno: ${pending.aluno?.nome || "Aluno"}\\n🏫 Turma: ${pending.turma?.nome || "—"}\\n______________________________________\\nSuspensão: ${numeroSuspensao}ª${resultaraEmExpulsao ? " (3ª e última)" : ""}\\nDuração: ${days} ${Number(days) === 1 ? "dia" : "dias"}\\n______________________________________\\n📅 Período: ${formatDate(startDate)} até ${formatDate(endDate)}\\nMotivo: O aluno atingiu ${ocorrenciasAteLimite} ocorrências.\\nOcorrência que gerou a suspensão: ${pending.occurrence?.descricao || "Não informado"}\\n\\n👨‍🏫 Professor responsável: ${professorResponsavel}\\n\\nRegistro realizado pelo LogZélia – Sistema de Gestão Escolar.`\n    : "";\n  const textoExpulsao = expulsionNotice\n    ? `🚨 COMUNICADO DE EXPULSÃO\\n\\n👤 Aluno: ${expulsionNotice.pending.aluno?.nome || "Aluno"}\\n🏫 Turma: ${expulsionNotice.pending.turma?.nome || "—"}\\n______________________________________\\n🚫 Medida: 3ª suspensão — expulsão\\n⏳ Duração: ${expulsionNotice.days} ${Number(expulsionNotice.days) === 1 ? "dia" : "dias"}\\n______________________________________\\n📅 Período: ${formatDate(expulsionNotice.startDate)} até ${formatDate(expulsionNotice.endDate)}\\nMotivo: O aluno atingiu a 3ª suspensão, resultando em expulsão.\\nOcorrência que gerou a medida: ${expulsionNotice.pending.occurrence?.descricao || "Não informado"}\\n\\n👨‍🏫 Professor responsável: ${professorResponsavel}\\n\\nRegistro realizado pelo LogZélia – Sistema de Gestão Escolar.`\n    : "";\n''',
-              text,
-              count=1,
-              flags=re.S,
-          )
-
-          new_image = r'''  const createImageBlob = async (isExpulsion = false, details = {}) => {
-    if (!pending) return null;
-    const currentDays = Number(details.days ?? days);
-    const currentStart = details.startDate ?? startDate;
-    const currentEnd = details.endDate ?? endDate;
-    const canvas = document.createElement("canvas");
-    canvas.width = 1400;
-    canvas.height = 1060;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    const font = '"Segoe UI", Arial, sans-serif';
-    const headerHeight = 205;
-
-    const roundedRect = (x, y, width, height, radius) => {
-      const r = Math.min(radius, width / 2, height / 2);
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.arcTo(x + width, y, x + width, y + height, r);
-      ctx.arcTo(x + width, y + height, x, y + height, r);
-      ctx.arcTo(x, y + height, x, y, r);
-      ctx.arcTo(x, y, x + width, y, r);
-      ctx.closePath();
-    };
-
-    const drawWrapped = (value, x, y, maxWidth, lineHeight, maxLines = 3) => {
-      const words = String(value || "—").split(/\s+/);
-      const lines = [];
-      let line = "";
-      for (const word of words) {
-        const test = line ? `${line} ${word}` : word;
-        if (ctx.measureText(test).width > maxWidth && line) {
-          lines.push(line);
-          line = word;
-        } else {
-          line = test;
-        }
-      }
-      if (line) lines.push(line);
-      lines.slice(0, maxLines).forEach((item, index) => ctx.fillText(item, x, y + index * lineHeight));
-      return Math.min(lines.length, maxLines);
-    };
-
-    const escola = String(schoolName || "Escola");
-
-    ctx.fillStyle = "#f8fafc";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = isExpulsion ? "#991b1b" : "#166534";
-    ctx.fillRect(0, 0, canvas.width, headerHeight);
-
-    const headerLogo = await loadImage(logoLogin);
-    if (headerLogo?.naturalWidth) {
-      ctx.drawImage(headerLogo, 60, 18, 190, 170);
-    }
-
-    ctx.fillStyle = "#ffffff";
-    let schoolFontSize = 38;
-    ctx.font = `700 ${schoolFontSize}px ${font}`;
-    while (ctx.measureText(escola).width > 1010 && schoolFontSize > 24) {
-      schoolFontSize -= 2;
-      ctx.font = `700 ${schoolFontSize}px ${font}`;
-    }
-    drawWrapped(escola, 285, 82, 1010, schoolFontSize + 7, 2);
-    ctx.font = `600 24px ${font}`;
-    ctx.fillText(isExpulsion ? "COMUNICADO DE EXPULSÃO" : "COMUNICADO DE SUSPENSÃO", 285, 155);
-
-    ctx.fillStyle = "#0f172a";
-    roundedRect(70, 245, 1260, 190, 22);
-    ctx.fillStyle = "#ffffff";
-    ctx.fill();
-    ctx.strokeStyle = "#e2e8f0";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.fillStyle = "#64748b";
-    ctx.font = `600 17px ${font}`;
-    ctx.fillText("ALUNO", 100, 285);
-    ctx.fillText("TURMA", 820, 285);
-    ctx.fillStyle = "#0f172a";
-    ctx.font = `700 32px ${font}`;
-    drawWrapped(pending.aluno?.nome || "Aluno", 100, 325, 650, 38, 2);
-    ctx.font = `600 27px ${font}`;
-    drawWrapped(pending.turma?.nome || "—", 820, 325, 430, 34, 2);
-    ctx.fillStyle = "#64748b";
-    ctx.font = `500 17px ${font}`;
-    if (pending.aluno?.matricula) ctx.fillText(`Matrícula: ${pending.aluno.matricula}`, 100, 400);
-
-    ctx.fillStyle = "#0f172a";
-    roundedRect(70, 465, 1260, 145, 22);
-    ctx.fillStyle = isExpulsion ? "#fef2f2" : "#fff7ed";
-    ctx.fill();
-    ctx.strokeStyle = isExpulsion ? "#fecaca" : "#fed7aa";
-    ctx.stroke();
-
-    ctx.fillStyle = isExpulsion ? "#b91c1c" : "#b45309";
-    ctx.font = `600 17px ${font}`;
-    ctx.fillText(isExpulsion ? "MEDIDA DISCIPLINAR" : "SUSPENSÃO", 100, 505);
-    ctx.fillStyle = "#0f172a";
-    ctx.font = `700 30px ${font}`;
-    ctx.fillText(isExpulsion ? "3ª suspensão — expulsão" : `${numeroSuspensao}ª suspensão`, 100, 550);
-    ctx.font = `700 30px ${font}`;
-    ctx.fillText(`${currentDays} ${Number(currentDays) === 1 ? "dia" : "dias"}`, 1030, 550);
-    ctx.fillStyle = "#64748b";
-    ctx.font = `500 17px ${font}`;
-    ctx.fillText(`${formatDate(currentStart)} até ${formatDate(currentEnd)}`, 850, 585);
-
-    ctx.fillStyle = "#334155";
-    ctx.font = `600 20px ${font}`;
-    ctx.fillText("MOTIVO", 90, 675);
-    ctx.font = `500 20px ${font}`;
-    ctx.fillStyle = "#475569";
-    drawWrapped(isExpulsion ? "O aluno atingiu a 3ª suspensão, resultando em expulsão." : `O aluno atingiu ${ocorrenciasAteLimite} ocorrências.`, 90, 710, 1220, 28, 2);
-
-    ctx.fillStyle = "#334155";
-    ctx.font = `600 20px ${font}`;
-    ctx.fillText("OCORRÊNCIA QUE GEROU A MEDIDA", 90, 785);
-    ctx.font = `500 19px ${font}`;
-    ctx.fillStyle = "#475569";
-    drawWrapped(pending.occurrence?.descricao || "Não informado", 90, 820, 1220, 27, 2);
-
-    ctx.fillStyle = "#64748b";
-    ctx.font = `600 17px ${font}`;
-    ctx.fillText(`Professor responsável: ${professorResponsavel}`, 90, 890);
-
-    const footer = await loadImage(topoMini);
-    if (footer?.naturalWidth) ctx.drawImage(footer, 0, 925, 1400, 135);
-
-    return new Promise((resolve) => canvas.toBlob(resolve, "image/png", 0.96));
-  };
-'''
-          text, count = re.subn(
-              r'  const createImageBlob = async \(isExpulsion = false, details = \{\}\) => \{.*?\n  \};\n\n  const copyText',
-              new_image + '\n  const copyText',
-              text,
-              count=1,
-              flags=re.S,
-          )
-          if count != 1:
-              raise SystemExit('createImageBlob não encontrado para atualização')
+          if not changed:
+              print('Nenhum ajuste visual pendente.')
+              raise SystemExit(0)
 
           path.write_text(text, encoding='utf-8')
 
-          subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
-          subprocess.run(['git', 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'], check=True)
-          subprocess.run(['git', 'add', str(path)], check=True)
-          result = subprocess.run(['git', 'diff', '--cached', '--quiet'])
-          if result.returncode == 0:
-              print('Nenhuma alteração necessária.')
-              raise SystemExit(0)
-          subprocess.run(['git', 'commit', '-m', 'feat: modernizar comunicado de suspensão'], check=True)
-          subprocess.run(['git', 'push'], check=True)
+      - name: Commitar somente o arquivo do comunicado
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/utils/suspensionReportBridge.js
+          git diff --cached --quiet && exit 0
+          git commit -m 'feat: ampliar logo e reduzir footer do comunicado'
+          git push
