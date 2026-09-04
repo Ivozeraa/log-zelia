@@ -24,6 +24,11 @@ const getReportData = (card, selectedStudent) => {
     );
   }
 
+  const descricaoBruta = descriptionMatch?.[1] || "Não informado";
+  const motivoProfessorMatch = descricaoBruta.match(/Motivo\s+do\s+professor:\s*(.+)$/i);
+  const motivoProfessor = motivoProfessorMatch?.[1]?.trim() || descricaoBruta;
+  const ocorrenciaResumo = `O aluno atingiu ${totalMatch?.[1] || "3"} ocorrências.`;
+
   return {
     aluno: selectedStudent?.nome || "Aluno",
     turma: selectedStudent?.turma || "—",
@@ -32,13 +37,15 @@ const getReportData = (card, selectedStudent) => {
     inicio: dates[0],
     fim: dates[1],
     totalOcorrencias: totalMatch?.[1] || "3",
-    descricao: descriptionMatch?.[1] || "Não informado",
+    motivoOcorrencias: ocorrenciaResumo,
+    motivoProfessor,
+    descricao: descricaoBruta,
     professor: professorMatch?.[1] || "Não informado",
   };
 };
 
 const reportText = (data) =>
-  `🚨 *COMUNICADO DE SUSPENSÃO*\n\n*Aluno:* ${data.aluno}\n*Turma:* ${data.turma}\n\n*Suspensão:* ${data.numero}ª\n*Duração:* ${data.days} ${data.days === 1 ? "dia" : "dias"}\n\n📅 *Período: ${data.inicio} até ${data.fim}*\n\n*Motivo:* O aluno atingiu ${data.totalOcorrencias} ocorrências.\n\n*Ocorrência que gerou a suspensão:* ${data.descricao}\n\n👨‍🏫 *Professor responsável:* ${data.professor}\n\n_Registro realizado pelo LogZélia – Sistema de Gestão Escolar._`;
+  `🚨 *COMUNICADO DE SUSPENSÃO*\n\n*Aluno:* ${data.aluno}\n*Turma:* ${data.turma}\n\n*Suspensão:* ${data.numero}ª\n*Duração:* ${data.days} ${data.days === 1 ? "dia" : "dias"}\n\n📅 *Período: ${data.inicio} até ${data.fim}*\n\n*Motivo da suspensão:* ${data.motivoOcorrencias}\n\n*Motivo informado pelo professor:* ${data.motivoProfessor}\n\n👨‍🏫 *Professor responsável:* ${data.professor}\n\n_Registro realizado pelo LogZélia – Sistema de Gestão Escolar._`;
 
 const loadImage = (src) =>
   new Promise((resolve) => {
@@ -90,7 +97,7 @@ const drawImageContain = (ctx, image, x, y, width, height) => {
 const createReportBlob = async (data) => {
   const canvas = document.createElement("canvas");
   canvas.width = 1400;
-  canvas.height = 1120;
+  canvas.height = 1220;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
@@ -105,15 +112,16 @@ const createReportBlob = async (data) => {
   ctx.fillStyle = "#166534";
   ctx.fillRect(0, 0, canvas.width, 175);
 
+  // Logo maior para manter a identidade visual mais presente.
   if (logo) {
-    drawImageContain(ctx, logo, 55, 20, 190, 135);
+    drawImageContain(ctx, logo, 45, 12, 225, 150);
   }
 
   ctx.fillStyle = "#ffffff";
   ctx.font = `800 38px ${font}`;
-  ctx.fillText("COMUNICADO DE SUSPENSÃO", 285, 74);
+  ctx.fillText("COMUNICADO DE SUSPENSÃO", 300, 74);
   ctx.font = `600 23px ${font}`;
-  ctx.fillText("LogZélia • Gestão Escolar", 285, 117);
+  ctx.fillText("LogZélia • Gestão Escolar", 300, 117);
 
   const box = (x, y, w, h, fill = "#ffffff", stroke = "#e2e8f0") => {
     ctx.fillStyle = fill;
@@ -154,8 +162,8 @@ const createReportBlob = async (data) => {
     });
   };
 
-  const label = (value, x, y) => {
-    ctx.fillStyle = "#64748b";
+  const label = (value, x, y, color = "#64748b") => {
+    ctx.fillStyle = color;
     ctx.font = `700 17px ${font}`;
     ctx.fillText(value.toUpperCase(), x, y);
   };
@@ -185,40 +193,27 @@ const createReportBlob = async (data) => {
   ctx.fillText(`${data.inicio} até ${data.fim}`, 1300, 550);
   ctx.textAlign = "left";
 
-  label("Motivo", 90, 645);
-  ctx.fillStyle = "#334155";
+  // Motivo das ocorrências que atingiu o limite.
+  box(70, 610, 1260, 145, "#eff6ff", "#bfdbfe");
+  label("Motivo da suspensão (limite de ocorrências)", 100, 650, "#2563eb");
+  ctx.fillStyle = "#1e293b";
   ctx.font = `600 23px ${font}`;
-  drawWrapped(`O aluno atingiu ${data.totalOcorrencias} ocorrências.`, 90, 685, 1220, 31, 2);
+  drawWrapped(data.motivoOcorrencias, 100, 695, 1180, 31, 2);
 
-  label("Ocorrência que gerou a medida", 90, 755);
+  // Motivo efetivamente informado pelo professor, separado do motivo da medida.
+  box(70, 780, 1260, 190, "#f0fdf4", "#bbf7d0");
+  label("Motivo informado pelo professor", 100, 820, "#15803d");
   ctx.fillStyle = "#334155";
   ctx.font = `500 21px ${font}`;
-  drawWrapped(data.descricao, 90, 795, 1220, 30, 3);
+  drawWrapped(data.motivoProfessor, 100, 865, 1180, 30, 3);
 
   ctx.fillStyle = "#64748b";
   ctx.font = `600 18px ${font}`;
-  drawWrapped(`👨‍🏫 Professor responsável: ${data.professor}`, 90, 900, 1220, 25, 2);
+  drawWrapped(`👨‍🏫 Professor responsável: ${data.professor}`, 100, 1005, 1180, 25, 2);
 
-  // Rodapé institucional com a arte existente do projeto. Há fallback visual
-  // para que a imagem nunca deixe um espaço vazio caso o asset não carregue.
-  ctx.fillStyle = "#166534";
-  ctx.fillRect(0, 1000, canvas.width, 120);
+  // O rodapé é exclusivamente a arte topo_mini, sem fundo verde adicional.
   if (footer) {
-    drawImageContain(ctx, footer, 0, 1000, canvas.width, 120);
-  } else {
-    ctx.fillStyle = "#ffffff";
-    ctx.font = `500 16px ${font}`;
-    ctx.textAlign = "center";
-    ctx.fillText("Registro realizado pelo LogZélia – Sistema de Gestão Escolar.", 700, 1070);
-    ctx.textAlign = "left";
-  }
-
-  if (footer) {
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.font = `600 15px ${font}`;
-    ctx.textAlign = "center";
-    ctx.fillText("Registro realizado pelo LogZélia – Sistema de Gestão Escolar.", 700, 1094);
-    ctx.textAlign = "left";
+    drawImageContain(ctx, footer, 0, 1060, canvas.width, 160);
   }
 
   return new Promise((resolve) => canvas.toBlob(resolve, "image/png", 0.98));
