@@ -24,20 +24,20 @@ jobs:
 
           replacements = [
               (
-                  'drawImageContain(ctx, logo, 20, 0, 295, 175);',
-                  'drawImageContain(ctx, logo, 5, -10, 350, 210);',
+                  'drawImageContain(ctx, logo, 10, -8, 325, 183);',
+                  'drawImageContain(ctx, logo, -5, -18, 370, 205);',
               ),
               (
-                  'ctx.fillText("COMUNICADO DE SUSPENSÃO", 335, 74);',
-                  'ctx.fillText("COMUNICADO DE SUSPENSÃO", 375, 74);',
+                  'ctx.fillText("COMUNICADO DE SUSPENSÃO", 365, 74);',
+                  'ctx.fillText("COMUNICADO DE SUSPENSÃO", 400, 74);',
               ),
               (
-                  'ctx.fillText("LogZélia • Gestão Escolar", 335, 117);',
-                  'ctx.fillText("LogZélia • Gestão Escolar", 375, 117);',
+                  'ctx.fillText("LogZélia • Gestão Escolar", 365, 117);',
+                  'ctx.fillText("LogZélia • Gestão Escolar", 400, 117);',
               ),
               (
-                  'drawImageCoverBottom(ctx, footer, 0, canvas.height, canvas.width, 160);',
-                  'drawImageCoverBottom(ctx, footer, 0, canvas.height, canvas.width, 110);',
+                  'drawImageCoverBottom(ctx, footer, 0, canvas.height, canvas.width, 120);',
+                  'drawImageCoverBottom(ctx, footer, 0, canvas.height, canvas.width, 95);',
               ),
           ]
 
@@ -48,8 +48,7 @@ jobs:
                   changed = True
 
           if not changed:
-              print('Nenhum ajuste visual pendente.')
-              raise SystemExit(0)
+              raise SystemExit('Nenhum ajuste visual pendente.')
 
           path.write_text(text, encoding='utf-8')
 
