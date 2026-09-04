@@ -130,14 +130,14 @@ const createReportBlob = async (data) => {
 
   // Logo ampliada.
   if (logo) {
-    drawImageContain(ctx, logo, 20, 0, 295, 175);
+    drawImageContain(ctx, logo, 10, -8, 325, 183);
   }
 
   ctx.fillStyle = "#ffffff";
   ctx.font = `800 38px ${font}`;
-  ctx.fillText("COMUNICADO DE SUSPENSÃO", 335, 74);
+  ctx.fillText("COMUNICADO DE SUSPENSÃO", 365, 74);
   ctx.font = `600 23px ${font}`;
-  ctx.fillText("LogZélia • Gestão Escolar", 335, 117);
+  ctx.fillText("LogZélia • Gestão Escolar", 365, 117);
 
   const box = (x, y, w, h, fill = "#ffffff", stroke = "#e2e8f0") => {
     ctx.fillStyle = fill;
@@ -228,7 +228,7 @@ const createReportBlob = async (data) => {
 
   // Footer fica exatamente no limite inferior do canvas e usa somente o topo_mini.
   if (footer) {
-    drawImageCoverBottom(ctx, footer, 0, canvas.height, canvas.width, 160);
+    drawImageCoverBottom(ctx, footer, 0, canvas.height, canvas.width, 120);
   }
 
   return new Promise((resolve) => canvas.toBlob(resolve, "image/png", 0.98));
