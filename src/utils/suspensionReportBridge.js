@@ -94,6 +94,22 @@ const drawImageContain = (ctx, image, x, y, width, height) => {
   return true;
 };
 
+const drawImageCoverBottom = (ctx, image, x, bottomY, width, height) => {
+  if (!image?.naturalWidth || !image?.naturalHeight) return false;
+  const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+  const drawWidth = image.naturalWidth * scale;
+  const drawHeight = image.naturalHeight * scale;
+  const drawX = x + (width - drawWidth) / 2;
+  const drawY = bottomY - drawHeight;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, bottomY - height, width, height);
+  ctx.clip();
+  ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+  ctx.restore();
+  return true;
+};
+
 const createReportBlob = async (data) => {
   const canvas = document.createElement("canvas");
   canvas.width = 1400;
@@ -114,14 +130,14 @@ const createReportBlob = async (data) => {
 
   // Logo ampliada.
   if (logo) {
-    drawImageContain(ctx, logo, 30, 5, 260, 165);
+    drawImageContain(ctx, logo, 20, 0, 295, 175);
   }
 
   ctx.fillStyle = "#ffffff";
   ctx.font = `800 38px ${font}`;
-  ctx.fillText("COMUNICADO DE SUSPENSÃO", 315, 74);
+  ctx.fillText("COMUNICADO DE SUSPENSÃO", 335, 74);
   ctx.font = `600 23px ${font}`;
-  ctx.fillText("LogZélia • Gestão Escolar", 315, 117);
+  ctx.fillText("LogZélia • Gestão Escolar", 335, 117);
 
   const box = (x, y, w, h, fill = "#ffffff", stroke = "#e2e8f0") => {
     ctx.fillStyle = fill;
@@ -193,16 +209,15 @@ const createReportBlob = async (data) => {
   ctx.fillText(`${data.inicio} até ${data.fim}`, 1300, 550);
   ctx.textAlign = "left";
 
-  // Motivo das ocorrências que atingiu o limite.
-  box(70, 610, 1260, 145, "#eff6ff", "#bfdbfe");
-  label("Motivo da suspensão (limite de ocorrências)", 100, 650, "#2563eb");
+  // Campos brancos, no mesmo padrão visual do primeiro modelo.
+  box(70, 610, 1260, 145, "#ffffff", "#e2e8f0");
+  label("Motivo da suspensão (limite de ocorrências)", 100, 650, "#64748b");
   ctx.fillStyle = "#1e293b";
   ctx.font = `600 23px ${font}`;
   drawWrapped(data.motivoOcorrencias, 100, 695, 1180, 31, 2);
 
-  // Motivo efetivamente informado pelo professor, separado do motivo da medida.
-  box(70, 780, 1260, 190, "#f0fdf4", "#bbf7d0");
-  label("Motivo informado pelo professor", 100, 820, "#15803d");
+  box(70, 780, 1260, 190, "#ffffff", "#e2e8f0");
+  label("Motivo informado pelo professor", 100, 820, "#64748b");
   ctx.fillStyle = "#334155";
   ctx.font = `500 21px ${font}`;
   drawWrapped(data.motivoProfessor, 100, 865, 1180, 30, 3);
@@ -211,9 +226,9 @@ const createReportBlob = async (data) => {
   ctx.font = `600 18px ${font}`;
   drawWrapped(`👨‍🏫 Professor responsável: ${data.professor}`, 100, 1005, 1180, 25, 2);
 
-  // Rodapé: somente a arte original topo_mini, posicionada mais abaixo.
+  // Footer fica exatamente no limite inferior do canvas e usa somente o topo_mini.
   if (footer) {
-    drawImageContain(ctx, footer, 0, 1100, canvas.width, 160);
+    drawImageCoverBottom(ctx, footer, 0, canvas.height, canvas.width, 160);
   }
 
   return new Promise((resolve) => canvas.toBlob(resolve, "image/png", 0.98));
