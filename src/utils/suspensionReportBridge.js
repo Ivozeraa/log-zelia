@@ -1,10 +1,7 @@
-import { FaCopy, FaDownload, FaShareAlt } from "react-icons/fa";
+import logoLogin from "../assets/images/logo-login.png";
+import topoMini from "../assets/images/topo_mini.png";
 
 const formatDateForReport = (value) => value || "—";
-
-const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
-  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
-}[char]));
 
 const getReportData = (card, selectedStudent) => {
   const text = card.innerText.replace(/\s+/g, " ").trim();
@@ -21,7 +18,10 @@ const getReportData = (card, selectedStudent) => {
   if (start && end) {
     const [sd, sm, sy] = start.split("/").map(Number);
     const [ed, em, ey] = end.split("/").map(Number);
-    days = Math.max(1, Math.round((new Date(ey, em - 1, ed) - new Date(sy, sm - 1, sd)) / 86400000) + 1);
+    days = Math.max(
+      1,
+      Math.round((new Date(ey, em - 1, ed) - new Date(sy, sm - 1, sd)) / 86400000) + 1,
+    );
   }
 
   return {
@@ -37,25 +37,83 @@ const getReportData = (card, selectedStudent) => {
   };
 };
 
-const reportText = (data) => `🚨 COMUNICADO DE SUSPENSÃO\n\nAluno: ${data.aluno}\nTurma: ${data.turma}\n\nSuspensão: ${data.numero}ª\nDuração: ${data.days} ${data.days === 1 ? "dia" : "dias"}\nPeríodo: ${data.inicio} até ${data.fim}\n\nMotivo: O aluno atingiu ${data.totalOcorrencias} ocorrências.\nOcorrência que gerou a medida: ${data.descricao}\nProfessor responsável: ${data.professor}\n\nRegistro realizado pelo LogZélia – Sistema de Gestão Escolar.`;
+const reportText = (data) =>
+  `🚨 *COMUNICADO DE SUSPENSÃO*\n\n*Aluno:* ${data.aluno}\n*Turma:* ${data.turma}\n\n*Suspensão:* ${data.numero}ª\n*Duração:* ${data.days} ${data.days === 1 ? "dia" : "dias"}\n\n📅 *Período: ${data.inicio} até ${data.fim}*\n\n*Motivo:* O aluno atingiu ${data.totalOcorrencias} ocorrências.\n\n*Ocorrência que gerou a suspensão:* ${data.descricao}\n\n👨‍🏫 *Professor responsável:* ${data.professor}\n\n_Registro realizado pelo LogZélia – Sistema de Gestão Escolar._`;
+
+const loadImage = (src) =>
+  new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
+
+const copyText = async (text) => {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Fallback abaixo para navegadores/dispositivos que bloqueiam clipboard.writeText.
+    }
+  }
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    textarea.style.pointerEvents = "none";
+    document.body.appendChild(textarea);
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    return copied;
+  } catch {
+    return false;
+  }
+};
+
+const drawImageContain = (ctx, image, x, y, width, height) => {
+  if (!image?.naturalWidth || !image?.naturalHeight) return false;
+  const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+  const drawWidth = image.naturalWidth * scale;
+  const drawHeight = image.naturalHeight * scale;
+  const drawX = x + (width - drawWidth) / 2;
+  const drawY = y + (height - drawHeight) / 2;
+  ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+  return true;
+};
 
 const createReportBlob = async (data) => {
   const canvas = document.createElement("canvas");
   canvas.width = 1400;
-  canvas.height = 1080;
+  canvas.height = 1120;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
+  const font = 'Inter, "Segoe UI", Arial, sans-serif';
+  const logo = await loadImage(logoLogin);
+  const footer = await loadImage(topoMini);
+
   ctx.fillStyle = "#f8fafc";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Cabeçalho institucional.
   ctx.fillStyle = "#166534";
-  ctx.fillRect(0, 0, canvas.width, 170);
+  ctx.fillRect(0, 0, canvas.width, 175);
+
+  if (logo) {
+    drawImageContain(ctx, logo, 55, 20, 190, 135);
+  }
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = '700 40px Inter, "Segoe UI", Arial, sans-serif';
-  ctx.fillText("COMUNICADO DE SUSPENSÃO", 80, 85);
-  ctx.font = '600 23px Inter, "Segoe UI", Arial, sans-serif';
-  ctx.fillText("LogZélia • Gestão Escolar", 80, 128);
+  ctx.font = `800 38px ${font}`;
+  ctx.fillText("COMUNICADO DE SUSPENSÃO", 285, 74);
+  ctx.font = `600 23px ${font}`;
+  ctx.fillText("LogZélia • Gestão Escolar", 285, 117);
 
   const box = (x, y, w, h, fill = "#ffffff", stroke = "#e2e8f0") => {
     ctx.fillStyle = fill;
@@ -67,51 +125,101 @@ const createReportBlob = async (data) => {
     ctx.stroke();
   };
 
+  const wrap = (value, maxWidth, maxLines = 2) => {
+    const words = String(value || "—").split(/\s+/);
+    const lines = [];
+    let current = "";
+
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (current && ctx.measureText(candidate).width > maxWidth) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = candidate;
+      }
+    }
+
+    if (current) lines.push(current);
+    if (lines.length <= maxLines) return lines;
+
+    const clipped = lines.slice(0, maxLines);
+    clipped[maxLines - 1] = `${clipped[maxLines - 1].replace(/[.…]+$/, "")}…`;
+    return clipped;
+  };
+
+  const drawWrapped = (value, x, y, maxWidth, lineHeight, maxLines = 2) => {
+    wrap(value, maxWidth, maxLines).forEach((line, index) => {
+      ctx.fillText(line, x, y + index * lineHeight);
+    });
+  };
+
+  const label = (value, x, y) => {
+    ctx.fillStyle = "#64748b";
+    ctx.font = `700 17px ${font}`;
+    ctx.fillText(value.toUpperCase(), x, y);
+  };
+
   box(70, 215, 1260, 185);
-  ctx.fillStyle = "#64748b";
-  ctx.font = '700 17px Inter, "Segoe UI", Arial, sans-serif';
-  ctx.fillText("ALUNO", 100, 255);
-  ctx.fillText("TURMA", 880, 255);
+  label("Aluno", 100, 255);
+  label("Turma", 880, 255);
+
   ctx.fillStyle = "#0f172a";
-  ctx.font = '700 32px Inter, "Segoe UI", Arial, sans-serif';
-  ctx.fillText(String(data.aluno).slice(0, 42), 100, 300);
-  ctx.font = '700 27px Inter, "Segoe UI", Arial, sans-serif';
-  ctx.fillText(String(data.turma).slice(0, 25), 880, 300);
+  ctx.font = `700 32px ${font}`;
+  drawWrapped(data.aluno, 100, 300, 670, 38, 2);
+  ctx.font = `700 27px ${font}`;
+  drawWrapped(data.turma, 880, 300, 380, 34, 2);
 
   box(70, 430, 1260, 150, "#fff7ed", "#fed7aa");
   ctx.fillStyle = "#b45309";
-  ctx.font = '700 17px Inter, "Segoe UI", Arial, sans-serif';
+  ctx.font = `700 17px ${font}`;
   ctx.fillText("SUSPENSÃO", 100, 468);
+
   ctx.fillStyle = "#0f172a";
-  ctx.font = '700 30px Inter, "Segoe UI", Arial, sans-serif';
+  ctx.font = `700 30px ${font}`;
   ctx.fillText(`${data.numero}ª suspensão`, 100, 515);
   ctx.textAlign = "right";
   ctx.fillText(`${data.days} ${data.days === 1 ? "dia" : "dias"}`, 1300, 515);
-  ctx.font = '600 17px Inter, "Segoe UI", Arial, sans-serif';
+  ctx.font = `600 17px ${font}`;
   ctx.fillStyle = "#64748b";
   ctx.fillText(`${data.inicio} até ${data.fim}`, 1300, 550);
   ctx.textAlign = "left";
 
-  ctx.fillStyle = "#64748b";
-  ctx.font = '700 17px Inter, "Segoe UI", Arial, sans-serif';
-  ctx.fillText("MOTIVO", 90, 645);
+  label("Motivo", 90, 645);
   ctx.fillStyle = "#334155";
-  ctx.font = '600 23px Inter, "Segoe UI", Arial, sans-serif';
-  ctx.fillText(`O aluno atingiu ${data.totalOcorrencias} ocorrências.`, 90, 685);
+  ctx.font = `600 23px ${font}`;
+  drawWrapped(`O aluno atingiu ${data.totalOcorrencias} ocorrências.`, 90, 685, 1220, 31, 2);
+
+  label("Ocorrência que gerou a medida", 90, 755);
+  ctx.fillStyle = "#334155";
+  ctx.font = `500 21px ${font}`;
+  drawWrapped(data.descricao, 90, 795, 1220, 30, 3);
 
   ctx.fillStyle = "#64748b";
-  ctx.font = '700 17px Inter, "Segoe UI", Arial, sans-serif';
-  ctx.fillText("OCORRÊNCIA QUE GEROU A MEDIDA", 90, 745);
-  ctx.fillStyle = "#334155";
-  ctx.font = '500 21px Inter, "Segoe UI", Arial, sans-serif';
-  ctx.fillText(String(data.descricao).slice(0, 100), 90, 785);
+  ctx.font = `600 18px ${font}`;
+  drawWrapped(`👨‍🏫 Professor responsável: ${data.professor}`, 90, 900, 1220, 25, 2);
 
-  ctx.fillStyle = "#64748b";
-  ctx.font = '600 18px Inter, "Segoe UI", Arial, sans-serif';
-  ctx.fillText(`Professor responsável: ${String(data.professor).slice(0, 70)}`, 90, 875);
-  ctx.fillStyle = "#94a3b8";
-  ctx.font = '500 16px Inter, "Segoe UI", Arial, sans-serif';
-  ctx.fillText("Registro realizado pelo LogZélia – Sistema de Gestão Escolar.", 90, 1010);
+  // Rodapé institucional com a arte existente do projeto. Há fallback visual
+  // para que a imagem nunca deixe um espaço vazio caso o asset não carregue.
+  ctx.fillStyle = "#166534";
+  ctx.fillRect(0, 1000, canvas.width, 120);
+  if (footer) {
+    drawImageContain(ctx, footer, 0, 1000, canvas.width, 120);
+  } else {
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `500 16px ${font}`;
+    ctx.textAlign = "center";
+    ctx.fillText("Registro realizado pelo LogZélia – Sistema de Gestão Escolar.", 700, 1070);
+    ctx.textAlign = "left";
+  }
+
+  if (footer) {
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.font = `600 15px ${font}`;
+    ctx.textAlign = "center";
+    ctx.fillText("Registro realizado pelo LogZélia – Sistema de Gestão Escolar.", 700, 1094);
+    ctx.textAlign = "left";
+  }
 
   return new Promise((resolve) => canvas.toBlob(resolve, "image/png", 0.98));
 };
@@ -160,9 +268,11 @@ export function installSuspensionReportBridge() {
       const getData = () => getReportData(card, selectedStudent);
 
       copyButton.onclick = async () => {
-        await navigator.clipboard?.writeText(reportText(getData()));
-        copyButton.querySelector("span").textContent = "Copiado!";
-        setTimeout(() => { copyButton.querySelector("span").textContent = "Copiar texto"; }, 1600);
+        const copied = await copyText(reportText(getData()));
+        copyButton.querySelector("span").textContent = copied ? "Copiado!" : "Falha ao copiar";
+        setTimeout(() => {
+          copyButton.querySelector("span").textContent = "Copiar texto";
+        }, 1600);
       };
 
       downloadButton.onclick = async () => {
@@ -172,22 +282,37 @@ export function installSuspensionReportBridge() {
         const anchor = document.createElement("a");
         anchor.href = url;
         anchor.download = `suspensao-${selectedStudent.nome.replace(/\s+/g, "-").toLowerCase()}.png`;
+        document.body.appendChild(anchor);
         anchor.click();
-        URL.revokeObjectURL(url);
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       };
 
       shareButton.onclick = async () => {
         const data = getData();
+        const text = reportText(data);
         const blob = await createReportBlob(data);
         if (!blob) return;
+
         const file = new File([blob], "comunicado-suspensao.png", { type: "image/png" });
         if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
-          await navigator.share({ title: "Comunicado de Suspensão", text: reportText(data), files: [file] }).catch(() => {});
-        } else {
-          await navigator.clipboard?.writeText(reportText(data));
-          shareButton.querySelector("span").textContent = "Texto copiado";
-          setTimeout(() => { shareButton.querySelector("span").textContent = "Compartilhar"; }, 1800);
+          try {
+            await navigator.share({
+              title: "Comunicado de Suspensão",
+              text,
+              files: [file],
+            });
+            return;
+          } catch (error) {
+            if (error?.name === "AbortError") return;
+          }
         }
+
+        const copied = await copyText(text);
+        shareButton.querySelector("span").textContent = copied ? "Texto copiado" : "Não foi possível compartilhar";
+        setTimeout(() => {
+          shareButton.querySelector("span").textContent = "Compartilhar";
+        }, 1800);
       };
 
       actions.append(copyButton, downloadButton, shareButton);
