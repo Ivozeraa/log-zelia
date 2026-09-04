@@ -1,0 +1,60 @@
+name: One-time suspension visual fix
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-time-suspension-visual-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ajustar logo e footer do comunicado
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/utils/suspensionReportBridge.js')
+          text = path.read_text(encoding='utf-8')
+
+          text = text.replace(
+              'drawImageContain(ctx, logo, 20, 0, 295, 175);',
+              'drawImageContain(ctx, logo, 10, -8, 325, 183);',
+              1,
+          )
+          text = text.replace(
+              'ctx.fillText("COMUNICADO DE SUSPENSÃO", 335, 74);',
+              'ctx.fillText("COMUNICADO DE SUSPENSÃO", 365, 74);',
+              1,
+          )
+          text = text.replace(
+              'ctx.fillText("LogZélia • Gestão Escolar", 335, 117);',
+              'ctx.fillText("LogZélia • Gestão Escolar", 365, 117);',
+              1,
+          )
+          text = text.replace(
+              'drawImageCoverBottom(ctx, footer, 0, canvas.height, canvas.width, 160);',
+              'drawImageCoverBottom(ctx, footer, 0, canvas.height, canvas.width, 120);',
+              1,
+          )
+
+          path.write_text(text, encoding='utf-8')
+
+      - name: Commitar alteração e remover workflow temporário
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/utils/suspensionReportBridge.js
+          git rm .github/workflows/one-time-suspension-visual-fix.yml
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git commit -m 'feat: ampliar logo e ajustar footer do comunicado'
+          git push
