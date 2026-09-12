@@ -238,7 +238,15 @@ const createButton = (label, icon, className = "") => {
   const button = document.createElement("button");
   button.type = "button";
   button.innerHTML = `${icon}<span>${label}</span>`;
-  button.className = `inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${className}`;
+  button.className = `inline-flex items-center gap-2 rounded-lg border font-semibold transition ${className}`;
+  Object.assign(button.style, {
+    fontSize: "14px",
+    lineHeight: "20px",
+    padding: "8px 12px",
+    minHeight: "36px",
+    width: "auto",
+    flex: "0 0 auto",
+  });
   return button;
 };
 
