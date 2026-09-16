@@ -5,10 +5,11 @@ import { useSchool } from "../../hooks/useSchool"
 import logo from "../../assets/images/logo.png"
 import { UserSidebar } from "../user/UserSidebar"
 import { Sidebar } from "./Sidebar"
-import { FaBell, FaBars, FaComments } from "react-icons/fa"
 import { CurrentUserAvatar } from "../user/CurrentUserAvatar"
 import { useCurrentUserName } from "../../hooks/useCurrentUserName"
 import { useNotificacoes } from "../../hooks/useNotifcations"
+import { AppBar, Toolbar, Box, Typography, IconButton, Badge, Menu, MenuItem, Divider, ListItemText } from "@mui/material"
+import { FaBell, FaBars, FaComments } from "react-icons/fa"
 
 const formatarTempo = (isoString) => {
   if (!isoString) return ""
@@ -27,24 +28,23 @@ export function Header() {
   const name = useCurrentUserName()
   const navigate = useNavigate()
   const { notificacoes, naoLidas, marcarComoLida, marcarTodasComoLidas } = useNotificacoes()
-
   const [openUser, setOpenUser] = useState(false)
   const [openMenu, setOpenMenu] = useState(false)
-  const [openSino, setOpenSino] = useState(false)
+  const [anchorEl, setAnchorEl] = useState(null)
   const sinoRef = useRef(null)
 
   useEffect(() => {
     const handler = (e) => {
-      if (sinoRef.current && !sinoRef.current.contains(e.target)) setOpenSino(false)
+      if (sinoRef.current && !sinoRef.current.contains(e.target)) setAnchorEl(null)
     }
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
   }, [])
 
-  function handleClickNotificacao(n) {
+  const handleClickNotificacao = (n) => {
     if (!n.aluno_id) return
     marcarComoLida(n.id)
-    setOpenSino(false)
+    setAnchorEl(null)
     navigate("/app/advertencias", { state: { alunoId: n.aluno_id } })
   }
 
@@ -52,27 +52,70 @@ export function Header() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 h-16 border-b border-gray-200 bg-white/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:border-slate-700 dark:bg-slate-950/95 sm:px-5 md:px-6">
-        <div className="mx-auto flex h-full w-full max-w-[1600px] items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <button type="button" onClick={() => setOpenMenu((prev) => !prev)} className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-lg text-slate-700 transition hover:bg-slate-100 active:scale-95 dark:text-white dark:hover:bg-slate-800 md:hidden" aria-label={openMenu ? "Fechar menu" : "Abrir menu"} aria-expanded={openMenu}><FaBars /></button>
-            <img className="h-9 w-9 shrink-0 sm:h-10 sm:w-10" src={logo} alt="Logo LogView" width="40" height="40" />
-            <div className="min-w-0">
-              <p className="truncate font-bold font-montserrat text-lg leading-none text-green-700 sm:text-xl md:text-2xl">LOG <span className="text-orange-500 dark:text-orange-600">VIEW</span></p>
-              <p className="max-w-[45vw] truncate text-[10px] font-medium text-slate-500 dark:text-slate-400 sm:text-xs" title={schoolName}>{schoolName}</p>
-            </div>
-          </div>
+      <AppBar position="fixed" color="default" elevation={0} sx={{ zIndex: 1201, borderBottom: 1, borderColor: "divider", bgcolor: "background.paper", backdropFilter: "blur(12px)" }}>
+        <Toolbar sx={{ minHeight: "64px !important", px: { xs: 1.5, sm: 2.5, md: 3 }, gap: { xs: 1, sm: 1.5 } }}>
+          <IconButton onClick={() => setOpenMenu((v) => !v)} sx={{ display: { xs: "inline-flex", md: "none" } }} aria-label={openMenu ? "Fechar menu" : "Abrir menu"}>
+            <FaBars />
+          </IconButton>
 
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3 md:gap-5">
-            {Number(user?.role_id) === 1 && <button type="button" onClick={() => navigate("/app/feedbacks")} className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-lg text-slate-600 transition hover:bg-slate-100 hover:text-green-700 active:scale-95 dark:text-white dark:hover:bg-slate-800" aria-label="Feedbacks da landing" title="Feedbacks da landing"><FaComments /></button>}
-            <div className="relative" ref={sinoRef}>
-              <button type="button" onClick={() => setOpenSino((prev) => !prev)} className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl text-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 active:scale-95 dark:text-white dark:hover:bg-slate-800 dark:hover:text-slate-300" aria-label="Notificações" aria-expanded={openSino}><FaBell />{naoLidas > 0 && <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">{naoLidas > 9 ? "9+" : naoLidas}</span>}</button>
-              {openSino && <div className="absolute right-0 top-full mt-2 w-[calc(100vw-1.5rem)] max-w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"><div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-slate-800"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Notificações</span>{naoLidas > 0 && <button type="button" onClick={marcarTodasComoLidas} className="text-xs text-blue-600 hover:underline dark:text-blue-400">Marcar todas como lidas</button>}</div><div className="max-h-[60vh] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">{notificacoes.length === 0 ? <div className="px-4 py-8 text-center"><p className="mb-2 text-2xl">🔔</p><p className="text-sm text-slate-400 dark:text-slate-500">Nenhuma notificação</p></div> : notificacoes.map((n) => <div key={n.id} onClick={() => handleClickNotificacao(n)} className={`flex items-start gap-3 px-4 py-3 transition ${n.lida ? "bg-white dark:bg-slate-900" : "bg-amber-50 dark:bg-amber-950/30"} ${n.aluno_id ? "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60" : ""}`}><span className="mt-0.5 shrink-0 text-base leading-none">⚠️</span><div className="flex min-w-0 flex-1 flex-col gap-0.5"><p className="text-xs font-semibold leading-snug text-slate-800 dark:text-slate-200">{n.mensagem}</p><p className="text-[11px] text-slate-400 dark:text-slate-500">{formatarTempo(n.criado_em)}</p></div>{!n.lida && <button type="button" onClick={(e) => { e.stopPropagation(); marcarComoLida(n.id) }} title="Marcar como lida" aria-label="Marcar como lida" className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-amber-400" />}</div>)}</div>{notificacoes.length > 0 && <div className="border-t border-slate-100 bg-slate-50 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-800/50"><p className="text-center text-[11px] text-slate-400 dark:text-slate-500">{naoLidas > 0 ? `${naoLidas} não ${naoLidas === 1 ? "lida" : "lidas"}` : "Tudo em dia ✓"}</p></div>}</div>}
-            </div>
-            <button type="button" className="flex min-w-0 items-center gap-2 rounded-xl p-1 transition hover:bg-slate-100 active:scale-[0.98] dark:hover:bg-slate-800" onClick={() => setOpenUser((prev) => !prev)} aria-label="Abrir perfil"><p className="hidden max-w-36 truncate text-sm dark:text-white sm:block md:max-w-52 md:text-base">{user?.nome || name || "Usuário"}</p><CurrentUserAvatar /></button>
-          </div>
-        </div>
-      </header>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, minWidth: 0, flex: 1 }}>
+            <Box component="img" src={logo} alt="Logo LogView" sx={{ width: { xs: 36, sm: 40 }, height: { xs: 36, sm: 40 }, flexShrink: 0 }} />
+            <Box sx={{ minWidth: 0 }}>
+              <Typography component="p" sx={{ fontWeight: 800, fontSize: { xs: 18, sm: 21, md: 24 }, lineHeight: 1, color: "primary.main", whiteSpace: "nowrap" }}>
+                LOG <Box component="span" sx={{ color: "secondary.main" }}>VIEW</Box>
+              </Typography>
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block", maxWidth: { xs: "42vw", sm: 420 } }}>{schoolName}</Typography>
+            </Box>
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: { xs: 0.5, sm: 1.5 } }}>
+            {Number(user?.role_id) === 1 && (
+              <IconButton onClick={() => navigate("/app/feedbacks")} aria-label="Feedbacks da landing" title="Feedbacks da landing">
+                <FaComments />
+              </IconButton>
+            )}
+
+            <Box ref={sinoRef}>
+              <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} aria-label="Notificações" aria-expanded={Boolean(anchorEl)}>
+                <Badge badgeContent={naoLidas > 9 ? "9+" : naoLidas} color="error" invisible={naoLidas === 0}>
+                  <FaBell />
+                </Badge>
+              </IconButton>
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={() => setAnchorEl(null)}
+                PaperProps={{ sx: { width: { xs: "calc(100vw - 24px)", sm: 360 }, maxWidth: "calc(100vw - 24px)", maxHeight: "70vh", borderRadius: 3, mt: 1 } }}
+              >
+                <Box sx={{ px: 2, py: 1.5, display: "flex", justifyContent: "space-between", gap: 2, alignItems: "center" }}>
+                  <Typography variant="overline" color="text.secondary" fontWeight={700}>Notificações</Typography>
+                  {naoLidas > 0 && <Typography component="button" onClick={marcarTodasComoLidas} variant="caption" color="primary" sx={{ border: 0, bgcolor: "transparent", cursor: "pointer", p: 0 }}>Marcar todas como lidas</Typography>}
+                </Box>
+                <Divider />
+                {notificacoes.length === 0 ? (
+                  <Box sx={{ py: 5, px: 2, textAlign: "center" }}>
+                    <Typography sx={{ fontSize: 28, mb: 1 }}>🔔</Typography>
+                    <Typography variant="body2" color="text.secondary">Nenhuma notificação</Typography>
+                  </Box>
+                ) : notificacoes.map((n) => (
+                  <MenuItem key={n.id} onClick={() => handleClickNotificacao(n)} sx={{ alignItems: "flex-start", gap: 1.25, py: 1.25, bgcolor: n.lida ? "transparent" : "warning.50" }}>
+                    <Typography sx={{ mt: 0.25 }}>⚠️</Typography>
+                    <ListItemText primary={n.mensagem} secondary={formatarTempo(n.criado_em)} primaryTypographyProps={{ fontSize: 13, fontWeight: 600 }} secondaryTypographyProps={{ fontSize: 11 }} />
+                    {!n.lida && <Box component="button" onClick={(e) => { e.stopPropagation(); marcarComoLida(n.id) }} aria-label="Marcar como lida" sx={{ width: 10, height: 10, minWidth: 10, border: 0, borderRadius: "50%", bgcolor: "warning.main", mt: 1, cursor: "pointer" }} />}
+                  </MenuItem>
+                ))}
+                {notificacoes.length > 0 && <><Divider /><Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center", py: 1 }}>{naoLidas > 0 ? `${naoLidas} não ${naoLidas === 1 ? "lida" : "lidas"}` : "Tudo em dia ✓"}</Typography></>}
+              </Menu>
+            </Box>
+
+            <IconButton onClick={() => setOpenUser((v) => !v)} aria-label="Abrir perfil" sx={{ borderRadius: 3, gap: 1, p: 0.5 }}>
+              <Typography sx={{ display: { xs: "none", sm: "block" }, maxWidth: { sm: 144, md: 208 }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.nome || name || "Usuário"}</Typography>
+              <CurrentUserAvatar />
+            </IconButton>
+          </Box>
+        </Toolbar>
+      </AppBar>
+
       <UserSidebar open={openUser} setOpen={setOpenUser} />
       <Sidebar open={openMenu} setOpen={setOpenMenu} />
     </>

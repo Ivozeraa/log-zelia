@@ -1,21 +1,20 @@
 import { Suspense, useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import { Box, Container } from '@mui/material'
 import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
 import { TeacherSchedule } from './components/dashboard/TeacherSchedule'
 
 function AppPageFallback() {
   return (
-    <div className="min-h-[50vh] w-full animate-pulse" aria-label="Carregando página">
-      <div className="mb-5 h-8 w-48 rounded-xl bg-slate-200/80 dark:bg-slate-800/80" />
-      <div className="h-4 w-72 max-w-full rounded-lg bg-slate-200/70 dark:bg-slate-800/70" />
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="h-32 rounded-2xl bg-slate-200/60 dark:bg-slate-800/60" />
-        <div className="h-32 rounded-2xl bg-slate-200/60 dark:bg-slate-800/60" />
-        <div className="h-32 rounded-2xl bg-slate-200/60 dark:bg-slate-800/60" />
-      </div>
-      <div className="mt-5 h-64 rounded-2xl bg-slate-200/50 dark:bg-slate-800/50" />
-    </div>
+    <Box sx={{ minHeight: '50vh', width: '100%', py: 2 }}>
+      <Box sx={{ width: 192, height: 32, borderRadius: 3, bgcolor: 'action.hover', mb: 2 }} />
+      <Box sx={{ width: 288, maxWidth: '100%', height: 16, borderRadius: 2, bgcolor: 'action.hover' }} />
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, mt: 3 }}>
+        {[1, 2, 3].map((item) => <Box key={item} sx={{ height: 128, borderRadius: 3, bgcolor: 'action.hover' }} />)}
+      </Box>
+      <Box sx={{ height: 256, borderRadius: 3, bgcolor: 'action.hover', mt: 2 }} />
+    </Box>
   )
 }
 
@@ -30,24 +29,20 @@ function Layout() {
   }, [location.pathname])
 
   return (
-    <div className="min-h-screen overflow-x-hidden font-inter bg-neutral-100 dark:bg-gray-950">
+    <Box sx={{ minHeight: '100vh', overflowX: 'hidden', bgcolor: 'background.default' }}>
       <Header />
-
-      <div className="pt-16 flex min-h-screen">
-        <aside className="hidden md:block fixed top-16 left-0 w-64 h-[calc(100vh-4rem)] z-40">
-          <Sidebar />
-        </aside>
-
-        <main className="w-full min-w-0 md:ml-64 px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6 z-10 relative">
-          <div className="mx-auto w-full max-w-[1600px] min-w-0">
+      <Box sx={{ pt: '64px', display: 'flex', minHeight: '100vh' }}>
+        <Sidebar />
+        <Box component="main" sx={{ width: '100%', minWidth: 0, ml: { xs: 0, md: '256px' }, px: { xs: 1.5, sm: 2.5, lg: 3 }, py: { xs: 2, sm: 2.5, lg: 3 }, position: 'relative', zIndex: 1 }}>
+          <Container maxWidth={false} disableGutters sx={{ width: '100%', maxWidth: 1600, mx: 'auto' }}>
             {isHome && <TeacherSchedule />}
             <Suspense fallback={<AppPageFallback />}>
               <Outlet />
             </Suspense>
-          </div>
-        </main>
-      </div>
-    </div>
+          </Container>
+        </Box>
+      </Box>
+    </Box>
   )
 }
 
