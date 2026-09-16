@@ -1,27 +1,28 @@
 import { NavLink } from "react-router-dom"
+import { ListItemButton, ListItemIcon, ListItemText } from "@mui/material"
 
 export const SidebarOptions = ({ to, icon, text, onClick }) => {
   const IconComponent = icon
 
   return (
-    <NavLink to={to} onClick={onClick}>
+    <NavLink to={to} onClick={onClick} style={{ textDecoration: "none", color: "inherit" }}>
       {({ isActive }) => (
-        <div
-          className={`relative flex items-center gap-2 p-2 cursor-pointer group ${isActive
-            ? "bg-green-700 dark:bg-green-800 text-white rounded-xl"
-            : "text-gray-700 hover:text-green-800 dark:text-slate-400 dark:hover:text-green-700 rounded-xl"
-            }`}
+        <ListItemButton
+          selected={isActive}
+          sx={{
+            minHeight: 44,
+            borderRadius: 3,
+            px: 1.5,
+            color: isActive ? "primary.contrastText" : "text.secondary",
+            bgcolor: isActive ? "primary.main" : "transparent",
+            "&:hover": { bgcolor: isActive ? "primary.dark" : "action.hover", color: isActive ? "primary.contrastText" : "primary.main" },
+            "&.Mui-selected": { bgcolor: "primary.main", color: "primary.contrastText" },
+            "&.Mui-selected:hover": { bgcolor: "primary.dark" },
+          }}
         >
-          <IconComponent />
-          <p>{text}</p>
-
-          <span
-            className={`absolute left-0 bottom-0 h-0.5 w-full bg-green-700 dark:bg-green-800 origin-left ${isActive
-              ? "scale-x-0"
-              : "scale-x-0 group-hover:scale-x-100 transition-transform duration-300"
-              }`}
-          ></span>
-        </div>
+          <ListItemIcon sx={{ minWidth: 36, color: "inherit" }}><IconComponent /></ListItemIcon>
+          <ListItemText primary={text} primaryTypographyProps={{ fontSize: 14, fontWeight: 600 }} />
+        </ListItemButton>
       )}
     </NavLink>
   )
