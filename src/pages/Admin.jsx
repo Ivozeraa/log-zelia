@@ -114,6 +114,8 @@ export const Admin = () => {
       entidade_id: school.id,
       detalhes: { campo: "ativo", valor: nextStatus },
     });
+    const { data: auditData } = await supabase.from("logview_auditoria").select("id, acao, entidade, detalhes, created_at, escolas:escola_id(nome)").order("created_at", { ascending: false }).limit(8);
+    setAudit(auditData || []);
     setSchools((current) => current.map((item) => item.id === school.id ? { ...item, ativo: nextStatus } : item));
     notify.success(nextStatus ? "Escola ativada." : "Escola desativada.");
   };
