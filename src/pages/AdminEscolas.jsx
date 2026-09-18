@@ -176,21 +176,21 @@ export const AdminEscolas = () => {
   if (!school) return <main className="mx-auto w-full max-w-5xl px-4 py-6"><p className="text-sm text-slate-500">Escola não encontrada.</p></main>;
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+    <main className="mx-auto w-full max-w-5xl min-w-0 px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
       <button onClick={() => navigate("/app/admin")} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"><FaArrowLeft /> Voltar</button>
-      <PageTitle title={school.nome} subtitle={school.cidade || "Configuração da escola"} />
+      <div className="min-w-0"><PageTitle title={school.nome} subtitle={school.cidade || "Configuração da escola"} /></div>
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"><div className="flex items-center gap-3"><FaUsers className="text-slate-500" /><div><p className="text-sm text-slate-500 dark:text-slate-400">Usuários</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.usuarios}</p></div></div></div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"><div className="flex items-center gap-3"><FaGraduationCap className="text-slate-500" /><div><p className="text-sm text-slate-500 dark:text-slate-400">Alunos</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.alunos}</p></div></div></div>
       </div>
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-6 grid min-w-0 gap-4 lg:grid-cols-2 lg:gap-6">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <div className="flex items-center gap-3"><div className="rounded-xl bg-slate-100 p-3 text-slate-600 dark:bg-slate-800 dark:text-slate-200"><FaBuilding /></div><div><h2 className="font-semibold text-slate-900 dark:text-white">Identidade</h2><p className="text-sm text-slate-500 dark:text-slate-400">Personalização da escola no LogView.</p></div></div>
           <label className="mt-5 block text-sm font-medium text-slate-700 dark:text-slate-200">Nome da escola<input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-green-500 dark:border-slate-600" /></label>
           <label className="mt-4 block text-sm font-medium text-slate-700 dark:text-slate-200">Cidade<input value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-green-500 dark:border-slate-600" /></label>
           <label className="mt-4 block text-sm font-medium text-slate-700 dark:text-slate-200">Logo (URL)</label>
           <input value={form.logo_url} onChange={(e) => setForm({ ...form, logo_url: e.target.value })} placeholder="https://..." className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-green-500 dark:border-slate-600" />
-          <div className="mt-4 grid grid-cols-2 gap-4">
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Cor primária<input type="color" value={form.cor_primaria} onChange={(e) => setForm({ ...form, cor_primaria: e.target.value })} className="mt-2 h-11 w-full cursor-pointer rounded-lg border border-slate-300 bg-transparent p-1 dark:border-slate-600" /></label>
             <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Cor secundária<input type="color" value={form.cor_secundaria} onChange={(e) => setForm({ ...form, cor_secundaria: e.target.value })} className="mt-2 h-11 w-full cursor-pointer rounded-lg border border-slate-300 bg-transparent p-1 dark:border-slate-600" /></label>
           </div>
@@ -218,7 +218,7 @@ export const AdminEscolas = () => {
           <button onClick={() => setShowNewUser((v) => !v)} className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700">{showNewUser ? "Cancelar" : "Novo usuário"}</button>
         </div>
         {showNewUser && (
-          <form onSubmit={createUser} className="mt-5 grid gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700 sm:grid-cols-2">
+          <form onSubmit={createUser} className="mt-5 grid min-w-0 gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700 sm:grid-cols-2 sm:p-4">
             <input required value={newUser.nome} onChange={(e) => setNewUser({ ...newUser, nome: e.target.value })} placeholder="Nome completo" className="rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-600" />
             <input required type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} placeholder="E-mail" className="rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-600" />
             <input required minLength={6} type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} placeholder="Senha inicial" className="rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-600" />
@@ -227,8 +227,8 @@ export const AdminEscolas = () => {
             <button disabled={creatingUser} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 dark:bg-white dark:text-slate-900">{creatingUser ? "Criando..." : "Criar usuário"}</button>
           </form>
         )}
-        <div className="mt-5 overflow-x-auto">
-          <table className="w-full min-w-[620px] text-left text-sm">
+        <div className="mt-5 -mx-1 overflow-x-auto px-1">
+          <table className="w-full min-w-[560px] text-left text-sm">
             <thead><tr className="border-b border-slate-200 text-xs uppercase text-slate-500 dark:border-slate-700"><th className="px-3 py-3">Nome</th><th className="px-3 py-3">E-mail</th><th className="px-3 py-3">Perfil</th><th className="px-3 py-3">PDT</th></tr></thead>
             <tbody>{users.map((item) => <tr key={item.id} className="border-b border-slate-100 dark:border-slate-800">
               <td className="px-3 py-3 font-medium text-slate-800 dark:text-white">{item.nome}</td>
@@ -240,7 +240,7 @@ export const AdminEscolas = () => {
           {!users.length && <p className="py-6 text-center text-sm text-slate-500">Nenhum usuário vinculado a esta escola.</p>}
         </div>
       </section>
-      <div className="mt-6 flex justify-end"><button disabled={saving} onClick={save} className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"><FaSave />{saving ? "Salvando..." : "Salvar alterações"}</button></div>
+      <div className="mt-6 flex justify-stretch sm:justify-end"><button disabled={saving} onClick={save} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"><FaSave />{saving ? "Salvando..." : "Salvar alterações"}</button></div>
     </main>
   );
 };
