@@ -303,7 +303,7 @@ export const Admin = () => {
               <div className="p-8 text-center text-sm text-slate-500">Carregando escolas...</div>
             ) : schools.length === 0 ? (
               <div className="p-8 text-center text-sm text-slate-500">
-                {schoolSearch || planFilter !== "todos" ? "Nenhuma escola encontrada com esses filtros." : "Nenhuma escola cadastrada."}
+                {schoolSearch || planFilter !== "todos" || statusFilter !== "todos" ? "Nenhuma escola encontrada com esses filtros." : "Nenhuma escola cadastrada."}
               </div>
             ) : (
               filteredSchools.map((school) => (
