@@ -1,7 +1,8 @@
 import { SidebarOptions as So } from '../ui/SidebarOptions'
 import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey, FaShieldAlt } from 'react-icons/fa'
 import { useAuth } from '../../hooks/useAuth'
-import { SectionTitle } from '../ui/SectionTitle'\nimport { useSchoolFeatures } from '../../hooks/useSchoolFeatures'
+import { SectionTitle } from '../ui/SectionTitle'
+import { useSchoolFeatures } from '../../hooks/useSchoolFeatures'
 
 export const Sidebar = ({ open, setOpen }) => {
   const { user } = useAuth()
@@ -15,7 +16,10 @@ export const Sidebar = ({ open, setOpen }) => {
   const canSeeManagement = [1, 2, 3].includes(user?.role_id)
   const canManageAnnouncements = Number(user?.role_id) === 1
   const canAccessPlatformAdmin = Number(user?.role_id) === 1
-  const canSeeSchedules = Number(user?.role_id) !== 4\n  const { hasFeature, loading: featuresLoading } = useSchoolFeatures()\n  const canSeeOccurrences = featuresLoading || hasFeature('ocorrencias')\n  const canSeeHorarios = featuresLoading || hasFeature('horarios')
+  const canSeeSchedules = Number(user?.role_id) !== 4
+  const { hasFeature, loading: featuresLoading } = useSchoolFeatures()
+  const canSeeOccurrences = featuresLoading || hasFeature('ocorrencias')
+  const canSeeHorarios = featuresLoading || hasFeature('horarios')
 
   return (
     <>
