@@ -27,7 +27,7 @@ const plannedFeatures = [
 
 function StatCard({ icon: Icon, label, value, description }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 dark:border-slate-700 dark:bg-slate-900">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
@@ -82,7 +82,7 @@ export const Admin = () => {
   );
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <main className="mx-auto w-full min-w-0 max-w-7xl overflow-x-hidden px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
       <PageTitle
         title="Administração do LogView"
         subtitle="Gerencie a plataforma, escolas, recursos e futuras versões em um único lugar."
@@ -115,8 +115,8 @@ export const Admin = () => {
         />
       </section>
 
-      <section className="mt-8 grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <section className="mt-6 grid min-w-0 gap-4 sm:mt-8 sm:gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)]">
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 dark:border-slate-700">
             <div>
               <h2 className="font-semibold text-slate-900 dark:text-white">Escolas cadastradas</h2>
@@ -138,23 +138,23 @@ export const Admin = () => {
               </div>
             ) : (
               schools.map((school) => (
-                <div key={school.id} className="flex flex-col items-stretch gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                  <div className="flex min-w-0 max-w-full items-center gap-3 sm:gap-4">
+                <div key={school.id} className="flex min-w-0 flex-col items-stretch gap-3 overflow-hidden p-3 sm:gap-4 sm:p-5 md:flex-row md:items-center md:justify-between">
+                  <div className="flex min-w-0 w-full max-w-full items-start gap-3 sm:items-center sm:gap-4">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                       <FaBuilding />
                     </div>
-                    <div className="min-w-0 max-w-full flex-1 overflow-hidden">
-                      <p className="max-w-full truncate font-semibold text-slate-900 dark:text-white">
+                    <div className="min-w-0 w-0 flex-1 overflow-hidden">
+                      <p className="max-w-full break-words text-sm font-semibold leading-5 text-slate-900 dark:text-white sm:text-base">
                         {school.nome}
                       </p>
-                      <p className="max-w-full truncate text-sm text-slate-500 dark:text-slate-400">
+                      <p className="max-w-full break-words text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
                         {school.cidade || "Cidade não informada"}
                       </p>
                     </div>
                   </div>
-                  <div className="flex w-full shrink-0 items-center justify-between gap-3 sm:w-auto sm:justify-end">
+                  <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto sm:justify-end">
                     <span className="hidden items-center gap-1.5 text-xs font-medium text-green-600 sm:flex dark:text-green-400"><FaCheckCircle /> Ativa</span>
-                    <Link to={`/app/admin/escolas/${school.id}`} className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 sm:flex-none">
+                    <Link to={`/app/admin/escolas/${school.id}`} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 sm:w-auto sm:min-w-36">
                       Configurar <FaArrowRight />
                     </Link>
                   </div>
@@ -177,7 +177,7 @@ export const Admin = () => {
             </div>
           </div>
 
-          <div className="mt-5 space-y-3">
+          <div className="mt-4 space-y-3 sm:mt-5">
             {plannedFeatures.map((feature) => (
               <div
                 key={feature.key}
