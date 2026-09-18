@@ -49,6 +49,7 @@ function App() {
           <Route path="gestao/alunos" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><StudentManagement /></ProtectedRoute>} />
           <Route path="gestao/senhas-alunos" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><StudentPasswordReset /></ProtectedRoute>} />
           <Route path="admin" element={<ProtectedRoute allowedRoles={[1]}><Admin /></ProtectedRoute>} />
+          <Route path="admin/escolas/:id" element={<ProtectedRoute allowedRoles={[1]}><AdminEscolas /></ProtectedRoute>} />
           <Route path="feedbacks" element={<ProtectedRoute allowedRoles={[1]}><AdminFeedbacks /></ProtectedRoute>} />
           <Route path="avisos" element={<ProtectedRoute allowedRoles={[1]}><AdminAvisos /></ProtectedRoute>} />
           <Route path="configuracoes" element={<Settings />} />
