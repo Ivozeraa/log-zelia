@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./Layout";
-import ProtectedRoute from "./routers/ProtectedRoute";
+import ProtectedRoute from "./routers/ProtectedRoute";\nimport FeatureRoute from "./routers/FeatureRoute";
 import { Login } from "./pages/Login";
 import { ToastProvider } from "./components/ui/ToastProvide";
 import { LegalAndFeedback } from "./components/ui/LegalAndFeedback";
@@ -42,7 +42,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/app" element={<ProtectedAppRoutes />}>
           <Route index element={<Home />} />
-          <Route path="advertencias" element={<Occurrences />} />
+          <Route path="advertencias" element={<FeatureRoute feature="ocorrencias"><Occurrences /></FeatureRoute>} />
           <Route path="gestao" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><Management /></ProtectedRoute>} />
           <Route path="gestao/alunos" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><StudentManagement /></ProtectedRoute>} />
           <Route path="gestao/senhas-alunos" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><StudentPasswordReset /></ProtectedRoute>} />
@@ -50,7 +50,7 @@ function App() {
           <Route path="feedbacks" element={<ProtectedRoute allowedRoles={[1]}><AdminFeedbacks /></ProtectedRoute>} />
           <Route path="avisos" element={<ProtectedRoute allowedRoles={[1]}><AdminAvisos /></ProtectedRoute>} />
           <Route path="configuracoes" element={<Settings />} />
-          <Route path="horarios" element={<Horarios />} />
+          <Route path="horarios" element={<FeatureRoute feature="horarios"><Horarios /></FeatureRoute>} />
           <Route path="editar-perfil" element={<EditProfile />} />
           <Route path="suporte" element={<Suporte />} />
           <Route path="*" element={<h1 className="mt-20 text-center text-2xl">404 - Página Não Encontrada</h1>} />
