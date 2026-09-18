@@ -65,7 +65,6 @@ export const AdminEscolas = () => {
         plano_id: configRes.data?.plano_id || planRes.data?.[0]?.id || "",
       });
       setLogoPreview(configRes.data?.logo_url || "");
-      });
       const nextEnabled = {};
       (resourceRes.data || []).forEach((r) => { nextEnabled[r.id] = true; });
       (flagsRes.data || []).forEach((r) => { nextEnabled[r.recurso_id] = r.habilitado; });
