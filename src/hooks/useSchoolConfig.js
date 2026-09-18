@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../utils/supabase";
-import { useSchool } from "../hooks/useSchool";
+import { useSchool } from "./useSchool";
 
 const DEFAULT_CONFIG = {
   logo_url: "",
