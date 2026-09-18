@@ -15,6 +15,10 @@ export const AdminEscolas = () => {
   const [resources, setResources] = useState([]);
   const [enabled, setEnabled] = useState({});
   const [stats, setStats] = useState({ usuarios: 0, alunos: 0 });
+  const [users, setUsers] = useState([]);
+  const [showNewUser, setShowNewUser] = useState(false);
+  const [newUser, setNewUser] = useState({ nome: "", email: "", password: "", role_id: "4", pdt: false });
+  const [creatingUser, setCreatingUser] = useState(false);
   const [form, setForm] = useState({ nome: "", cidade: "", logo_url: "", cor_primaria: "#16a34a", cor_secundaria: "#0f172a", versao_id: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -23,7 +27,7 @@ export const AdminEscolas = () => {
     let mounted = true;
     const load = async () => {
       setLoading(true);
-      const [schoolRes, configRes, versionRes, resourceRes, flagsRes, usersRes, studentsRes, planRes] = await Promise.all([
+      const [schoolRes, configRes, versionRes, resourceRes, flagsRes, usersRes, studentsRes, planRes, usersListRes] = await Promise.all([
         supabase.from("escolas").select("id, nome, cidade").eq("id", id).maybeSingle(),
         supabase.from("logview_escola_config").select("*").eq("escola_id", id).maybeSingle(),
         supabase.from("logview_versoes").select("id, numero, nome").eq("ativa", true).order("numero", { ascending: false }),
@@ -32,9 +36,10 @@ export const AdminEscolas = () => {
         supabase.from("usuarios").select("id", { count: "exact", head: true }).eq("escola_id", id),
         supabase.from("alunos").select("id", { count: "exact", head: true }).eq("escola_id", id),
         supabase.from("logview_planos").select("id, chave, nome, descricao, preco_mensal").eq("ativo", true).order("preco_mensal"),
+        supabase.from("usuarios").select("id, nome, email, role_id, pdt, created_at").eq("escola_id", id).order("nome"),
       ]);
       if (!mounted) return;
-      const error = schoolRes.error || configRes.error || versionRes.error || resourceRes.error || flagsRes.error || usersRes.error || studentsRes.error || planRes.error;
+      const error = schoolRes.error || configRes.error || versionRes.error || resourceRes.error || flagsRes.error || usersRes.error || studentsRes.error || planRes.error || usersListRes.error;
       if (error) {
         console.error("Erro carregando configuração da escola:", error);
         notify.error("Não foi possível carregar a configuração.");
@@ -43,6 +48,7 @@ export const AdminEscolas = () => {
       }
       setSchool(schoolRes.data);
       setStats({ usuarios: usersRes.count ?? 0, alunos: studentsRes.count ?? 0 });
+      setUsers(usersListRes.data || []);
       setVersions(versionRes.data || []);
       setPlans(planRes.data || []);
       setResources(resourceRes.data || []);
@@ -80,6 +86,43 @@ export const AdminEscolas = () => {
       data.forEach((item) => { next[item.recurso_id] = item.habilitado; });
       setEnabled(next);
     }
+  };
+
+  const roleLabel = (roleId) => ({ 2: "Diretor", 3: "Coordenador", 4: "Professor" })[Number(roleId)] || "Perfil desconhecido";
+
+  const updateUserRole = async (userId, roleId) => {
+    const { error } = await supabase.from("usuarios").update({ role_id: Number(roleId) }).eq("id", userId).eq("escola_id", id);
+    if (error) {
+      console.error(error);
+      notify.error("Não foi possível alterar o perfil.");
+      return;
+    }
+    setUsers((current) => current.map((item) => item.id === userId ? { ...item, role_id: Number(roleId) } : item));
+    notify.success("Perfil do usuário atualizado.");
+  };
+
+  const createUser = async (event) => {
+    event.preventDefault();
+    if (!newUser.nome.trim() || !newUser.email.trim() || !newUser.password) {
+      notify.error("Preencha nome, e-mail e senha.");
+      return;
+    }
+    setCreatingUser(true);
+    const { data, error } = await supabase.functions.invoke("create-user", {
+      body: { ...newUser, nome: newUser.nome.trim(), email: newUser.email.trim().toLowerCase(), role_id: Number(newUser.role_id), escola_id: id },
+    });
+    if (error || data?.error) {
+      console.error(error || data?.error);
+      notify.error(data?.error || error?.message || "Não foi possível criar o usuário.");
+      setCreatingUser(false);
+      return;
+    }
+    setUsers((current) => [...current, data.user].sort((a, b) => a.nome.localeCompare(b.nome)));
+    setStats((current) => ({ ...current, usuarios: current.usuarios + 1 }));
+    setNewUser({ nome: "", email: "", password: "", role_id: "4", pdt: false });
+    setShowNewUser(false);
+    setCreatingUser(false);
+    notify.success("Usuário criado com acesso à escola.");
   };
 
   const save = async () => {
@@ -169,6 +212,34 @@ export const AdminEscolas = () => {
           ))}</div>
         </section>
       </div>
+      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="font-semibold text-slate-900 dark:text-white">Usuários da escola</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Gerencie os perfis vinculados a esta escola.</p></div>
+          <button onClick={() => setShowNewUser((v) => !v)} className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700">{showNewUser ? "Cancelar" : "Novo usuário"}</button>
+        </div>
+        {showNewUser && (
+          <form onSubmit={createUser} className="mt-5 grid gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700 sm:grid-cols-2">
+            <input required value={newUser.nome} onChange={(e) => setNewUser({ ...newUser, nome: e.target.value })} placeholder="Nome completo" className="rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-600" />
+            <input required type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} placeholder="E-mail" className="rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-600" />
+            <input required minLength={6} type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} placeholder="Senha inicial" className="rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-600" />
+            <select value={newUser.role_id} onChange={(e) => setNewUser({ ...newUser, role_id: e.target.value })} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white"><option value="2">Diretor</option><option value="3">Coordenador</option><option value="4">Professor</option></select>
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"><input type="checkbox" checked={newUser.pdt} onChange={(e) => setNewUser({ ...newUser, pdt: e.target.checked })} className="h-4 w-4 accent-green-600" /> Professor PDT</label>
+            <button disabled={creatingUser} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 dark:bg-white dark:text-slate-900">{creatingUser ? "Criando..." : "Criar usuário"}</button>
+          </form>
+        )}
+        <div className="mt-5 overflow-x-auto">
+          <table className="w-full min-w-[620px] text-left text-sm">
+            <thead><tr className="border-b border-slate-200 text-xs uppercase text-slate-500 dark:border-slate-700"><th className="px-3 py-3">Nome</th><th className="px-3 py-3">E-mail</th><th className="px-3 py-3">Perfil</th><th className="px-3 py-3">PDT</th></tr></thead>
+            <tbody>{users.map((item) => <tr key={item.id} className="border-b border-slate-100 dark:border-slate-800">
+              <td className="px-3 py-3 font-medium text-slate-800 dark:text-white">{item.nome}</td>
+              <td className="px-3 py-3 text-slate-500 dark:text-slate-400">{item.email || "—"}</td>
+              <td className="px-3 py-3"><select value={item.role_id} onChange={(e) => void updateUserRole(item.id, e.target.value)} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-600 dark:bg-slate-800 dark:text-white"><option value="2">Diretor</option><option value="3">Coordenador</option><option value="4">Professor</option></select></td>
+              <td className="px-3 py-3">{item.pdt ? "Sim" : "Não"}</td>
+            </tr>)}</tbody>
+          </table>
+          {!users.length && <p className="py-6 text-center text-sm text-slate-500">Nenhum usuário vinculado a esta escola.</p>}
+        </div>
+      </section>
       <div className="mt-6 flex justify-end"><button disabled={saving} onClick={save} className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"><FaSave />{saving ? "Salvando..." : "Salvar alterações"}</button></div>
     </main>
   );
