@@ -1,5 +1,5 @@
 import { SidebarOptions as So } from '../ui/SidebarOptions'
-import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey } from 'react-icons/fa'
+import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey, FaShieldAlt } from 'react-icons/fa'
 import { useAuth } from '../../hooks/useAuth'
 import { SectionTitle } from '../ui/SectionTitle'
 
@@ -14,6 +14,7 @@ export const Sidebar = ({ open, setOpen }) => {
 
   const canSeeManagement = [1, 2, 3].includes(user?.role_id)
   const canManageAnnouncements = Number(user?.role_id) === 1
+  const canAccessPlatformAdmin = Number(user?.role_id) === 1
   const canSeeSchedules = Number(user?.role_id) !== 4
 
   return (
@@ -47,6 +48,10 @@ export const Sidebar = ({ open, setOpen }) => {
             <So to="/app/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
             <So to="/app/gestao/senhas-alunos" icon={FaKey} text="Senhas dos alunos" onClick={handleClick} />
           </>
+        )}
+
+        {canAccessPlatformAdmin && (
+          <So to="/app/admin" icon={FaShieldAlt} text="Administração" onClick={handleClick} />
         )}
 
         {canManageAnnouncements && (
