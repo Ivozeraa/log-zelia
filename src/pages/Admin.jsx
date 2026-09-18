@@ -12,6 +12,7 @@ import {
   FaArrowRight,
   FaPlus,
   FaTimes,
+  FaHistory,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { supabase } from "../utils/supabase";
@@ -50,6 +51,7 @@ export const Admin = () => {
   const [showNewSchool, setShowNewSchool] = useState(false);
   const [creatingSchool, setCreatingSchool] = useState(false);
   const [newSchool, setNewSchool] = useState({ nome: "", cidade: "" });
+  const [audit, setAudit] = useState([]);
 
   useEffect(() => {
     let mounted = true;
@@ -59,7 +61,7 @@ export const Admin = () => {
 
       const { data, error } = await supabase
         .from("escolas")
-        .select("id, nome, cidade, created_at")
+        .select("id, nome, cidade, created_at, logview_escola_config(plano_id, logview_planos(nome))")
         .order("nome", { ascending: true });
 
       if (!mounted) return;
@@ -71,6 +73,12 @@ export const Admin = () => {
         setSchools(data ?? []);
       }
 
+      const { data: auditData } = await supabase
+        .from("logview_auditoria")
+        .select("id, acao, entidade, detalhes, created_at, escolas:escola_id(nome)")
+        .order("created_at", { ascending: false })
+        .limit(8);
+      if (mounted) setAudit(auditData || []);
       setLoading(false);
     };
 
@@ -153,6 +161,13 @@ export const Admin = () => {
       );
     }
 
+    await supabase.from("logview_auditoria").insert({
+      escola_id: school.id,
+      acao: "criar",
+      entidade: "escola",
+      entidade_id: school.id,
+      detalhes: { nome, cidade: cidade || null },
+    });
     setSchools((current) => [...current, school].sort((a, b) => a.nome.localeCompare(b.nome)));
     setNewSchool({ nome: "", cidade: "" });
     setShowNewSchool(false);
@@ -317,6 +332,31 @@ export const Admin = () => {
         </div>
       )}
 
+
+
+      <section className="mt-6 min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex items-start gap-3 border-b border-slate-200 px-4 py-4 sm:px-5 dark:border-slate-700">
+          <div className="rounded-xl bg-slate-100 p-3 text-slate-600 dark:bg-slate-800 dark:text-slate-200"><FaHistory /></div>
+          <div className="min-w-0">
+            <h2 className="font-semibold text-slate-900 dark:text-white">Atividade administrativa</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Últimas alterações realizadas pelo Super Admin.</p>
+          </div>
+        </div>
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          {audit.length ? audit.map((item) => (
+            <div key={item.id} className="flex min-w-0 items-start gap-3 px-4 py-3 sm:px-5">
+              <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-green-500" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-slate-700 dark:text-slate-200">
+                  <span className="font-semibold capitalize">{item.acao}</span> {item.entidade}
+                  {item.escolas?.nome ? <> em <span className="font-medium">{item.escolas.nome}</span></> : null}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">{new Date(item.created_at).toLocaleString("pt-BR")}</p>
+              </div>
+            </div>
+          )) : <p className="px-4 py-6 text-sm text-slate-500 sm:px-5">Nenhuma atividade registrada ainda.</p>}
+        </div>
+      </section>
       <section className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5 dark:border-blue-900/60 dark:bg-blue-950/20">
         <div className="flex gap-3">
           <FaUsers className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
