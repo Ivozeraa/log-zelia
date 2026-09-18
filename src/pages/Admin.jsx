@@ -11,6 +11,7 @@ import {
   FaUsers,
   FaArrowRight,
 } from "react-icons/fa";
+import { Link } from "react-router-dom";
 import { supabase } from "../utils/supabase";
 import { PageTitle } from "../components/ui/PageTitle";
 import { notify } from "../utils/notify";
@@ -116,7 +117,7 @@ export const Admin = () => {
 
       <section className="mt-8 grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+          <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 dark:border-slate-700">
             <div>
               <h2 className="font-semibold text-slate-900 dark:text-white">Escolas cadastradas</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -137,7 +138,7 @@ export const Admin = () => {
               </div>
             ) : (
               schools.map((school) => (
-                <div key={school.id} className="flex items-center justify-between gap-4 p-5">
+                <div key={school.id} className="flex flex-col items-stretch gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                   <div className="flex min-w-0 items-center gap-4">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                       <FaBuilding />
@@ -151,11 +152,11 @@ export const Admin = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex w-full shrink-0 items-center justify-between gap-3 sm:w-auto sm:justify-end">
                     <span className="hidden items-center gap-1.5 text-xs font-medium text-green-600 sm:flex dark:text-green-400"><FaCheckCircle /> Ativa</span>
-                    <a href={`/app/admin/escolas/${school.id}`} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+                    <Link to={`/app/admin/escolas/${school.id}`} className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 sm:flex-none">
                       Configurar <FaArrowRight />
-                    </a>
+                    </Link>
                   </div>
                 </div>
               ))
