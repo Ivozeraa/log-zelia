@@ -139,15 +139,15 @@ export const Admin = () => {
             ) : (
               schools.map((school) => (
                 <div key={school.id} className="flex flex-col items-stretch gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                  <div className="flex min-w-0 items-center gap-4">
+                  <div className="flex min-w-0 max-w-full items-center gap-3 sm:gap-4">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                       <FaBuilding />
                     </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-900 dark:text-white">
+                    <div className="min-w-0 max-w-full flex-1 overflow-hidden">
+                      <p className="max-w-full truncate font-semibold text-slate-900 dark:text-white">
                         {school.nome}
                       </p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <p className="max-w-full truncate text-sm text-slate-500 dark:text-slate-400">
                         {school.cidade || "Cidade não informada"}
                       </p>
                     </div>
@@ -165,13 +165,13 @@ export const Admin = () => {
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             <div className="rounded-xl bg-slate-100 p-3 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
               <FaTools />
             </div>
-            <div>
+            <div className="min-w-0 flex-1 overflow-hidden">
               <h2 className="font-semibold text-slate-900 dark:text-white">Próxima camada</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="break-words text-sm text-slate-500 dark:text-slate-400">
                 Recursos que serão controlados pelo Admin.
               </p>
             </div>
@@ -181,17 +181,17 @@ export const Admin = () => {
             {plannedFeatures.map((feature) => (
               <div
                 key={feature.key}
-                className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950"
+                className="flex min-w-0 flex-col items-start gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-950"
               >
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                <span className="min-w-0 max-w-full break-words text-sm font-medium text-slate-700 dark:text-slate-200">
                   {feature.label}
                 </span>
                 {feature.status === "active" ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-600 dark:text-green-400">
+                  <span className="inline-flex max-w-full shrink-0 items-center gap-1 text-xs font-semibold text-green-600 dark:text-green-400">
                     <FaCheckCircle /> disponível
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400">
+                  <span className="inline-flex max-w-full shrink-0 items-center gap-1 text-xs font-semibold text-slate-400">
                     <FaLock /> em preparação
                   </span>
                 )}
