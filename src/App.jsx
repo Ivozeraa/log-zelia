@@ -1,7 +1,8 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./Layout";
-import ProtectedRoute from "./routers/ProtectedRoute";\nimport FeatureRoute from "./routers/FeatureRoute";
+import ProtectedRoute from "./routers/ProtectedRoute";
+import FeatureRoute from "./routers/FeatureRoute";
 import { Login } from "./pages/Login";
 import { ToastProvider } from "./components/ui/ToastProvide";
 import { LegalAndFeedback } from "./components/ui/LegalAndFeedback";
@@ -23,7 +24,8 @@ const Suporte = lazy(() => import("./pages/Suport").then((module) => ({ default:
 const Horarios = lazy(() => import("./pages/Horarios").then((module) => ({ default: module.Horarios })));
 const AdminFeedbacks = lazy(() => import("./pages/AdminFeedbacks").then((module) => ({ default: module.AdminFeedbacks })));
 const AdminAvisos = lazy(() => import("./pages/AdminAvisos").then((module) => ({ default: module.AdminAvisos })));
-const Admin = lazy(() => import("./pages/Admin").then((module) => ({ default: module.Admin })));\nconst AdminEscolas = lazy(() => import("./pages/AdminEscolas").then((module) => ({ default: module.AdminEscolas })));
+const Admin = lazy(() => import("./pages/Admin").then((module) => ({ default: module.Admin })));
+const AdminEscolas = lazy(() => import("./pages/AdminEscolas").then((module) => ({ default: module.AdminEscolas })));
 
 function PublicPageFallback() {
   return <div className="min-h-screen bg-white dark:bg-slate-950"><div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"><div className="h-10 w-36 animate-pulse rounded-xl bg-slate-200/80 dark:bg-slate-800/80" /><div className="mt-16 h-12 w-full max-w-xl animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-800/70" /></div></div>;
