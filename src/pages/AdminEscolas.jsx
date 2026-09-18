@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FaArrowLeft, FaBuilding, FaCheckCircle, FaSave, FaUsers, FaGraduationCap, FaUpload, FaTimes } from "react-icons/fa";
+import { FaArrowLeft, FaBuilding, FaCheckCircle, FaSave, FaUsers, FaGraduationCap, FaUpload, FaTimes, FaHistory, FaPowerOff } from "react-icons/fa";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../utils/supabase";
 import { notify } from "../utils/notify";
@@ -15,11 +15,12 @@ export const AdminEscolas = () => {
   const [resources, setResources] = useState([]);
   const [enabled, setEnabled] = useState({});
   const [stats, setStats] = useState({ usuarios: 0, alunos: 0 });
+  const [audit, setAudit] = useState([]);
   const [users, setUsers] = useState([]);
   const [showNewUser, setShowNewUser] = useState(false);
   const [newUser, setNewUser] = useState({ nome: "", email: "", password: "", role_id: "4", pdt: false });
   const [creatingUser, setCreatingUser] = useState(false);
-  const [form, setForm] = useState({ nome: "", cidade: "", logo_url: "", cor_primaria: "#16a34a", cor_secundaria: "#0f172a", versao_id: "" });
+  const [form, setForm] = useState({ nome: "", cidade: "", logo_url: "", cor_primaria: "#16a34a", cor_secundaria: "#0f172a", versao_id: "", plano_id: "", ativo: true });
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState("");
   const [removeLogo, setRemoveLogo] = useState(false);
@@ -30,8 +31,8 @@ export const AdminEscolas = () => {
     let mounted = true;
     const load = async () => {
       setLoading(true);
-      const [schoolRes, configRes, versionRes, resourceRes, flagsRes, usersRes, studentsRes, planRes, usersListRes] = await Promise.all([
-        supabase.from("escolas").select("id, nome, cidade").eq("id", id).maybeSingle(),
+      const [schoolRes, configRes, versionRes, resourceRes, flagsRes, usersRes, studentsRes, planRes, usersListRes, auditRes] = await Promise.all([
+        supabase.from("escolas").select("id, nome, cidade, ativo").eq("id", id).maybeSingle(),
         supabase.from("logview_escola_config").select("*").eq("escola_id", id).maybeSingle(),
         supabase.from("logview_versoes").select("id, numero, nome").eq("ativa", true).order("numero", { ascending: false }),
         supabase.from("logview_recursos").select("id, chave, nome, descricao").eq("ativo", true).order("nome"),
@@ -40,9 +41,10 @@ export const AdminEscolas = () => {
         supabase.from("alunos").select("id", { count: "exact", head: true }).eq("escola_id", id),
         supabase.from("logview_planos").select("id, chave, nome, descricao, preco_mensal").eq("ativo", true).order("preco_mensal"),
         supabase.from("usuarios").select("id, nome, email, role_id, pdt, created_at").eq("escola_id", id).order("nome"),
+        supabase.from("logview_auditoria").select("id, acao, entidade, detalhes, created_at").eq("escola_id", id).order("created_at", { ascending: false }).limit(12),
       ]);
       if (!mounted) return;
-      const error = schoolRes.error || configRes.error || versionRes.error || resourceRes.error || flagsRes.error || usersRes.error || studentsRes.error || planRes.error || usersListRes.error;
+      const error = schoolRes.error || configRes.error || versionRes.error || resourceRes.error || flagsRes.error || usersRes.error || studentsRes.error || planRes.error || usersListRes.error || auditRes.error;
       if (error) {
         console.error("Erro carregando configuração da escola:", error);
         notify.error("Não foi possível carregar a configuração.");
@@ -52,6 +54,7 @@ export const AdminEscolas = () => {
       setSchool(schoolRes.data);
       setStats({ usuarios: usersRes.count ?? 0, alunos: studentsRes.count ?? 0 });
       setUsers(usersListRes.data || []);
+      setAudit(auditRes.data || []);
       setVersions(versionRes.data || []);
       setPlans(planRes.data || []);
       setResources(resourceRes.data || []);
@@ -63,6 +66,7 @@ export const AdminEscolas = () => {
         cor_secundaria: configRes.data?.cor_secundaria || "#0f172a",
         versao_id: configRes.data?.versao_id || versionRes.data?.[0]?.id || "",
         plano_id: configRes.data?.plano_id || planRes.data?.[0]?.id || "",
+        ativo: schoolRes.data?.ativo !== false,
       });
       setLogoPreview(configRes.data?.logo_url || "");
       const nextEnabled = {};
@@ -214,6 +218,7 @@ export const AdminEscolas = () => {
     const { error: schoolError } = await supabase.from("escolas").update({
       nome: form.nome.trim(),
       cidade: form.cidade.trim() || null,
+      ativo: Boolean(form.ativo),
     }).eq("id", id);
     if (schoolError) {
       console.error(schoolError);
@@ -221,7 +226,7 @@ export const AdminEscolas = () => {
       setSaving(false);
       return;
     }
-    setSchool((current) => ({ ...current, nome: form.nome.trim(), cidade: form.cidade.trim() || null }));
+    setSchool((current) => ({ ...current, nome: form.nome.trim(), cidade: form.cidade.trim() || null, ativo: Boolean(form.ativo) }));
 
     const { error: configError } = await supabase.from("logview_escola_config").upsert({
       escola_id: id,
@@ -270,6 +275,8 @@ export const AdminEscolas = () => {
       setSaving(false);
       return;
     }
+    const { data: auditRows } = await supabase.from("logview_auditoria").select("id, acao, entidade, detalhes, created_at").eq("escola_id", id).order("created_at", { ascending: false }).limit(12);
+    setAudit(auditRows || []);
     await supabase.from("logview_auditoria").insert({
       escola_id: id,
       acao: "alterar",
@@ -278,6 +285,7 @@ export const AdminEscolas = () => {
       detalhes: {
         nome: form.nome.trim(),
         cidade: form.cidade.trim() || null,
+        ativo: Boolean(form.ativo),
         plano_id: form.plano_id || null,
         versao_id: form.versao_id || null,
         logo_alterada: Boolean(logoFile || removeLogo),
@@ -295,10 +303,17 @@ export const AdminEscolas = () => {
     <main className="mx-auto w-full max-w-5xl min-w-0 px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
       <button onClick={() => navigate("/app/admin")} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"><FaArrowLeft /> Voltar</button>
       <div className="min-w-0"><PageTitle title={school.nome} subtitle={school.cidade || "Configuração da escola"} /></div>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"><div className="flex items-center gap-3"><FaUsers className="text-slate-500" /><div><p className="text-sm text-slate-500 dark:text-slate-400">Usuários</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.usuarios}</p></div></div></div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"><div className="flex items-center gap-3"><FaGraduationCap className="text-slate-500" /><div><p className="text-sm text-slate-500 dark:text-slate-400">Alunos</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.alunos}</p></div></div></div>
       </div>
+      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3"><div className={`rounded-xl p-3 ${form.ativo ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800"}`}><FaPowerOff /></div><div><h2 className="font-semibold text-slate-900 dark:text-white">Status da escola</h2><p className="text-sm text-slate-500 dark:text-slate-400">Controle se a escola está ativa na plataforma.</p></div></div>
+          <button type="button" onClick={() => setForm((current) => ({ ...current, ativo: !current.ativo }))} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white ${form.ativo ? "bg-green-600 hover:bg-green-700" : "bg-slate-600 hover:bg-slate-700"}`}><FaPowerOff /> {form.ativo ? "Escola ativa" : "Escola inativa"}</button>
+        </div>
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">A alteração é aplicada ao clicar em “Salvar alterações”.</p>
+      </section>
       <div className="mt-6 grid min-w-0 gap-4 lg:grid-cols-2 lg:gap-6">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <div className="flex items-center gap-3"><div className="rounded-xl bg-slate-100 p-3 text-slate-600 dark:bg-slate-800 dark:text-slate-200"><FaBuilding /></div><div><h2 className="font-semibold text-slate-900 dark:text-white">Identidade</h2><p className="text-sm text-slate-500 dark:text-slate-400">Personalização da escola no LogView.</p></div></div>
@@ -347,6 +362,7 @@ export const AdminEscolas = () => {
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <h2 className="font-semibold text-slate-900 dark:text-white">Recursos disponíveis</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Defina quais módulos esta escola pode utilizar.</p>
+          <div className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300">Plano atual: <span className="font-semibold">{plans.find((p) => p.id === form.plano_id)?.nome || "Sem plano"}</span> · {planResources.filter((item) => item.habilitado).length} de {planResources.length} recursos previstos pelo plano.</div>
           <div className="mt-5 space-y-3">{resources.map((resource) => (
             <label key={resource.id} className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
               <span><span className="block text-sm font-semibold text-slate-800 dark:text-white">{resource.nome}</span><span className="block text-xs text-slate-500 dark:text-slate-400">{resource.descricao || "Módulo do LogView"}</span></span>
@@ -382,6 +398,10 @@ export const AdminEscolas = () => {
           </table>
           {!users.length && <p className="py-6 text-center text-sm text-slate-500">Nenhum usuário vinculado a esta escola.</p>}
         </div>
+      </section>
+      <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700"><FaHistory className="text-slate-500" /><div><h2 className="font-semibold text-slate-900 dark:text-white">Histórico da escola</h2><p className="text-sm text-slate-500 dark:text-slate-400">Alterações administrativas recentes.</p></div></div>
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">{audit.length ? audit.map((item) => <div key={item.id} className="flex gap-3 px-5 py-3"><div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-green-500" /><div className="min-w-0"><p className="text-sm text-slate-700 dark:text-slate-200"><span className="font-semibold capitalize">{item.acao}</span> {item.entidade}</p><p className="mt-1 text-xs text-slate-400">{new Date(item.created_at).toLocaleString("pt-BR")}</p></div></div>) : <p className="px-5 py-6 text-sm text-slate-500">Nenhuma alteração registrada.</p>}</div>
       </section>
       <div className="mt-6 flex justify-stretch sm:justify-end"><button disabled={saving} onClick={save} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"><FaSave />{saving ? "Salvando..." : "Salvar alterações"}</button></div>
     </main>
