@@ -275,8 +275,6 @@ export const AdminEscolas = () => {
       setSaving(false);
       return;
     }
-    const { data: auditRows } = await supabase.from("logview_auditoria").select("id, acao, entidade, detalhes, created_at").eq("escola_id", id).order("created_at", { ascending: false }).limit(12);
-    setAudit(auditRows || []);
     await supabase.from("logview_auditoria").insert({
       escola_id: id,
       acao: "alterar",
@@ -292,6 +290,8 @@ export const AdminEscolas = () => {
         recursos_atualizados: true,
       },
     });
+    const { data: auditRows } = await supabase.from("logview_auditoria").select("id, acao, entidade, detalhes, created_at").eq("escola_id", id).order("created_at", { ascending: false }).limit(12);
+    setAudit(auditRows || []);
     notify.success("Configuração da escola salva.");
     setSaving(false);
   };
