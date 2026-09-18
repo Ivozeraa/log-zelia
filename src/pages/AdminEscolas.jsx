@@ -129,6 +129,13 @@ export const AdminEscolas = () => {
       notify.error("Não foi possível alterar o perfil.");
       return;
     }
+    await supabase.from("logview_auditoria").insert({
+      escola_id: id,
+      acao: "alterar",
+      entidade: "usuario",
+      entidade_id: userId,
+      detalhes: { campo: "role_id", valor: Number(roleId) },
+    });
     setUsers((current) => current.map((item) => item.id === userId ? { ...item, role_id: Number(roleId) } : item));
     notify.success("Perfil do usuário atualizado.");
   };
@@ -149,6 +156,13 @@ export const AdminEscolas = () => {
       setCreatingUser(false);
       return;
     }
+    await supabase.from("logview_auditoria").insert({
+      escola_id: id,
+      acao: "criar",
+      entidade: "usuario",
+      entidade_id: data.user?.id || null,
+      detalhes: { nome: newUser.nome.trim(), email: newUser.email.trim().toLowerCase(), role_id: Number(newUser.role_id), pdt: Boolean(newUser.pdt) },
+    });
     setUsers((current) => [...current, data.user].sort((a, b) => a.nome.localeCompare(b.nome)));
     setStats((current) => ({ ...current, usuarios: current.usuarios + 1 }));
     setNewUser({ nome: "", email: "", password: "", role_id: "4", pdt: false });
@@ -256,6 +270,20 @@ export const AdminEscolas = () => {
       setSaving(false);
       return;
     }
+    await supabase.from("logview_auditoria").insert({
+      escola_id: id,
+      acao: "alterar",
+      entidade: "configuracao",
+      entidade_id: id,
+      detalhes: {
+        nome: form.nome.trim(),
+        cidade: form.cidade.trim() || null,
+        plano_id: form.plano_id || null,
+        versao_id: form.versao_id || null,
+        logo_alterada: Boolean(logoFile || removeLogo),
+        recursos_atualizados: true,
+      },
+    });
     notify.success("Configuração da escola salva.");
     setSaving(false);
   };
