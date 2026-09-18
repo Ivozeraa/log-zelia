@@ -9,6 +9,7 @@ import {
   FaShieldAlt,
   FaTools,
   FaUsers,
+  FaArrowRight,
 } from "react-icons/fa";
 import { supabase } from "../utils/supabase";
 import { PageTitle } from "../components/ui/PageTitle";
@@ -150,10 +151,12 @@ export const Admin = () => {
                       </p>
                     </div>
                   </div>
-                  <span className="hidden shrink-0 items-center gap-1.5 text-xs font-medium text-green-600 sm:flex dark:text-green-400">
-                    <FaCheckCircle />
-                    Ativa
-                  </span>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="hidden items-center gap-1.5 text-xs font-medium text-green-600 sm:flex dark:text-green-400"><FaCheckCircle /> Ativa</span>
+                    <a href={`/app/admin/escolas/${school.id}`} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+                      Configurar <FaArrowRight />
+                    </a>
+                  </div>
                 </div>
               ))
             )}
