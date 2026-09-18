@@ -56,6 +56,7 @@ export const Admin = () => {
   const [audit, setAudit] = useState([]);
   const [schoolSearch, setSchoolSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("todos");
+  const [statusFilter, setStatusFilter] = useState("todos");
 
   useEffect(() => {
     let mounted = true;
@@ -65,7 +66,7 @@ export const Admin = () => {
 
       const { data, error } = await supabase
         .from("escolas")
-        .select("id, nome, cidade, created_at, logview_escola_config(plano_id, logview_planos(nome))")
+        .select("id, nome, cidade, ativo, created_at, logview_escola_config(plano_id, logview_planos(chave, nome))")
         .order("nome", { ascending: true });
 
       if (!mounted) return;
@@ -98,17 +99,39 @@ export const Admin = () => {
     [loading, schools.length]
   );
 
+  const toggleSchoolStatus = async (school) => {
+    const nextStatus = !school.ativo;
+    const { error } = await supabase.from("escolas").update({ ativo: nextStatus }).eq("id", school.id);
+    if (error) {
+      console.error(error);
+      notify.error("Não foi possível alterar o status da escola.");
+      return;
+    }
+    await supabase.from("logview_auditoria").insert({
+      escola_id: school.id,
+      acao: "alterar",
+      entidade: "escola",
+      entidade_id: school.id,
+      detalhes: { campo: "ativo", valor: nextStatus },
+    });
+    setSchools((current) => current.map((item) => item.id === school.id ? { ...item, ativo: nextStatus } : item));
+    notify.success(nextStatus ? "Escola ativada." : "Escola desativada.");
+  };
+
   const filteredSchools = useMemo(() => {
     const query = schoolSearch.trim().toLocaleLowerCase("pt-BR");
     return schools.filter((school) => {
       const name = school.nome?.toLocaleLowerCase("pt-BR") || "";
       const city = school.cidade?.toLocaleLowerCase("pt-BR") || "";
-      const plan = school.logview_escola_config?.[0]?.logview_planos?.nome?.toLocaleLowerCase("pt-BR") || "básico";
+      const planKey = school.logview_escola_config?.[0]?.logview_planos?.chave?.toLocaleLowerCase("pt-BR") || "basico";
       const matchesSearch = !query || name.includes(query) || city.includes(query);
-      const matchesPlan = planFilter === "todos" || plan === planFilter;
-      return matchesSearch && matchesPlan;
+      const matchesPlan = planFilter === "todos" || planKey === planFilter;
+      const matchesStatus = statusFilter === "todos" || (statusFilter === "ativas" ? school.ativo : !school.ativo);
+      return matchesSearch && matchesPlan && matchesStatus;
     });
-  }, [schools, schoolSearch, planFilter]);
+  }, [schools, schoolSearch, planFilter, statusFilter]);
+
+  const activeSchoolCount = useMemo(() => schools.filter((school) => school.ativo).length, [schools]);
 
   const planCounts = useMemo(() => {
     return schools.reduce((acc, school) => {
@@ -192,7 +215,7 @@ export const Admin = () => {
       entidade_id: school.id,
       detalhes: { nome, cidade: cidade || null },
     });
-    setSchools((current) => [...current, school].sort((a, b) => a.nome.localeCompare(b.nome)));
+    setSchools((current) => [...current, { ...school, ativo: true }].sort((a, b) => a.nome.localeCompare(b.nome)));
     setNewSchool({ nome: "", cidade: "" });
     setShowNewSchool(false);
     setCreatingSchool(false);
@@ -244,7 +267,7 @@ export const Admin = () => {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 dark:bg-green-950/40 dark:text-green-400">
-                {schools.length} cadastradas
+                {activeSchoolCount} ativas · {schools.length} total
               </span>
               <button type="button" onClick={() => setShowNewSchool(true)} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700">
                 <FaPlus /> Nova escola
@@ -267,6 +290,11 @@ export const Admin = () => {
                   <option value="enterprise">Enterprise</option>
                 </select>
               </div>
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white sm:w-40">
+                <option value="todos">Todos os status</option>
+                <option value="ativas">Ativas</option>
+                <option value="inativas">Inativas</option>
+              </select>
             </div>
           </div>
 
@@ -294,8 +322,11 @@ export const Admin = () => {
                     </div>
                   </div>
                   <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto sm:justify-end">
-                    <span className="hidden items-center gap-1.5 text-xs font-medium text-green-600 sm:flex dark:text-green-400"><FaCheckCircle /> Ativa</span>
-                    <Link to={`/app/admin/escolas/${school.id}`} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 sm:w-auto sm:min-w-36">
+                    <span className={`hidden items-center gap-1.5 text-xs font-medium sm:flex ${school.ativo ? "text-green-600 dark:text-green-400" : "text-slate-400 dark:text-slate-500"}`}><FaCheckCircle /> {school.ativo ? "Ativa" : "Inativa"}</span>
+                    <button type="button" onClick={() => void toggleSchoolStatus(school)} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 sm:flex-none">
+                      {school.ativo ? "Desativar" : "Ativar"}
+                    </button>
+                    <Link to={`/app/admin/escolas/${school.id}`} className="inline-flex min-h-11 w-full flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 sm:w-auto sm:min-w-36">
                       Configurar <FaArrowRight />
                     </Link>
                   </div>
