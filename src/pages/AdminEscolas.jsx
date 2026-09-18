@@ -10,6 +10,8 @@ export const AdminEscolas = () => {
   const navigate = useNavigate();
   const [school, setSchool] = useState(null);
   const [versions, setVersions] = useState([]);
+  const [plans, setPlans] = useState([]);
+  const [planResources, setPlanResources] = useState([]);
   const [resources, setResources] = useState([]);
   const [enabled, setEnabled] = useState({});
   const [stats, setStats] = useState({ usuarios: 0, alunos: 0 });
@@ -21,7 +23,7 @@ export const AdminEscolas = () => {
     let mounted = true;
     const load = async () => {
       setLoading(true);
-      const [schoolRes, configRes, versionRes, resourceRes, flagsRes, usersRes, studentsRes] = await Promise.all([
+      const [schoolRes, configRes, versionRes, resourceRes, flagsRes, usersRes, studentsRes, planRes] = await Promise.all([
         supabase.from("escolas").select("id, nome, cidade").eq("id", id).maybeSingle(),
         supabase.from("logview_escola_config").select("*").eq("escola_id", id).maybeSingle(),
         supabase.from("logview_versoes").select("id, numero, nome").eq("ativa", true).order("numero", { ascending: false }),
@@ -29,9 +31,10 @@ export const AdminEscolas = () => {
         supabase.from("logview_escola_recursos").select("recurso_id, habilitado").eq("escola_id", id),
         supabase.from("usuarios").select("id", { count: "exact", head: true }).eq("escola_id", id),
         supabase.from("alunos").select("id", { count: "exact", head: true }).eq("escola_id", id),
+        supabase.from("logview_planos").select("id, chave, nome, descricao, preco_mensal").eq("ativo", true).order("preco_mensal"),
       ]);
       if (!mounted) return;
-      const error = schoolRes.error || configRes.error || versionRes.error || resourceRes.error || flagsRes.error || usersRes.error || studentsRes.error;
+      const error = schoolRes.error || configRes.error || versionRes.error || resourceRes.error || flagsRes.error || usersRes.error || studentsRes.error || planRes.error;
       if (error) {
         console.error("Erro carregando configuração da escola:", error);
         notify.error("Não foi possível carregar a configuração.");
@@ -41,6 +44,7 @@ export const AdminEscolas = () => {
       setSchool(schoolRes.data);
       setStats({ usuarios: usersRes.count ?? 0, alunos: studentsRes.count ?? 0 });
       setVersions(versionRes.data || []);
+      setPlans(planRes.data || []);
       setResources(resourceRes.data || []);
       setForm({
         nome: schoolRes.data?.nome || "",
@@ -49,16 +53,34 @@ export const AdminEscolas = () => {
         cor_primaria: configRes.data?.cor_primaria || "#16a34a",
         cor_secundaria: configRes.data?.cor_secundaria || "#0f172a",
         versao_id: configRes.data?.versao_id || versionRes.data?.[0]?.id || "",
+        plano_id: configRes.data?.plano_id || planRes.data?.[0]?.id || "",
       });
       const nextEnabled = {};
       (resourceRes.data || []).forEach((r) => { nextEnabled[r.id] = true; });
       (flagsRes.data || []).forEach((r) => { nextEnabled[r.recurso_id] = r.habilitado; });
       setEnabled(nextEnabled);
+      const selectedPlanId = configRes.data?.plano_id || planRes.data?.[0]?.id || "";
+      if (selectedPlanId) {
+        const { data: selectedPlanResources } = await supabase.from("logview_plano_recursos").select("recurso_id, habilitado").eq("plano_id", selectedPlanId);
+        setPlanResources(selectedPlanResources || []);
+      }
+
       setLoading(false);
     };
     load();
     return () => { mounted = false; };
   }, [id]);
+
+  const handlePlanChange = async (planId) => {
+    setForm((current) => ({ ...current, plano_id: planId }));
+    const { data } = await supabase.from("logview_plano_recursos").select("recurso_id, habilitado").eq("plano_id", planId);
+    setPlanResources(data || []);
+    if (data?.length) {
+      const next = { ...enabled };
+      data.forEach((item) => { next[item.recurso_id] = item.habilitado; });
+      setEnabled(next);
+    }
+  };
 
   const save = async () => {
     if (!school) return;
@@ -81,6 +103,7 @@ export const AdminEscolas = () => {
       cor_primaria: form.cor_primaria,
       cor_secundaria: form.cor_secundaria,
       versao_id: form.versao_id || null,
+      plano_id: form.plano_id || null,
       updated_at: new Date().toISOString(),
     });
     if (configError) {
@@ -128,6 +151,7 @@ export const AdminEscolas = () => {
             <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Cor primária<input type="color" value={form.cor_primaria} onChange={(e) => setForm({ ...form, cor_primaria: e.target.value })} className="mt-2 h-11 w-full cursor-pointer rounded-lg border border-slate-300 bg-transparent p-1 dark:border-slate-600" /></label>
             <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Cor secundária<input type="color" value={form.cor_secundaria} onChange={(e) => setForm({ ...form, cor_secundaria: e.target.value })} className="mt-2 h-11 w-full cursor-pointer rounded-lg border border-slate-300 bg-transparent p-1 dark:border-slate-600" /></label>
           </div>
+          <label className="mt-4 block text-sm font-medium text-slate-700 dark:text-slate-200">Plano<select value={form.plano_id || ""} onChange={(e) => void handlePlanChange(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white"><option value="">Sem plano</option>{plans.map((p) => <option key={p.id} value={p.id}>{p.nome} — {Number(p.preco_mensal) === 0 ? "Grátis" : `R$ ${Number(p.preco_mensal).toFixed(2).replace(".", ",")}/mês`}</option>)}</select></label>
           <label className="mt-4 block text-sm font-medium text-slate-700 dark:text-slate-200">Versão</label>
           <select value={form.versao_id} onChange={(e) => setForm({ ...form, versao_id: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white">
             <option value="">Sem versão definida</option>
