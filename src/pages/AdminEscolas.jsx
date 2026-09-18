@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FaArrowLeft, FaBuilding, FaCheckCircle, FaSave } from "react-icons/fa";
+import { FaArrowLeft, FaBuilding, FaCheckCircle, FaSave, FaUsers, FaGraduationCap } from "react-icons/fa";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../utils/supabase";
 import { notify } from "../utils/notify";
@@ -12,7 +12,8 @@ export const AdminEscolas = () => {
   const [versions, setVersions] = useState([]);
   const [resources, setResources] = useState([]);
   const [enabled, setEnabled] = useState({});
-  const [form, setForm] = useState({ logo_url: "", cor_primaria: "#16a34a", cor_secundaria: "#0f172a", versao_id: "" });
+  const [stats, setStats] = useState({ usuarios: 0, alunos: 0 });
+  const [form, setForm] = useState({ nome: "", cidade: "", logo_url: "", cor_primaria: "#16a34a", cor_secundaria: "#0f172a", versao_id: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -20,15 +21,17 @@ export const AdminEscolas = () => {
     let mounted = true;
     const load = async () => {
       setLoading(true);
-      const [schoolRes, configRes, versionRes, resourceRes, flagsRes] = await Promise.all([
+      const [schoolRes, configRes, versionRes, resourceRes, flagsRes, usersRes, studentsRes] = await Promise.all([
         supabase.from("escolas").select("id, nome, cidade").eq("id", id).maybeSingle(),
         supabase.from("logview_escola_config").select("*").eq("escola_id", id).maybeSingle(),
         supabase.from("logview_versoes").select("id, numero, nome").eq("ativa", true).order("numero", { ascending: false }),
         supabase.from("logview_recursos").select("id, chave, nome, descricao").eq("ativo", true).order("nome"),
         supabase.from("logview_escola_recursos").select("recurso_id, habilitado").eq("escola_id", id),
+        supabase.from("usuarios").select("id", { count: "exact", head: true }).eq("escola_id", id),
+        supabase.from("alunos").select("id", { count: "exact", head: true }).eq("escola_id", id),
       ]);
       if (!mounted) return;
-      const error = schoolRes.error || configRes.error || versionRes.error || resourceRes.error || flagsRes.error;
+      const error = schoolRes.error || configRes.error || versionRes.error || resourceRes.error || flagsRes.error || usersRes.error || studentsRes.error;
       if (error) {
         console.error("Erro carregando configuração da escola:", error);
         notify.error("Não foi possível carregar a configuração.");
@@ -36,9 +39,12 @@ export const AdminEscolas = () => {
         return;
       }
       setSchool(schoolRes.data);
+      setStats({ usuarios: usersRes.count ?? 0, alunos: studentsRes.count ?? 0 });
       setVersions(versionRes.data || []);
       setResources(resourceRes.data || []);
       setForm({
+        nome: schoolRes.data?.nome || "",
+        cidade: schoolRes.data?.cidade || "",
         logo_url: configRes.data?.logo_url || "",
         cor_primaria: configRes.data?.cor_primaria || "#16a34a",
         cor_secundaria: configRes.data?.cor_secundaria || "#0f172a",
@@ -57,6 +63,18 @@ export const AdminEscolas = () => {
   const save = async () => {
     if (!school) return;
     setSaving(true);
+    const { error: schoolError } = await supabase.from("escolas").update({
+      nome: form.nome.trim(),
+      cidade: form.cidade.trim() || null,
+    }).eq("id", id);
+    if (schoolError) {
+      console.error(schoolError);
+      notify.error("Não foi possível salvar os dados da escola.");
+      setSaving(false);
+      return;
+    }
+    setSchool((current) => ({ ...current, nome: form.nome.trim(), cidade: form.cidade.trim() || null }));
+
     const { error: configError } = await supabase.from("logview_escola_config").upsert({
       escola_id: id,
       logo_url: form.logo_url.trim() || null,
@@ -95,10 +113,16 @@ export const AdminEscolas = () => {
     <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
       <button onClick={() => navigate("/app/admin")} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"><FaArrowLeft /> Voltar</button>
       <PageTitle title={school.nome} subtitle={school.cidade || "Configuração da escola"} />
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"><div className="flex items-center gap-3"><FaUsers className="text-slate-500" /><div><p className="text-sm text-slate-500 dark:text-slate-400">Usuários</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.usuarios}</p></div></div></div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"><div className="flex items-center gap-3"><FaGraduationCap className="text-slate-500" /><div><p className="text-sm text-slate-500 dark:text-slate-400">Alunos</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.alunos}</p></div></div></div>
+      </div>
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <div className="flex items-center gap-3"><div className="rounded-xl bg-slate-100 p-3 text-slate-600 dark:bg-slate-800 dark:text-slate-200"><FaBuilding /></div><div><h2 className="font-semibold text-slate-900 dark:text-white">Identidade</h2><p className="text-sm text-slate-500 dark:text-slate-400">Personalização da escola no LogView.</p></div></div>
-          <label className="mt-5 block text-sm font-medium text-slate-700 dark:text-slate-200">Logo (URL)</label>
+          <label className="mt-5 block text-sm font-medium text-slate-700 dark:text-slate-200">Nome da escola<input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-green-500 dark:border-slate-600" /></label>
+          <label className="mt-4 block text-sm font-medium text-slate-700 dark:text-slate-200">Cidade<input value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-green-500 dark:border-slate-600" /></label>
+          <label className="mt-4 block text-sm font-medium text-slate-700 dark:text-slate-200">Logo (URL)</label>
           <input value={form.logo_url} onChange={(e) => setForm({ ...form, logo_url: e.target.value })} placeholder="https://..." className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-green-500 dark:border-slate-600" />
           <div className="mt-4 grid grid-cols-2 gap-4">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Cor primária<input type="color" value={form.cor_primaria} onChange={(e) => setForm({ ...form, cor_primaria: e.target.value })} className="mt-2 h-11 w-full cursor-pointer rounded-lg border border-slate-300 bg-transparent p-1 dark:border-slate-600" /></label>
