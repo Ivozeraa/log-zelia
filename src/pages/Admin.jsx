@@ -13,6 +13,8 @@ import {
   FaPlus,
   FaTimes,
   FaHistory,
+  FaSearch,
+  FaFilter,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { supabase } from "../utils/supabase";
@@ -52,6 +54,8 @@ export const Admin = () => {
   const [creatingSchool, setCreatingSchool] = useState(false);
   const [newSchool, setNewSchool] = useState({ nome: "", cidade: "" });
   const [audit, setAudit] = useState([]);
+  const [schoolSearch, setSchoolSearch] = useState("");
+  const [planFilter, setPlanFilter] = useState("todos");
 
   useEffect(() => {
     let mounted = true;
@@ -93,6 +97,26 @@ export const Admin = () => {
     () => (loading ? "—" : String(schools.length)),
     [loading, schools.length]
   );
+
+  const filteredSchools = useMemo(() => {
+    const query = schoolSearch.trim().toLocaleLowerCase("pt-BR");
+    return schools.filter((school) => {
+      const name = school.nome?.toLocaleLowerCase("pt-BR") || "";
+      const city = school.cidade?.toLocaleLowerCase("pt-BR") || "";
+      const plan = school.logview_escola_config?.[0]?.logview_planos?.nome?.toLocaleLowerCase("pt-BR") || "básico";
+      const matchesSearch = !query || name.includes(query) || city.includes(query);
+      const matchesPlan = planFilter === "todos" || plan === planFilter;
+      return matchesSearch && matchesPlan;
+    });
+  }, [schools, schoolSearch, planFilter]);
+
+  const planCounts = useMemo(() => {
+    return schools.reduce((acc, school) => {
+      const plan = school.logview_escola_config?.[0]?.logview_planos?.nome || "Básico";
+      acc[plan] = (acc[plan] || 0) + 1;
+      return acc;
+    }, {});
+  }, [schools]);
 
   const createSchool = async (event) => {
     event.preventDefault();
@@ -228,15 +252,33 @@ export const Admin = () => {
             </div>
           </div>
 
+          <div className="border-b border-slate-200 p-3 dark:border-slate-700">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="relative min-w-0 flex-1">
+                <FaSearch className="pointer-events-none absolute left-3 top-3 text-slate-400" />
+                <input value={schoolSearch} onChange={(e) => setSchoolSearch(e.target.value)} placeholder="Buscar por escola ou cidade..." className="w-full rounded-xl border border-slate-300 bg-transparent py-2.5 pl-9 pr-3 text-sm outline-none focus:border-green-500 dark:border-slate-600 dark:text-white" />
+              </div>
+              <div className="relative sm:w-44">
+                <FaFilter className="pointer-events-none absolute left-3 top-3 text-slate-400" />
+                <select value={planFilter} onChange={(e) => setPlanFilter(e.target.value)} className="w-full appearance-none rounded-xl border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white">
+                  <option value="todos">Todos os planos</option>
+                  <option value="básico">Básico</option>
+                  <option value="profissional">Profissional</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {loading ? (
               <div className="p-8 text-center text-sm text-slate-500">Carregando escolas...</div>
             ) : schools.length === 0 ? (
               <div className="p-8 text-center text-sm text-slate-500">
-                Nenhuma escola cadastrada.
+                {schoolSearch || planFilter !== "todos" ? "Nenhuma escola encontrada com esses filtros." : "Nenhuma escola cadastrada."}
               </div>
             ) : (
-              schools.map((school) => (
+              filteredSchools.map((school) => (
                 <div key={school.id} className="flex min-w-0 flex-col items-stretch gap-3 overflow-hidden p-3 sm:gap-4 sm:p-5 md:flex-row md:items-center md:justify-between">
                   <div className="flex min-w-0 w-full max-w-full items-start gap-3 sm:items-center sm:gap-4">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
