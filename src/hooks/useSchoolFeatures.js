@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../utils/supabase";
-import { useSchool } from "../contexts/SchoolContext";
+import { useSchool } from "./useSchool";
 
 export function useSchoolFeatures() {
   const { schoolId, isGlobalAdmin } = useSchool();
