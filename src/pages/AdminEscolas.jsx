@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FaArrowLeft, FaBuilding, FaCheckCircle, FaSave, FaUsers, FaGraduationCap } from "react-icons/fa";
+import { FaArrowLeft, FaBuilding, FaCheckCircle, FaSave, FaUsers, FaGraduationCap, FaUpload, FaTimes } from "react-icons/fa";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../utils/supabase";
 import { notify } from "../utils/notify";
@@ -20,6 +20,9 @@ export const AdminEscolas = () => {
   const [newUser, setNewUser] = useState({ nome: "", email: "", password: "", role_id: "4", pdt: false });
   const [creatingUser, setCreatingUser] = useState(false);
   const [form, setForm] = useState({ nome: "", cidade: "", logo_url: "", cor_primaria: "#16a34a", cor_secundaria: "#0f172a", versao_id: "" });
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState("");
+  const [removeLogo, setRemoveLogo] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -61,6 +64,8 @@ export const AdminEscolas = () => {
         versao_id: configRes.data?.versao_id || versionRes.data?.[0]?.id || "",
         plano_id: configRes.data?.plano_id || planRes.data?.[0]?.id || "",
       });
+      setLogoPreview(configRes.data?.logo_url || "");
+      });
       const nextEnabled = {};
       (resourceRes.data || []).forEach((r) => { nextEnabled[r.id] = true; });
       (flagsRes.data || []).forEach((r) => { nextEnabled[r.recurso_id] = r.habilitado; });
@@ -76,6 +81,34 @@ export const AdminEscolas = () => {
     load();
     return () => { mounted = false; };
   }, [id]);
+
+  const handleLogoChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      notify.error("Envie a logo em PNG, JPG ou WEBP.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      notify.error("A logo deve ter no máximo 2 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setLogoFile(file);
+    setRemoveLogo(false);
+    setLogoPreview(URL.createObjectURL(file));
+  };
+
+  const clearLogo = () => {
+    setLogoFile(null);
+    setRemoveLogo(true);
+    setLogoPreview("");
+  };
 
   const handlePlanChange = async (planId) => {
     setForm((current) => ({ ...current, plano_id: planId }));
@@ -128,6 +161,43 @@ export const AdminEscolas = () => {
   const save = async () => {
     if (!school) return;
     setSaving(true);
+
+    let logoUrl = form.logo_url.trim() || null;
+    const previousLogoUrl = form.logo_url.trim() || null;
+    let uploadedLogoPath = null;
+
+    if (removeLogo) {
+      logoUrl = null;
+    }
+
+    if (logoFile) {
+      const extension = logoFile.name.split(".").pop()?.toLowerCase() || "png";
+      uploadedLogoPath = `${id}/logo-${Date.now()}.${extension}`;
+      const { error: uploadError } = await supabase.storage
+        .from("school-logos")
+        .upload(uploadedLogoPath, logoFile, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: logoFile.type,
+        });
+
+      if (uploadError) {
+        console.error(uploadError);
+        notify.error("Não foi possível enviar a logo.");
+        setSaving(false);
+        return;
+      }
+
+      const { data: publicData } = supabase.storage.from("school-logos").getPublicUrl(uploadedLogoPath);
+      logoUrl = publicData?.publicUrl || null;
+
+      if (!logoUrl) {
+        await supabase.storage.from("school-logos").remove([uploadedLogoPath]);
+        notify.error("Não foi possível gerar o endereço da logo.");
+        setSaving(false);
+        return;
+      }
+    }
     const { error: schoolError } = await supabase.from("escolas").update({
       nome: form.nome.trim(),
       cidade: form.cidade.trim() || null,
@@ -142,7 +212,7 @@ export const AdminEscolas = () => {
 
     const { error: configError } = await supabase.from("logview_escola_config").upsert({
       escola_id: id,
-      logo_url: form.logo_url.trim() || null,
+      logo_url: logoUrl,
       cor_primaria: form.cor_primaria,
       cor_secundaria: form.cor_secundaria,
       versao_id: form.versao_id || null,
@@ -151,10 +221,29 @@ export const AdminEscolas = () => {
     });
     if (configError) {
       console.error(configError);
+      if (uploadedLogoPath) await supabase.storage.from("school-logos").remove([uploadedLogoPath]);
       notify.error("Não foi possível salvar a configuração.");
       setSaving(false);
       return;
     }
+
+    const extractLogoPath = (url) => {
+      if (!url) return null;
+      const marker = "/storage/v1/object/public/school-logos/";
+      const index = url.indexOf(marker);
+      return index >= 0 ? decodeURIComponent(url.slice(index + marker.length)) : null;
+    };
+
+    const previousLogoPath = extractLogoPath(previousLogoUrl);
+    if ((logoFile || removeLogo) && previousLogoPath && previousLogoPath !== uploadedLogoPath) {
+      const { error: removeError } = await supabase.storage.from("school-logos").remove([previousLogoPath]);
+      if (removeError) console.warn("Não foi possível remover a logo anterior:", removeError);
+    }
+
+    setForm((current) => ({ ...current, logo_url: logoUrl }));
+    setLogoFile(null);
+    setRemoveLogo(false);
+    setLogoPreview(logoUrl || "");
     const rows = resources.map((r) => ({
       escola_id: id,
       recurso_id: r.id,
@@ -188,8 +277,35 @@ export const AdminEscolas = () => {
           <div className="flex items-center gap-3"><div className="rounded-xl bg-slate-100 p-3 text-slate-600 dark:bg-slate-800 dark:text-slate-200"><FaBuilding /></div><div><h2 className="font-semibold text-slate-900 dark:text-white">Identidade</h2><p className="text-sm text-slate-500 dark:text-slate-400">Personalização da escola no LogView.</p></div></div>
           <label className="mt-5 block text-sm font-medium text-slate-700 dark:text-slate-200">Nome da escola<input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-green-500 dark:border-slate-600" /></label>
           <label className="mt-4 block text-sm font-medium text-slate-700 dark:text-slate-200">Cidade<input value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-green-500 dark:border-slate-600" /></label>
-          <label className="mt-4 block text-sm font-medium text-slate-700 dark:text-slate-200">Logo (URL)</label>
-          <input value={form.logo_url} onChange={(e) => setForm({ ...form, logo_url: e.target.value })} placeholder="https://..." className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-green-500 dark:border-slate-600" />
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Logo da escola</label>
+            <div className="mt-2 flex min-w-0 flex-col gap-3 rounded-xl border border-dashed border-slate-300 p-3 dark:border-slate-600 sm:flex-row sm:items-center">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Prévia da logo" className="h-full w-full object-contain p-2" />
+                ) : (
+                  <FaBuilding className="text-2xl text-slate-400" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">Envie a imagem da escola</p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">PNG, JPG ou WEBP • até 2 MB</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900">
+                    <FaUpload />
+                    {logoFile ? "Trocar logo" : "Selecionar logo"}
+                    <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoChange} className="hidden" />
+                  </label>
+                  {logoPreview && (
+                    <button type="button" onClick={clearLogo} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800">
+                      <FaTimes />
+                      Remover
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Cor primária<input type="color" value={form.cor_primaria} onChange={(e) => setForm({ ...form, cor_primaria: e.target.value })} className="mt-2 h-11 w-full cursor-pointer rounded-lg border border-slate-300 bg-transparent p-1 dark:border-slate-600" /></label>
             <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Cor secundária<input type="color" value={form.cor_secundaria} onChange={(e) => setForm({ ...form, cor_secundaria: e.target.value })} className="mt-2 h-11 w-full cursor-pointer rounded-lg border border-slate-300 bg-transparent p-1 dark:border-slate-600" /></label>
