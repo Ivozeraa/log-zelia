@@ -26,6 +26,7 @@ export const AdminEscolas = () => {
   const [removeLogo, setRemoveLogo] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const enabledCount = resources.filter((resource) => Boolean(enabled[resource.id])).length;
 
   useEffect(() => {
     let mounted = true;
@@ -307,6 +308,7 @@ export const AdminEscolas = () => {
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"><div className="flex items-center gap-3"><FaUsers className="text-slate-500" /><div><p className="text-sm text-slate-500 dark:text-slate-400">Usuários</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.usuarios}</p></div></div></div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"><div className="flex items-center gap-3"><FaGraduationCap className="text-slate-500" /><div><p className="text-sm text-slate-500 dark:text-slate-400">Alunos</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.alunos}</p></div></div></div>
       </div>
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Plano atual</p><p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{plans.find((p) => p.id === form.plano_id)?.nome || "Sem plano"}</p></div><div className="text-right"><p className="text-xs text-slate-400">Recursos habilitados</p><p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{enabledCount} / {resources.length}</p></div></div></div>
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3"><div className={`rounded-xl p-3 ${form.ativo ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800"}`}><FaPowerOff /></div><div><h2 className="font-semibold text-slate-900 dark:text-white">Status da escola</h2><p className="text-sm text-slate-500 dark:text-slate-400">Controle se a escola está ativa na plataforma.</p></div></div>
