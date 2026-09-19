@@ -15,6 +15,8 @@ import {
   FaHistory,
   FaSearch,
   FaFilter,
+  FaChartPie,
+  FaDatabase,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { supabase } from "../utils/supabase";
@@ -57,7 +59,8 @@ export const Admin = () => {
   const [schoolSearch, setSchoolSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("todos");
   const [statusFilter, setStatusFilter] = useState("todos");
-  const [platformStats, setPlatformStats] = useState({ usuarios: 0, alunos: 0 });
+  const [platformStats, setPlatformStats] = useState({ usuarios: 0, alunos: 0, gestores: 0, coordenadores: 0, professores: 0 });
+  const [resourceStats, setResourceStats] = useState([]);
 
   useEffect(() => {
     let mounted = true;
@@ -79,11 +82,34 @@ export const Admin = () => {
         setSchools(data ?? []);
       }
 
-      const [{ count: userCount }, { count: studentCount }] = await Promise.all([
+      const [{ count: userCount }, { count: studentCount }, { data: usersByRole }, { data: resourceRows }] = await Promise.all([
         supabase.from("usuarios").select("id", { count: "exact", head: true }),
         supabase.from("alunos").select("id", { count: "exact", head: true }),
+        supabase.from("usuarios").select("role_id"),
+        supabase.from("logview_escola_recursos").select("habilitado, logview_recursos(chave, nome)"),
       ]);
-      if (mounted) setPlatformStats({ usuarios: userCount ?? 0, alunos: studentCount ?? 0 });
+
+      const roleStats = (usersByRole || []).reduce((acc, item) => {
+        const role = Number(item.role_id);
+        if (role === 2) acc.gestores += 1;
+        if (role === 3) acc.coordenadores += 1;
+        if (role === 4) acc.professores += 1;
+        return acc;
+      }, { gestores: 0, coordenadores: 0, professores: 0 });
+
+      const resourceMap = (resourceRows || []).reduce((acc, item) => {
+        const key = item.logview_recursos?.chave;
+        if (!key) return acc;
+        if (!acc[key]) acc[key] = { chave: key, nome: item.logview_recursos?.nome || key, total: 0, habilitado: 0 };
+        acc[key].total += 1;
+        if (item.habilitado) acc[key].habilitado += 1;
+        return acc;
+      }, {});
+
+      if (mounted) {
+        setPlatformStats({ usuarios: userCount ?? 0, alunos: studentCount ?? 0, ...roleStats });
+        setResourceStats(Object.values(resourceMap).sort((a, b) => b.habilitado - a.habilitado));
+      }
 
       const { data: auditData } = await supabase
         .from("logview_auditoria")
@@ -265,6 +291,34 @@ export const Admin = () => {
         />
       </section>
 
+      <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={FaUsers} label="Equipe da plataforma" value={loading ? "—" : platformStats.usuarios} description={loading ? "Carregando usuários" : `${platformStats.gestores} gestores · ${platformStats.coordenadores} coord. · ${platformStats.professores} professores`} />
+        <StatCard icon={FaDatabase} label="Alunos" value={loading ? "—" : platformStats.alunos} description="Registros distribuídos entre as escolas" />
+        <StatCard icon={FaCheckCircle} label="Escolas ativas" value={loading ? "—" : activeSchoolCount} description={loading ? "Carregando status" : `${schools.length - activeSchoolCount} escolas inativas`} />
+        <StatCard icon={FaLayerGroup} label="Planos em uso" value={loading ? "—" : Object.keys(planCounts).length} description={loading ? "Carregando planos" : Object.entries(planCounts).map(([plan, count]) => `${plan}: ${count}`).join(" · ") || "Nenhuma escola"} />
+      </section>
+
+      <section className="mt-6 grid min-w-0 gap-4 lg:grid-cols-2">
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <div className="flex items-start gap-3"><div className="rounded-xl bg-slate-100 p-3 text-slate-700 dark:bg-slate-800 dark:text-slate-200"><FaChartPie /></div><div><h2 className="font-semibold text-slate-900 dark:text-white">Distribuição por plano</h2><p className="text-sm text-slate-500 dark:text-slate-400">Quantidade de escolas em cada plano.</p></div></div>
+          <div className="mt-5 space-y-4">
+            {Object.entries(planCounts).length ? Object.entries(planCounts).map(([plan, count]) => {
+              const percentage = schools.length ? Math.round((count / schools.length) * 100) : 0;
+              return <div key={plan}><div className="mb-1 flex justify-between gap-3 text-sm"><span className="font-medium text-slate-700 dark:text-slate-200">{plan}</span><span className="text-slate-500 dark:text-slate-400">{count} · {percentage}%</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-green-500" style={{ width: `${percentage}%` }} /></div></div>;
+            }) : <p className="text-sm text-slate-500">Nenhuma escola cadastrada.</p>}
+          </div>
+        </div>
+
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <div className="flex items-start gap-3"><div className="rounded-xl bg-slate-100 p-3 text-slate-700 dark:bg-slate-800 dark:text-slate-200"><FaTools /></div><div><h2 className="font-semibold text-slate-900 dark:text-white">Adoção de recursos</h2><p className="text-sm text-slate-500 dark:text-slate-400">Escolas com cada recurso habilitado.</p></div></div>
+          <div className="mt-5 space-y-4">
+            {resourceStats.length ? resourceStats.map((resource) => {
+              const percentage = resource.total ? Math.round((resource.habilitado / resource.total) * 100) : 0;
+              return <div key={resource.chave}><div className="mb-1 flex justify-between gap-3 text-sm"><span className="min-w-0 truncate font-medium text-slate-700 dark:text-slate-200">{resource.nome}</span><span className="shrink-0 text-slate-500 dark:text-slate-400">{resource.habilitado}/{resource.total}</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-green-500" style={{ width: `${percentage}%` }} /></div></div>;
+            }) : <p className="text-sm text-slate-500">Nenhum recurso configurado nas escolas.</p>}
+          </div>
+        </div>
+      </section>
       <section className="mt-6 grid min-w-0 gap-4 sm:mt-8 sm:gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)]">
         <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 dark:border-slate-700">
