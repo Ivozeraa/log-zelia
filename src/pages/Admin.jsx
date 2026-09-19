@@ -57,6 +57,7 @@ export const Admin = () => {
   const [schoolSearch, setSchoolSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("todos");
   const [statusFilter, setStatusFilter] = useState("todos");
+  const [platformStats, setPlatformStats] = useState({ usuarios: 0, alunos: 0 });
 
   useEffect(() => {
     let mounted = true;
@@ -77,6 +78,12 @@ export const Admin = () => {
       } else {
         setSchools(data ?? []);
       }
+
+      const [{ count: userCount }, { count: studentCount }] = await Promise.all([
+        supabase.from("usuarios").select("id", { count: "exact", head: true }),
+        supabase.from("alunos").select("id", { count: "exact", head: true }),
+      ]);
+      if (mounted) setPlatformStats({ usuarios: userCount ?? 0, alunos: studentCount ?? 0 });
 
       const { data: auditData } = await supabase
         .from("logview_auditoria")
@@ -236,7 +243,7 @@ export const Admin = () => {
           icon={FaBuilding}
           label="Escolas"
           value={schoolCountLabel}
-          description="Cadastros atualmente disponíveis"
+          description={`${activeSchoolCount} ativas · ${schools.length - activeSchoolCount} inativas`}
         />
         <StatCard
           icon={FaLayerGroup}
@@ -252,9 +259,9 @@ export const Admin = () => {
         />
         <StatCard
           icon={FaServer}
-          label="Backend"
-          value="Supabase"
-          description="Banco e políticas RLS"
+          label="Usuários"
+          value={loading ? "—" : platformStats.usuarios}
+          description={`${loading ? "Carregando" : platformStats.alunos} alunos cadastrados`}
         />
       </section>
 
@@ -287,7 +294,7 @@ export const Admin = () => {
                 <FaFilter className="pointer-events-none absolute left-3 top-3 text-slate-400" />
                 <select value={planFilter} onChange={(e) => setPlanFilter(e.target.value)} className="w-full appearance-none rounded-xl border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white">
                   <option value="todos">Todos os planos</option>
-                  <option value="básico">Básico</option>
+                  <option value="basico">Básico</option>
                   <option value="profissional">Profissional</option>
                   <option value="enterprise">Enterprise</option>
                 </select>
@@ -298,6 +305,9 @@ export const Admin = () => {
                 <option value="inativas">Inativas</option>
               </select>
             </div>
+          </div>
+          <div className="flex flex-wrap gap-2 border-b border-slate-200 px-3 py-3 dark:border-slate-700">
+            {Object.entries(planCounts).map(([plan, count]) => <span key={plan} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">{plan}: {count}</span>)}
           </div>
 
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
