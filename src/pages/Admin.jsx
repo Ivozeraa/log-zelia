@@ -332,9 +332,7 @@ export const Admin = () => {
               <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 dark:bg-green-950/40 dark:text-green-400">
                 {activeSchoolCount} ativas · {schools.length} total
               </span>
-              <button type="button" onClick={() => setShowNewSchool(true)} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700">
-                <FaPlus /> Nova escola
-              </button>
+              <div className="flex flex-wrap gap-2"><Link to="/app/admin/usuarios" className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><FaUsers /> Usuários</Link><button type="button" onClick={() => setShowNewSchool(true)} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700"><FaPlus /> Nova escola</button></div>
             </div>
           </div>
 
