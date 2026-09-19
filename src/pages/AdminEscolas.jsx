@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FaArrowLeft, FaBuilding, FaCheckCircle, FaSave, FaUsers, FaGraduationCap, FaUpload, FaTimes, FaHistory, FaPowerOff } from "react-icons/fa";
+import { FaArrowLeft, FaBuilding, FaCheckCircle, FaSave, FaUsers, FaGraduationCap, FaUpload, FaTimes, FaHistory, FaPowerOff, FaChartPie, FaLayerGroup } from "react-icons/fa";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../utils/supabase";
 import { notify } from "../utils/notify";
@@ -27,6 +27,16 @@ export const AdminEscolas = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const enabledCount = resources.filter((resource) => Boolean(enabled[resource.id])).length;
+  const roleCounts = users.reduce((acc, user) => {
+    const role = Number(user.role_id);
+    if (role === 2) acc.diretores += 1;
+    else if (role === 3) acc.coordenadores += 1;
+    else if (role === 4) acc.professores += 1;
+    return acc;
+  }, { diretores: 0, coordenadores: 0, professores: 0 });
+  const selectedPlan = plans.find((plan) => plan.id === form.plano_id);
+  const enabledResources = resources.filter((resource) => Boolean(enabled[resource.id]));
+  const disabledResources = resources.filter((resource) => !enabled[resource.id]);
 
   useEffect(() => {
     let mounted = true;
@@ -304,11 +314,34 @@ export const AdminEscolas = () => {
     <main className="mx-auto w-full max-w-5xl min-w-0 px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
       <button onClick={() => navigate("/app/admin")} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"><FaArrowLeft /> Voltar</button>
       <div className="min-w-0"><PageTitle title={school.nome} subtitle={school.cidade || "Configuração da escola"} /></div>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"><div className="flex items-center gap-3"><FaUsers className="text-slate-500" /><div><p className="text-sm text-slate-500 dark:text-slate-400">Usuários</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.usuarios}</p></div></div></div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"><div className="flex items-center gap-3"><FaGraduationCap className="text-slate-500" /><div><p className="text-sm text-slate-500 dark:text-slate-400">Alunos</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.alunos}</p></div></div></div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"><div className="flex items-center gap-3"><FaChartPie className="text-slate-500" /><div><p className="text-sm text-slate-500 dark:text-slate-400">Equipe</p><p className="text-lg font-bold text-slate-900 dark:text-white">{roleCounts.professores} prof.</p><p className="text-xs text-slate-400">{roleCounts.diretores} dir. · {roleCounts.coordenadores} coord.</p></div></div></div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"><div className="flex items-center gap-3"><FaLayerGroup className="text-slate-500" /><div><p className="text-sm text-slate-500 dark:text-slate-400">Recursos</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{enabledCount}/{resources.length}</p><p className="text-xs text-slate-400">habilitados</p></div></div></div>
       </div>
-      <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Plano atual</p><p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{plans.find((p) => p.id === form.plano_id)?.nome || "Sem plano"}</p></div><div className="text-right"><p className="text-xs text-slate-400">Recursos habilitados</p><p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{enabledCount} / {resources.length}</p></div></div></div>
+      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Plano atual</p><p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{selectedPlan?.nome || "Sem plano"}</p></div>
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${form.ativo ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800"}`}>{form.ativo ? "Ativa" : "Inativa"}</span>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950"><p className="text-xs text-slate-400">Mensalidade</p><p className="mt-1 font-semibold text-slate-800 dark:text-white">{selectedPlan ? (Number(selectedPlan.preco_mensal) === 0 ? "Grátis" : `R$ ${Number(selectedPlan.preco_mensal).toFixed(2).replace(".", ",")}/mês`) : "—"}</p></div>
+            <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950"><p className="text-xs text-slate-400">Recursos do plano</p><p className="mt-1 font-semibold text-slate-800 dark:text-white">{planResources.filter((item) => item.habilitado).length}/{planResources.length}</p></div>
+          </div>
+          {selectedPlan?.descricao && <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">{selectedPlan.descricao}</p>}
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-5">
+          <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Distribuição da equipe</p><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{stats.usuarios} usuários vinculados</p></div><FaChartPie className="text-slate-400" /></div>
+          <div className="mt-4 space-y-3">
+            {[["Diretores", roleCounts.diretores], ["Coordenadores", roleCounts.coordenadores], ["Professores", roleCounts.professores]].map(([label, count]) => {
+              const percentage = stats.usuarios ? Math.round((count / stats.usuarios) * 100) : 0;
+              return <div key={label}><div className="flex justify-between text-xs"><span className="font-medium text-slate-600 dark:text-slate-300">{label}</span><span className="text-slate-400">{count} · {percentage}%</span></div><div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-green-500" style={{ width: `${percentage}%` }} /></div></div>;
+            })}
+          </div>
+        </div>
+      </div>
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3"><div className={`rounded-xl p-3 ${form.ativo ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800"}`}><FaPowerOff /></div><div><h2 className="font-semibold text-slate-900 dark:text-white">Status da escola</h2><p className="text-sm text-slate-500 dark:text-slate-400">Controle se a escola está ativa na plataforma.</p></div></div>
@@ -364,7 +397,10 @@ export const AdminEscolas = () => {
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <h2 className="font-semibold text-slate-900 dark:text-white">Recursos disponíveis</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Defina quais módulos esta escola pode utilizar.</p>
-          <div className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300">Plano atual: <span className="font-semibold">{plans.find((p) => p.id === form.plano_id)?.nome || "Sem plano"}</span> · {planResources.filter((item) => item.habilitado).length} de {planResources.length} recursos previstos pelo plano.</div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <div className="rounded-xl bg-green-50 p-3 text-xs text-green-800 dark:bg-green-950/20 dark:text-green-300"><span className="font-semibold">{enabledResources.length}</span> recursos ativos nesta escola.</div>
+            <div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300"><span className="font-semibold">{disabledResources.length}</span> recursos desativados.</div>
+          </div>
           <div className="mt-5 space-y-3">{resources.map((resource) => (
             <label key={resource.id} className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
               <span><span className="block text-sm font-semibold text-slate-800 dark:text-white">{resource.nome}</span><span className="block text-xs text-slate-500 dark:text-slate-400">{resource.descricao || "Módulo do LogView"}</span></span>
