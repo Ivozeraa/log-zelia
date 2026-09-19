@@ -26,6 +26,7 @@ const AdminFeedbacks = lazy(() => import("./pages/AdminFeedbacks").then((module)
 const AdminAvisos = lazy(() => import("./pages/AdminAvisos").then((module) => ({ default: module.AdminAvisos })));
 const Admin = lazy(() => import("./pages/Admin").then((module) => ({ default: module.Admin })));
 const AdminEscolas = lazy(() => import("./pages/AdminEscolas").then((module) => ({ default: module.AdminEscolas })));
+const AdminUsuarios = lazy(() => import("./pages/AdminUsuarios").then((module) => ({ default: module.AdminUsuarios })));
 
 function PublicPageFallback() {
   return <div className="min-h-screen bg-white dark:bg-slate-950"><div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"><div className="h-10 w-36 animate-pulse rounded-xl bg-slate-200/80 dark:bg-slate-800/80" /><div className="mt-16 h-12 w-full max-w-xl animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-800/70" /></div></div>;
@@ -50,6 +51,7 @@ function App() {
           <Route path="gestao/senhas-alunos" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><StudentPasswordReset /></ProtectedRoute>} />
           <Route path="admin" element={<ProtectedRoute allowedRoles={[1]}><Admin /></ProtectedRoute>} />
           <Route path="admin/escolas/:id" element={<ProtectedRoute allowedRoles={[1]}><AdminEscolas /></ProtectedRoute>} />
+          <Route path="admin/usuarios" element={<ProtectedRoute allowedRoles={[1]}><AdminUsuarios /></ProtectedRoute>} />
           <Route path="feedbacks" element={<ProtectedRoute allowedRoles={[1]}><AdminFeedbacks /></ProtectedRoute>} />
           <Route path="avisos" element={<ProtectedRoute allowedRoles={[1]}><AdminAvisos /></ProtectedRoute>} />
           <Route path="configuracoes" element={<Settings />} />
