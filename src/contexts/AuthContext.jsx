@@ -39,6 +39,26 @@ export function AuthProvider({ children }) {
         console.error("Erro buscando perfil:", perfilError);
       }
 
+      if (perfil?.escola_id && Number(perfil.role_id) !== 1) {
+        const { data: escola, error: escolaError } = await withTimeout(
+          supabase
+            .from("escolas")
+            .select("id, ativo")
+            .eq("id", perfil.escola_id)
+            .maybeSingle(),
+          AUTH_INIT_TIMEOUT_MS,
+          "Tempo limite ao verificar o status da escola.",
+        );
+
+        if (escolaError) {
+          console.error("Erro verificando status da escola:", escolaError);
+        } else if (escola && escola.ativo === false) {
+          await supabase.auth.signOut({ scope: "local" });
+          setUser(null);
+          return null;
+        }
+      }
+
       const nextUser = {
         id: authUser.id,
         nome: perfil?.nome || authUser.user_metadata?.name || "Usuário",
