@@ -26,7 +26,7 @@ export function SchoolProvider({ children }) {
 
     const { data, error: schoolsError } = await supabase
       .from("escolas")
-      .select("id, nome, cidade, created_at")
+      .select("id, nome, cidade, ativo, created_at")
       .order("nome", { ascending: true });
 
     if (schoolsError) {
