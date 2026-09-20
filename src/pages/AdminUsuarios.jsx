@@ -75,7 +75,6 @@ export const AdminUsuarios = () => {
 
     await supabase.from("logview_auditoria").insert({
       escola_id: schoolId || previous?.escola_id || null,
-      usuario_id: user.id,
       acao: "alterar",
       entidade: "usuario",
       entidade_id: user.id,
