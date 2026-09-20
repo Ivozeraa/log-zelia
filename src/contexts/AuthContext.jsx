@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../utils/supabase";
 import { AuthContext } from "./AuthContextImpl";
+import { debugError, debugLog, debugQuery } from "../utils/debug";
 
 const AUTH_INIT_TIMEOUT_MS = 10000;
 
@@ -17,6 +18,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const loadUser = useCallback(async (authUser) => {
+    debugLog("AUTH", "loadUser iniciado", { id: authUser?.id, email: authUser?.email });
     if (!authUser) {
       setUser(null);
       return null;
@@ -24,11 +26,11 @@ export function AuthProvider({ children }) {
 
     try {
       const result = await withTimeout(
-        supabase
+        debugQuery("AUTH", "carregar perfil usuarios", supabase
           .from("usuarios")
           .select("id, nome, role_id, escola_id, pdt")
           .eq("id", authUser.id)
-          .maybeSingle(),
+          .maybeSingle()),
         AUTH_INIT_TIMEOUT_MS,
         "Tempo limite ao carregar perfil do usuário.",
       );
@@ -36,22 +38,22 @@ export function AuthProvider({ children }) {
       const { data: perfil, error: perfilError } = result;
 
       if (perfilError) {
-        console.error("Erro buscando perfil:", perfilError);
+        debugError("AUTH", "Erro buscando perfil", perfilError);
       }
 
       if (perfil?.escola_id && Number(perfil.role_id) !== 1) {
         const { data: escola, error: escolaError } = await withTimeout(
-          supabase
+          debugQuery("AUTH", "verificar escola ativa", supabase
             .from("escolas")
             .select("id, ativo")
             .eq("id", perfil.escola_id)
-            .maybeSingle(),
+            .maybeSingle()),
           AUTH_INIT_TIMEOUT_MS,
           "Tempo limite ao verificar o status da escola.",
         );
 
         if (escolaError) {
-          console.error("Erro verificando status da escola:", escolaError);
+          debugError("AUTH", "Erro verificando status da escola", escolaError);
         } else if (escola && escola.ativo === false) {
           await supabase.auth.signOut({ scope: "local" });
           setUser(null);
@@ -70,9 +72,10 @@ export function AuthProvider({ children }) {
       };
 
       setUser(nextUser);
+      debugLog("AUTH", "loadUser concluído", { role_id: nextUser.role_id, escola_id: nextUser.escola_id });
       return nextUser;
     } catch (err) {
-      console.error("Erro em loadUser:", err);
+      debugError("AUTH", "Erro em loadUser", err);
 
       const fallbackUser = {
         id: authUser.id,
@@ -161,6 +164,7 @@ export function AuthProvider({ children }) {
 
     const initializeAuth = async () => {
       try {
+        debugLog("AUTH", "inicialização: getSession");
         const result = await withTimeout(
           supabase.auth.getSession(),
           AUTH_INIT_TIMEOUT_MS,
@@ -171,7 +175,7 @@ export function AuthProvider({ children }) {
           error,
         } = result;
 
-        if (error) console.error("Erro obtendo sessão:", error);
+        if (error) debugError("AUTH", "Erro obtendo sessão", error);
         if (!mounted) return;
 
         initialized = true;
@@ -182,7 +186,7 @@ export function AuthProvider({ children }) {
           setUser(null);
         }
       } catch (err) {
-        console.error("Erro inicializando autenticação:", err);
+        debugError("AUTH", "Erro inicializando autenticação", err);
         if (mounted) setUser(null);
       } finally {
         if (mounted) setLoading(false);
@@ -191,8 +195,10 @@ export function AuthProvider({ children }) {
 
     void initializeAuth();
 
+    debugLog("AUTH", "listener onAuthStateChange registrado");
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        debugLog("AUTH", `evento de autenticação: ${event}`, { hasSession: Boolean(session) });
         if (!mounted) return;
 
         if (event === "SIGNED_OUT") {
