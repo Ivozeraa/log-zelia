@@ -1,5 +1,5 @@
 import { SidebarOptions as So } from '../ui/SidebarOptions'
-import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey, FaShieldAlt } from 'react-icons/fa'
+import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey, FaShieldAlt, FaHistory } from 'react-icons/fa'
 import { useAuth } from '../../hooks/useAuth'
 import { SectionTitle } from '../ui/SectionTitle'
 import { useSchoolFeatures } from '../../hooks/useSchoolFeatures'
@@ -57,6 +57,7 @@ export const Sidebar = ({ open, setOpen }) => {
         {canAccessPlatformAdmin && (
           <So to="/app/admin" icon={FaShieldAlt} text="Administração" onClick={handleClick} />
             <So to="/app/admin/usuarios" icon={FaKey} text="Usuários da plataforma" onClick={handleClick} />
+            <So to="/app/admin/auditoria" icon={FaHistory} text="Auditoria" onClick={handleClick} />
         )}
 
         {canManageAnnouncements && (
