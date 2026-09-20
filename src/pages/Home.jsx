@@ -20,7 +20,7 @@ import { debugError, debugLog, debugQuery } from "../utils/debug";
 
 export const Home = () => {
   const { user } = useAuth();
-  const { schoolId, isGlobalAdmin } = useSchool();
+  const { school, schoolId, isGlobalAdmin } = useSchool();
   const [open, setOpen] = useState(false);
   const [escolas, setEscolas] = useState([]);
   const [selectedEscola, setSelectedEscola] = useState("");
@@ -67,7 +67,7 @@ export const Home = () => {
 
       const { data, error } = await debugQuery("HOME", "carregar ocorrências", supabase
         .from("ocorrencias")
-        .select("id, aluno_id, professor_id, turma_id, data_ocorrido, tipo, categoria, descricao, escola_id, data_inicio, data_fim, data_aplicacao, ocorrencia_origem_id")
+        .select("id, data_ocorrido, categoria, ocorrencia_origem_id")
         .eq("escola_id", activeSchoolId));
 
       if (error) {
@@ -111,39 +111,34 @@ export const Home = () => {
   useEffect(() => {
     const loadEscolas = async () => {
       if (!user) return;
-      const query = supabase.from("escolas").select("id, nome").order("nome", { ascending: true });
 
-      if (isGlobalAdmin) {
-        const { data, error } = await debugQuery("HOME", "carregar escolas", query);
-        if (error) {
-          notify.error("Erro carregando as escolas");
-          debugError("HOME", "Erro carregando escolas", error);
+      if (!isGlobalAdmin) {
+        if (!schoolId) {
           setEscolas([]);
+          setSelectedEscola("");
           return;
         }
-        setEscolas(data || []);
-        if (data?.length > 0 && !selectedEscola) setSelectedEscola(data[0].id);
+        setEscolas(school ? [school] : []);
+        setSelectedEscola((current) => current || schoolId);
         return;
       }
 
-      if (!schoolId) {
-        setEscolas([]);
-        setSelectedEscola("");
-        return;
-      }
-
-      const { data, error } = await query.eq("id", schoolId).maybeSingle();
+      const { data, error } = await debugQuery(
+        "HOME",
+        "carregar escolas",
+        supabase.from("escolas").select("id, nome").order("nome", { ascending: true }),
+      );
       if (error) {
-        notify.error("Erro carregando a escola");
-        debugError("HOME", "Erro carregando turmas", error);
+        notify.error("Erro carregando as escolas");
+        debugError("HOME", "Erro carregando escolas", error);
         setEscolas([]);
         return;
       }
-      setEscolas(data ? [data] : []);
-      setSelectedEscola(schoolId);
+      setEscolas(data || []);
+      if (data?.length > 0) setSelectedEscola((current) => current || data[0].id);
     };
     loadEscolas();
-  }, [user, schoolId, isGlobalAdmin, selectedEscola]);
+  }, [user, school, schoolId, isGlobalAdmin]);
 
   useEffect(() => {
     const loadTurmas = async () => {
