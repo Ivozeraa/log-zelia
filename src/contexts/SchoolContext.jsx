@@ -24,12 +24,14 @@ export function SchoolProvider({ children }) {
       return [];
     }
 
-    const { data, error: schoolsError } = await supabase
+    debugLog("SCHOOL", "carregando lista global de escolas");
+    const { data, error: schoolsError } = await debugQuery("SCHOOL", "listar escolas", supabase
       .from("escolas")
       .select("id, nome, cidade, ativo, created_at")
-      .order("nome", { ascending: true });
+      .order("nome", { ascending: true }));
 
     if (schoolsError) {
+      debugError("SCHOOL", "Erro ao listar escolas", schoolsError);
       throw schoolsError;
     }
 
@@ -39,8 +41,12 @@ export function SchoolProvider({ children }) {
   }, [isGlobalAdmin]);
 
   const loadSchool = useCallback(async () => {
-    if (authLoading) return;
+    if (authLoading) {
+      debugLog("SCHOOL", "aguardando AuthProvider");
+      return;
+    }
 
+    debugLog("SCHOOL", "iniciando carregamento do contexto", { isGlobalAdmin, escolaId: user?.escola_id });
     setLoading(true);
     setError(null);
 
@@ -70,11 +76,11 @@ export function SchoolProvider({ children }) {
         return;
       }
 
-      const { data, error: schoolError } = await supabase
+      const { data, error: schoolError } = await debugQuery("SCHOOL", "carregar escola do usuário", supabase
         .from("escolas")
         .select("id, nome, cidade, created_at")
         .eq("id", user.escola_id)
-        .maybeSingle();
+        .maybeSingle());
 
       if (schoolError) throw schoolError;
 
@@ -82,12 +88,13 @@ export function SchoolProvider({ children }) {
       setSelectedSchoolId(data?.id ? String(data.id) : null);
       setSchools(data ? [data] : []);
     } catch (loadError) {
-      console.error("Erro carregando escolas:", loadError);
+      debugError("SCHOOL", "Erro carregando contexto de escola", loadError);
       setSchool(null);
       setSchools([]);
       setError(loadError);
     } finally {
       setLoading(false);
+      debugLog("SCHOOL", "contexto de escola finalizado", { schoolId: selectedSchoolId });
     }
   }, [authLoading, isGlobalAdmin, loadSchools, user?.escola_id]);
 
