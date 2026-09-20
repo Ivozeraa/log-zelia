@@ -26,7 +26,7 @@ export const TeacherSchedule = () => {
       if (!user?.id || !user?.escola_id) { debugLog('SCHEDULE', 'sem usuário/escola, horário não será carregado'); if (active) setLoading(false); return; }
       setLoading(true);
       try {
-        const { data: configs, error: configError } = await debugQuery('SCHEDULE', 'carregar configurações', supabase.from('horario_configuracoes').select('id, ano_letivo, semestre, created_at').eq('escola_id', user.escola_id).order('ano_letivo', { ascending: false }).order('semestre', { ascending: false }).order('created_at', { ascending: false }));
+        const { data: configs, error: configError } = await debugQuery('SCHEDULE', 'carregar configurações', supabase.from('horario_configuracoes').select('id, ano_letivo, semestre, created_at').eq('escola_id', user.escola_id).order('ano_letivo', { ascending: false }).order('semestre', { ascending: false }).order('created_at', { ascending: false }).limit(1));
         if (configError) throw configError;
         const currentConfig = configs?.[0];
         if (!currentConfig) { if (active) setLessons([]); return; }
