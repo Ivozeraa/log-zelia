@@ -55,9 +55,11 @@ export const Sidebar = ({ open, setOpen }) => {
         )}
 
         {canAccessPlatformAdmin && (
-          <So to="/app/admin" icon={FaShieldAlt} text="Administração" onClick={handleClick} />
+          <>
+            <So to="/app/admin" icon={FaShieldAlt} text="Administração" onClick={handleClick} />
             <So to="/app/admin/usuarios" icon={FaKey} text="Usuários da plataforma" onClick={handleClick} />
             <So to="/app/admin/auditoria" icon={FaHistory} text="Auditoria" onClick={handleClick} />
+          </>
         )}
 
         {canManageAnnouncements && (
