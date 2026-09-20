@@ -16,6 +16,7 @@ import { SectionTitle } from "../components/ui/SectionTitle";
 import { RankingOcorrencias } from "../components/ui/Ranking";
 import { SuspensionDecisionPopup } from "../components/ui/SuspensionDecisionPopup";
 import { notify } from "../utils/notify";
+import { debugError, debugLog, debugQuery } from "../utils/debug";
 
 export const Home = () => {
   const { user } = useAuth();
@@ -57,19 +58,20 @@ export const Home = () => {
 
   useEffect(() => {
     const loadDashboard = async () => {
+      debugLog("HOME", "loadDashboard", { activeSchoolId, isGlobalAdmin });
       if (!activeSchoolId) {
         setStats({ total: 0, mes: 0, semana: 0 });
         setGraficoData([]);
         return;
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await debugQuery("HOME", "carregar ocorrências", supabase
         .from("ocorrencias")
         .select("*")
-        .eq("escola_id", activeSchoolId);
+        .eq("escola_id", activeSchoolId));
 
       if (error) {
-        console.error("Erro ao carregar dashboard:", error);
+        debugError("HOME", "Erro ao carregar dashboard", error);
         return;
       }
 
@@ -86,6 +88,7 @@ export const Home = () => {
       const mes = registros.filter((o) => new Date(o.data_ocorrido) >= inicioMes).length;
       const semana = registros.filter((o) => new Date(o.data_ocorrido) >= inicioSemana).length;
 
+      debugLog("HOME", "dashboard processado", { registros: registros.length, total, mes, semana });
       setStats({ total, mes, semana });
 
       const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -111,10 +114,10 @@ export const Home = () => {
       const query = supabase.from("escolas").select("id, nome").order("nome", { ascending: true });
 
       if (isGlobalAdmin) {
-        const { data, error } = await query;
+        const { data, error } = await debugQuery("HOME", "carregar escolas", query);
         if (error) {
           notify.error("Erro carregando as escolas");
-          console.error(error);
+          debugError("HOME", "Erro carregando escolas", error);
           setEscolas([]);
           return;
         }
@@ -132,7 +135,7 @@ export const Home = () => {
       const { data, error } = await query.eq("id", schoolId).maybeSingle();
       if (error) {
         notify.error("Erro carregando a escola");
-        console.error(error);
+        debugError("HOME", "Erro carregando turmas", error);
         setEscolas([]);
         return;
       }
@@ -152,13 +155,13 @@ export const Home = () => {
         return;
       }
       setLoadingTurmas(true);
-      const { data, error } = await supabase
+      const { data, error } = await debugQuery("HOME", "carregar turmas", supabase
         .from("turmas")
         .select("id, nome")
         .eq("escola_id", activeSchoolId)
-        .order("nome", { ascending: true });
+        .order("nome", { ascending: true }));
       if (error) {
-        console.error(error);
+        debugError("HOME", "Erro carregando alunos", error);
         setTurmas([]);
       } else {
         setTurmas(data || []);
@@ -176,11 +179,11 @@ export const Home = () => {
         return;
       }
       setLoadingAlunos(true);
-      const { data, error } = await supabase
+      const { data, error } = await debugQuery("HOME", "carregar alunos", supabase
         .from("alunos")
         .select("id, nome, matricula")
         .eq("turma_id", selectedTurma)
-        .order("nome", { ascending: true });
+        .order("nome", { ascending: true }));
       if (error) {
         console.error(error);
         setAlunos([]);
