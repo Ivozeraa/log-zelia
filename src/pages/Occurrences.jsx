@@ -92,11 +92,17 @@ const contarSuspensoes = (ocorrenciasDoAluno) => {
 };
 
 const ordenarESinalizarSuspensoes = (lista) => {
-  const ascendente = [...lista].sort((a, b) => {
-    const dateCompare = (a.data_ocorrido || "").localeCompare(b.data_ocorrido || "");
-    if (dateCompare !== 0) return dateCompare;
-    return String(a.created_at || a.id || "").localeCompare(String(b.created_at || b.id || ""));
-  });
+  // A data em que o registro foi lançado é a referência correta para
+  // determinar a ordem disciplinar. data_ocorrido pode ser retroativa
+  // (ex.: registrar hoje uma ocorrência de 17/09), o que fazia o histórico
+  // voltar a contar as ocorrências por data e exibir "2 ocorrências" mesmo
+  // quando aquela já era uma ocorrência posterior.
+  const chaveCronologica = (item) =>
+    String(item?.data_aplicacao || item?.created_at || item?.id || "");
+
+  const ascendente = [...lista].sort((a, b) =>
+    chaveCronologica(a).localeCompare(chaveCronologica(b)),
+  );
 
   // Uma suspensão criada automaticamente aponta para a ocorrência que a originou.
   // No histórico, exibimos somente a suspensão para evitar o registro duplicado,
@@ -111,45 +117,62 @@ const ordenarESinalizarSuspensoes = (lista) => {
     (item) => !idsDeOrigens.has(String(item.id)),
   );
 
+  // Numera as suspensões pela ordem em que foram efetivamente aplicadas,
+  // e não pela data da ocorrência que as originou.
+  const numeroSuspensaoPorId = new Map();
   let numeroSuspensao = 0;
 
-  return historico
-    .map((occ) => {
-      if (occ.categoria !== "suspensao") {
-        return { ...occ, suspensaoGerada: null };
-      }
-
+  for (const item of historico) {
+    if (item.categoria === "suspensao") {
       numeroSuspensao += 1;
+      numeroSuspensaoPorId.set(String(item.id), numeroSuspensao);
+    }
+  }
 
-      const origem = occ.ocorrencia_origem_id
-        ? ascendente.find((item) => String(item.id) === String(occ.ocorrencia_origem_id))
-        : null;
+  const resultado = historico.map((occ) => {
+    if (occ.categoria !== "suspensao") {
+      return { ...occ, suspensaoGerada: null };
+    }
 
-      const ocorrenciasAteOrigem = origem
-        ? ascendente.filter(
-            (item) =>
-              item.categoria === "ocorrencia" &&
-              (item.data_ocorrido || "") <= (origem.data_ocorrido || ""),
-          ).length
-        : null;
+    const origem = occ.ocorrencia_origem_id
+      ? ascendente.find((item) => String(item.id) === String(occ.ocorrencia_origem_id))
+      : null;
 
-      const motivo = origem?.descricao || occ.descricao || "Não informado";
-      const professor = origem?.professor_nome || occ.professor_nome || "Não informado";
+    const chaveOrigem = origem ? chaveCronologica(origem) : null;
 
-      return {
-        ...occ,
-        descricao: origem
-          ? `O aluno atingiu ${ocorrenciasAteOrigem || 3} ocorrências. Motivo do professor: ${motivo}.`
-          : occ.descricao || "Suspensão registrada.",
-        professor_nome: professor,
-        suspensaoGerada: { numero: numeroSuspensao, origem: "aplicada" },
-      };
-    })
-    .sort((a, b) => {
-      const dateCompare = (b.data_ocorrido || "").localeCompare(a.data_ocorrido || "");
-      if (dateCompare !== 0) return dateCompare;
-      return String(b.created_at || b.id || "").localeCompare(String(a.created_at || a.id || ""));
-    });
+    // Conta somente ocorrências normais lançadas até a ocorrência que
+    // efetivamente gerou a suspensão. Não usa data_ocorrido, pois ela pode
+    // ser retroativa e distorcer o contador.
+    const ocorrenciasAteOrigem = origem
+      ? ascendente.filter(
+          (item) =>
+            item.categoria === "ocorrencia" &&
+            chaveCronologica(item) <= chaveOrigem,
+        ).length
+      : null;
+
+    const motivo = origem?.descricao || occ.descricao || "Não informado";
+    const professor = origem?.professor_nome || occ.professor_nome || "Não informado";
+
+    return {
+      ...occ,
+      descricao: origem
+        ? `O aluno atingiu ${ocorrenciasAteOrigem || 0} ocorrências. Motivo do professor: ${motivo}.`
+        : occ.descricao || "Suspensão registrada.",
+      professor_nome: professor,
+      suspensaoGerada: {
+        numero: numeroSuspensaoPorId.get(String(occ.id)) || 1,
+        origem: "aplicada",
+      },
+    };
+  });
+
+  // A interface continua mostrando os registros mais recentes primeiro.
+  return resultado.sort((a, b) => {
+    const dateCompare = chaveCronologica(b).localeCompare(chaveCronologica(a));
+    if (dateCompare !== 0) return dateCompare;
+    return String(b.data_ocorrido || "").localeCompare(String(a.data_ocorrido || ""));
+  });
 };
 
 const resolverEstiloStatus = (status) => {
