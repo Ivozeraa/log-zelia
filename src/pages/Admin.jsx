@@ -3,11 +3,9 @@ import { Link } from "react-router-dom";
 import {
   FaBuilding,
   FaCheckCircle,
-  FaCog,
   FaLayerGroup,
   FaPlus,
   FaSearch,
-  FaShieldAlt,
   FaUsers,
 } from "react-icons/fa";
 import {
@@ -79,13 +77,6 @@ export const Admin = () => {
   const [schoolSearch, setSchoolSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("todos");
   const [statusFilter, setStatusFilter] = useState("todos");
-  const [platformName, setPlatformName] = useState("LogView");
-  const [savedPlatformName, setSavedPlatformName] = useState("LogView");
-  const [primaryColor, setPrimaryColor] = useState("#4CA65A");
-  const [secondaryColor, setSecondaryColor] = useState("#F2762E");
-  const [savedPrimaryColor, setSavedPrimaryColor] = useState("#4CA65A");
-  const [savedSecondaryColor, setSavedSecondaryColor] = useState("#F2762E");
-  const [savingPlatformName, setSavingPlatformName] = useState(false);
   const [platformStats, setPlatformStats] = useState({ usuarios: 0, alunos: 0 });
 
   useEffect(() => {
@@ -98,7 +89,6 @@ export const Admin = () => {
         schoolsResult,
         usersResult,
         studentsResult,
-        configResult,
       ] = await Promise.all([
         supabase
           .from("escolas")
@@ -106,7 +96,6 @@ export const Admin = () => {
           .order("nome", { ascending: true }),
         supabase.from("usuarios").select("id", { count: "exact", head: true }),
         supabase.from("alunos").select("id", { count: "exact", head: true }),
-        supabase.from("logview_config").select("nome_aplicacao, cor_primaria, cor_secundaria").eq("id", 1).maybeSingle(),
       ]);
 
       if (!mounted) return;
@@ -118,15 +107,6 @@ export const Admin = () => {
         setSchools(schoolsResult.data ?? []);
       }
 
-      const nextName = configResult.data?.nome_aplicacao?.trim() || "LogView";
-      setPlatformName(nextName);
-      const nextPrimary = configResult.data?.cor_primaria || "#4CA65A";
-      const nextSecondary = configResult.data?.cor_secundaria || "#F2762E";
-      setPrimaryColor(nextPrimary);
-      setSecondaryColor(nextSecondary);
-      setSavedPrimaryColor(nextPrimary);
-      setSavedSecondaryColor(nextSecondary);
-      setSavedPlatformName(nextName);
       setPlatformStats({
         usuarios: usersResult.count ?? 0,
         alunos: studentsResult.count ?? 0,
@@ -174,51 +154,6 @@ export const Admin = () => {
       return matchesSearch && matchesPlan && matchesStatus;
     });
   }, [schools, schoolSearch, planFilter, statusFilter]);
-
-  const savePlatformName = async (event) => {
-    event.preventDefault();
-    const name = platformName.trim();
-    const isHex = (value) => /^#[0-9A-Fa-f]{6}$/.test(value);
-
-    if (!name) {
-      notify.error("Informe um nome para a plataforma.");
-      return;
-    }
-
-    if (name.length > 40) {
-      notify.error("O nome da plataforma deve ter no máximo 40 caracteres.");
-      return;
-    }
-
-    if (!isHex(primaryColor) || !isHex(secondaryColor)) {
-      notify.error("Use cores no formato hexadecimal, por exemplo #4CA65A.");
-      return;
-    }
-
-    setSavingPlatformName(true);
-
-    const { error } = await supabase
-      .from("logview_config")
-      .upsert({ id: 1, nome_aplicacao: name, cor_primaria: primaryColor.toUpperCase(), cor_secundaria: secondaryColor.toUpperCase(), updated_at: new Date().toISOString() });
-
-    setSavingPlatformName(false);
-
-    if (error) {
-      console.error(error);
-      notify.error("Não foi possível salvar o nome da plataforma.");
-      return;
-    }
-
-    const nextPrimary = primaryColor.toUpperCase();
-    const nextSecondary = secondaryColor.toUpperCase();
-    setSavedPlatformName(name);
-    setPlatformName(name);
-    setPrimaryColor(nextPrimary);
-    setSecondaryColor(nextSecondary);
-    setSavedPrimaryColor(nextPrimary);
-    setSavedSecondaryColor(nextSecondary);
-    notify.success("Nome da plataforma atualizado.");
-  };
 
   const toggleSchoolStatus = async (school) => {
     const nextStatus = !school.ativo;
@@ -343,7 +278,6 @@ export const Admin = () => {
   const schoolCountLabel = loading ? "—" : String(schools.length);
   const activeLabel = loading ? "—" : String(activeSchoolCount);
   const inactiveCount = Math.max(0, schools.length - activeSchoolCount);
-  const hasNameChanges = platformName.trim() !== savedPlatformName || primaryColor.toUpperCase() !== savedPrimaryColor || secondaryColor.toUpperCase() !== savedSecondaryColor;
 
   return (
     <MuiTheme>
@@ -497,77 +431,6 @@ export const Admin = () => {
           </div>
 
           <div className="space-y-4">
-            <form
-              onSubmit={savePlatformName}
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"
-            >
-              <div className="flex items-start gap-3">
-                <div className="rounded-xl bg-green-50 p-3 text-green-700 dark:bg-green-950/40 dark:text-green-400">
-                  <FaShieldAlt />
-                </div>
-                <div className="min-w-0">
-                  <h2 className="font-semibold text-slate-900 dark:text-white">Identidade da plataforma</h2>
-                  <p className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">
-                    Defina o nome exibido ao lado da logo no cabeçalho.
-                  </p>
-                </div>
-              </div>
-
-              <label className="mt-5 block text-sm font-medium text-slate-700 dark:text-slate-200">
-                Nome
-                <input
-                  value={platformName}
-                  maxLength={40}
-                  onChange={(e) => setPlatformName(e.target.value)}
-                  placeholder="LogView"
-                  className="mt-1.5 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-3 text-sm outline-none focus:border-green-500 dark:border-slate-600 dark:text-white"
-                />
-              </label>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {[
-                  ["Cor principal", primaryColor, setPrimaryColor],
-                  ["Cor secundária", secondaryColor, setSecondaryColor],
-                ].map(([label, value, setter]) => (
-                  <label key={label} className="block text-sm font-medium text-slate-700 dark:text-slate-200">
-                    {label}
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={value}
-                        onChange={(e) => setter(e.target.value.toUpperCase())}
-                        className="h-11 w-12 cursor-pointer rounded-xl border border-slate-300 bg-white p-1 dark:border-slate-600 dark:bg-slate-950"
-                        aria-label={label}
-                      />
-                      <input
-                        value={value}
-                        maxLength={7}
-                        onChange={(e) => setter(e.target.value.toUpperCase())}
-                        className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-transparent px-3 py-2.5 font-mono text-sm outline-none focus:border-green-500 dark:border-slate-600 dark:text-white"
-                        aria-label={`${label} em hexadecimal`}
-                      />
-                    </div>
-                  </label>
-                ))}
-              </div>
-
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <span className="text-xs text-slate-400">
-                  {platformName.length}/40 caracteres
-                </span>
-                <MuiButton
-                  type="submit"
-                  size="small"
-                  variant="contained"
-                  color="success"
-                  disabled={savingPlatformName || !platformName.trim() || !hasNameChanges}
-                  startIcon={<FaCog />}
-                >
-                  {savingPlatformName ? "Salvando..." : "Salvar"}
-                </MuiButton>
-              </div>
-            </form>
-
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
               <div className="flex items-center justify-between gap-3">
                 <div>
