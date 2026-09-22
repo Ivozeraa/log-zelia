@@ -3,6 +3,7 @@ import { supabase } from "../utils/supabase";
 import { SchoolContext } from "./SchoolContextImpl";
 import { useAuth } from "../hooks/useAuth";
 import { canSelectSchool, resolveSchoolId } from "../utils/schoolScope";
+import { debugError, debugLog, debugQuery } from "../utils/debug";
 
 const SELECTED_SCHOOL_STORAGE_KEY = "logview:selected-school-id";
 
