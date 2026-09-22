@@ -77,17 +77,34 @@ export function SchoolProvider({ children }) {
         return;
       }
 
-      const { data, error: schoolError } = await debugQuery("SCHOOL", "carregar escola do usuário", supabase
+      // A escola já está determinada pelo perfil autenticado. Não bloqueamos
+      // o restante da aplicação esperando nome/cidade: esses dados são carregados
+      // em segundo plano.
+      const immediateSchool = {
+        id: user.escola_id,
+        nome: "Escola atual",
+      };
+
+      setSchool((current) => current?.id === user.escola_id ? current : immediateSchool);
+      setSelectedSchoolId(String(user.escola_id));
+      setSchools((current) => current.length > 0 ? current : [immediateSchool]);
+      setLoading(false);
+
+      void debugQuery("SCHOOL", "carregar detalhes da escola", supabase
         .from("escolas")
-        .select("id, nome, cidade, created_at")
+        .select("id, nome, cidade, created_at, ativo")
         .eq("id", user.escola_id)
-        .maybeSingle());
+        .maybeSingle())
+        .then(({ data, error: schoolError }) => {
+          if (schoolError) {
+            debugError("SCHOOL", "Erro ao carregar detalhes da escola", schoolError);
+            return;
+          }
 
-      if (schoolError) throw schoolError;
-
-      setSchool(data ?? null);
-      setSelectedSchoolId(data?.id ? String(data.id) : null);
-      setSchools(data ? [data] : []);
+          if (!data) return;
+          setSchool(data);
+          setSchools([data]);
+        });
     } catch (loadError) {
       debugError("SCHOOL", "Erro carregando contexto de escola", loadError);
       setSchool(null);
