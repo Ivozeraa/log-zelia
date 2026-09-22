@@ -21,41 +21,48 @@ export const TeacherSchedule = () => {
 
   useEffect(() => {
     let active = true;
+
     const loadSchedule = async () => {
       debugLog('SCHEDULE', 'carregamento iniciado', { userId: user?.id, escolaId: user?.escola_id });
-      if (!user?.id || !user?.escola_id) { debugLog('SCHEDULE', 'sem usuário/escola, horário não será carregado'); if (active) setLoading(false); return; }
+      if (!user?.id || !user?.escola_id) {
+        debugLog('SCHEDULE', 'sem usuário/escola, horário não será carregado');
+        if (active) setLoading(false);
+        return;
+      }
+
       setLoading(true);
+
       try {
-        const { data: configs, error: configError } = await debugQuery('SCHEDULE', 'carregar configurações', supabase.from('horario_configuracoes').select('id, ano_letivo, semestre, created_at').eq('escola_id', user.escola_id).order('ano_letivo', { ascending: false }).order('semestre', { ascending: false }).order('created_at', { ascending: false }).limit(1));
-        if (configError) throw configError;
-        const currentConfig = configs?.[0];
-        if (!currentConfig) { if (active) setLessons([]); return; }
-        const { data: professors, error: professorError } = await debugQuery('SCHEDULE', 'carregar professor', supabase.from('horario_professores').select('id, usuario_id').eq('configuracao_id', currentConfig.id).eq('usuario_id', user.id));
-        if (professorError) throw professorError;
-        const professorIds = (professors || []).map((row) => row.id);
-        if (!professorIds.length) { if (active) setLessons([]); return; }
-        const { data: gradeRows, error: gradeError } = await debugQuery('SCHEDULE', 'carregar grade', supabase.from('horario_grade_gerada').select('id, config_turma_id, dia_semana, aula_numero, professor_id, disciplina_id, tipo').eq('configuracao_id', currentConfig.id).in('professor_id', professorIds).order('dia_semana').order('aula_numero'));
-        if (gradeError) throw gradeError;
-        const configTurmaIds = [...new Set((gradeRows || []).map((row) => row.config_turma_id).filter(Boolean))];
-        const disciplineIds = [...new Set((gradeRows || []).map((row) => row.disciplina_id).filter(Boolean))];
-        const [configTurmasResult, disciplinesResult] = await Promise.all([
-          configTurmaIds.length ? debugQuery('SCHEDULE', 'carregar turmas da grade', supabase.from('horario_config_turmas').select('id, turma_id').in('id', configTurmaIds)) : Promise.resolve({ data: [], error: null }),
-          disciplineIds.length ? debugQuery('SCHEDULE', 'carregar disciplinas da grade', supabase.from('horario_disciplinas').select('id, nome').in('id', disciplineIds)) : Promise.resolve({ data: [], error: null }),
-        ]);
-        if (configTurmasResult.error) throw configTurmasResult.error;
-        if (disciplinesResult.error) throw disciplinesResult.error;
-        const turmaIds = [...new Set((configTurmasResult.data || []).map((row) => row.turma_id).filter(Boolean))];
-        const { data: turmaRows, error: turmaError } = turmaIds.length ? await debugQuery('SCHEDULE', 'carregar nomes das turmas', supabase.from('turmas').select('id, nome').in('id', turmaIds)) : { data: [], error: null };
-        if (turmaError) throw turmaError;
-        const configTurmaMap = Object.fromEntries((configTurmasResult.data || []).map((row) => [String(row.id), row.turma_id]));
-        const turmaMap = Object.fromEntries((turmaRows || []).map((row) => [String(row.id), row.nome]));
-        const disciplineMap = Object.fromEntries((disciplinesResult.data || []).map((row) => [String(row.id), row.nome]));
-        const normalized = (gradeRows || []).map((row) => ({ id: row.id, day: Number(row.dia_semana), slot: Number(row.aula_numero), time: SLOT_TIMES[Number(row.aula_numero)] || `${row.aula_numero}ª aula`, turma: turmaMap[String(configTurmaMap[String(row.config_turma_id)])] || 'Turma', disciplina: row.tipo === 'fc' ? 'Formação para a Cidadania' : disciplineMap[String(row.disciplina_id)] || 'Disciplina' }));
+        const { data, error } = await debugQuery(
+          'SCHEDULE',
+          'carregar horário completo',
+          supabase.rpc('logview_get_teacher_schedule', {
+            p_user_id: user.id,
+            p_escola_id: user.escola_id,
+          }),
+        );
+
+        if (error) throw error;
+
+        const normalized = (data || []).map((row) => ({
+          id: row.id,
+          day: Number(row.day),
+          slot: Number(row.slot),
+          time: SLOT_TIMES[Number(row.slot)] || `${row.slot}ª aula`,
+          turma: row.turma || 'Turma',
+          disciplina: row.disciplina || 'Disciplina',
+        }));
+
         if (active) setLessons(normalized);
         debugLog('SCHEDULE', 'horário processado', { aulas: normalized.length });
-      } catch (error) { debugError('SCHEDULE', 'Erro ao carregar horário do professor', error); if (active) setLessons([]); }
-      finally { if (active) setLoading(false); }
+      } catch (error) {
+        debugError('SCHEDULE', 'Erro ao carregar horário do professor', error);
+        if (active) setLessons([]);
+      } finally {
+        if (active) setLoading(false);
+      }
     };
+
     void loadSchedule();
     return () => { active = false; };
   }, [user?.id, user?.escola_id]);
