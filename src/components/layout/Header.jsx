@@ -11,6 +11,7 @@ import { useCurrentUserName } from "../../hooks/useCurrentUserName"
 import { useNotificacoes } from "../../hooks/useNotifcations"
 import { useSchoolFeatures } from "../../hooks/useSchoolFeatures"
 import { useSchoolConfig } from "../../hooks/useSchoolConfig"
+import { usePlatformConfig } from "../../hooks/usePlatformConfig"
 
 const formatarTempo = (isoString) => {
   if (!isoString) return ""
@@ -27,6 +28,7 @@ export function Header() {
   const { user } = useAuth()
   const { school } = useSchool()
   const { config: schoolConfig } = useSchoolConfig()
+  const { config: platformConfig } = usePlatformConfig()
   const { hasFeature } = useSchoolFeatures()
   const name = useCurrentUserName()
   const navigate = useNavigate()
@@ -63,7 +65,7 @@ export function Header() {
             <button type="button" onClick={() => setOpenMenu((prev) => !prev)} className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-lg text-slate-700 transition hover:bg-slate-100 active:scale-95 dark:text-white dark:hover:bg-slate-800 md:hidden" aria-label={openMenu ? "Fechar menu" : "Abrir menu"} aria-expanded={openMenu}><FaBars /></button>
             <img className="h-9 w-9 shrink-0 rounded-lg object-contain sm:h-10 sm:w-10" src={schoolConfig.logo_url || logo} alt={`Logo ${schoolName}`} width="40" height="40" onError={(e) => { e.currentTarget.src = logo }} />
             <div className="min-w-0">
-              <p className="truncate font-bold font-montserrat text-lg leading-none sm:text-xl md:text-2xl" style={{ color: schoolConfig.cor_primaria }}>LOG <span style={{ color: schoolConfig.cor_secundaria }}>VIEW</span></p>
+              <p className="truncate font-bold font-montserrat text-lg leading-none sm:text-xl md:text-2xl" style={{ color: schoolConfig.cor_primaria }}>{platformConfig.nome_aplicacao}</p>
               <p className="max-w-[45vw] truncate text-[10px] font-medium text-slate-500 dark:text-slate-400 sm:text-xs" title={schoolName}>{schoolName}</p>
             </div>
           </div>
