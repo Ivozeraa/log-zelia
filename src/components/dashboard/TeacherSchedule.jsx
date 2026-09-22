@@ -30,6 +30,17 @@ export const TeacherSchedule = () => {
         return;
       }
 
+      // Super Admin não possui vínculo de professor no horário. Evita uma
+      // chamada RPC desnecessária durante a abertura do dashboard.
+      if (Number(user.role_id) === 1) {
+        debugLog('SCHEDULE', 'Super Admin, horário do professor não será carregado');
+        if (active) {
+          setLessons([]);
+          setLoading(false);
+        }
+        return;
+      }
+
       setLoading(true);
 
       try {
