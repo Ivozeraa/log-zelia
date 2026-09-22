@@ -41,6 +41,7 @@ export const Home = () => {
   const [graficoData, setGraficoData] = useState([]);
   const [stats, setStats] = useState({ total: 0, mes: 0, semana: 0 });
   const [suspensionQueue, setSuspensionQueue] = useState([]);
+  const [dashboardData, setDashboardData] = useState(null);
 
   const activeSchoolId = isGlobalAdmin ? selectedEscola : schoolId || "";
 
@@ -62,23 +63,35 @@ export const Home = () => {
       if (!activeSchoolId) {
         setStats({ total: 0, mes: 0, semana: 0 });
         setGraficoData([]);
+        setDashboardData(null);
+        setTurmas([]);
+        setSelectedTurma("");
+        setAlunos([]);
+        setSelectedAlunos([]);
         return;
       }
 
-      const { data, error } = await debugQuery("HOME", "carregar ocorrências", supabase
-        .from("ocorrencias")
-        .select("id, data_ocorrido, categoria, ocorrencia_origem_id")
-        .eq("escola_id", activeSchoolId));
+      setDashboardData(null);
+
+      const { data, error } = await debugQuery(
+        "HOME",
+        "carregar dashboard completo",
+        supabase.rpc("logview_get_home_dashboard", { p_escola_id: activeSchoolId }),
+      );
 
       if (error) {
         debugError("HOME", "Erro ao carregar dashboard", error);
+        setTurmas([]);
         return;
       }
 
-      // Uma suspensão automática aponta para a ocorrência que atingiu o limite.
-      // Para os indicadores, essa ocorrência de origem não é contada novamente:
-      // o evento passa a ser representado pela suspensão uma única vez.
-      const registros = consolidarOcorrencias(data || []);
+      const payload = data || {};
+      setDashboardData(payload);
+      setTurmas(Array.isArray(payload.turmas) ? payload.turmas : []);
+
+      // O backend já consolida os registros para evitar duplicar uma ocorrência
+      // quando ela possui uma suspensão derivada.
+      const registros = consolidarOcorrencias(payload.ocorrencias || []);
       const total = registros.length;
       const hoje = new Date();
       const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
@@ -139,32 +152,6 @@ export const Home = () => {
     };
     loadEscolas();
   }, [user, school, schoolId, isGlobalAdmin]);
-
-  useEffect(() => {
-    const loadTurmas = async () => {
-      if (!activeSchoolId) {
-        setTurmas([]);
-        setSelectedTurma("");
-        setAlunos([]);
-        setSelectedAlunos([]);
-        return;
-      }
-      setLoadingTurmas(true);
-      const { data, error } = await debugQuery("HOME", "carregar turmas", supabase
-        .from("turmas")
-        .select("id, nome")
-        .eq("escola_id", activeSchoolId)
-        .order("nome", { ascending: true }));
-      if (error) {
-        debugError("HOME", "Erro carregando alunos", error);
-        setTurmas([]);
-      } else {
-        setTurmas(data || []);
-      }
-      setLoadingTurmas(false);
-    };
-    loadTurmas();
-  }, [activeSchoolId]);
 
   useEffect(() => {
     const loadAlunos = async () => {
@@ -390,7 +377,7 @@ export const Home = () => {
         </div>
       </div>
 
-      <div><RankingOcorrencias escolaId={activeSchoolId} /></div>
+      <div><RankingOcorrencias escolaId={activeSchoolId} dashboardData={dashboardData} /></div>
 
       <Modal isOpen={open} onClose={() => setOpen(false)} title="Adicionar Advertência">
         <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>
