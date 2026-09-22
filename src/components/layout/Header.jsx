@@ -11,7 +11,6 @@ import { useCurrentUserName } from "../../hooks/useCurrentUserName"
 import { useNotificacoes } from "../../hooks/useNotifcations"
 import { useSchoolFeatures } from "../../hooks/useSchoolFeatures"
 import { useSchoolConfig } from "../../hooks/useSchoolConfig"
-import { usePlatformConfig } from "../../hooks/usePlatformConfig"
 
 const formatarTempo = (isoString) => {
   if (!isoString) return ""
@@ -28,7 +27,6 @@ export function Header() {
   const { user } = useAuth()
   const { school } = useSchool()
   const { config: schoolConfig } = useSchoolConfig()
-  const { config: platformConfig } = usePlatformConfig()
   const { hasFeature } = useSchoolFeatures()
   const name = useCurrentUserName()
   const navigate = useNavigate()
@@ -57,7 +55,7 @@ export function Header() {
 
   const schoolName = school?.nome || "LogView"
   const brandParts = (() => {
-    const value = platformConfig.nome_aplicacao?.trim() || "LogView"
+    const value = schoolConfig.nome_aplicacao?.trim() || "LogView"
     const match = value.match(/^(.+?)(?:\s+|(?=[A-ZÁÉÍÓÚÀÂÃÊÔÕÜÇ]))(.+)$/u)
     return match ? [match[1].trim(), match[2].trim()] : [value, ""]
   })()
