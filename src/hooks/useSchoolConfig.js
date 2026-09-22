@@ -3,6 +3,7 @@ import { supabase } from "../utils/supabase";
 import { useSchool } from "./useSchool";
 
 const DEFAULT_CONFIG = {
+  nome_aplicacao: "LogView",
   logo_url: "",
   cor_primaria: "#16a34a",
   cor_secundaria: "#0f172a",
@@ -24,7 +25,7 @@ export function useSchoolConfig() {
     setLoading(true);
     const { data, error } = await supabase
       .from("logview_escola_config")
-      .select("logo_url, cor_primaria, cor_secundaria, versao_id")
+      .select("nome_aplicacao, logo_url, cor_primaria, cor_secundaria, versao_id")
       .eq("escola_id", schoolId)
       .maybeSingle();
 
