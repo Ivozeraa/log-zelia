@@ -1,23 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   FaBuilding,
   FaCheckCircle,
   FaCog,
   FaLayerGroup,
-  FaLock,
-  FaServer,
-  FaShieldAlt,
-  FaTools,
-  FaUsers,
-  FaArrowRight,
   FaPlus,
-  FaHistory,
   FaSearch,
-  FaFilter,
-  FaChartPie,
-  FaDatabase,
+  FaShieldAlt,
+  FaUsers,
 } from "react-icons/fa";
-import { Link } from "react-router-dom";
 import {
   Box,
   Button as MuiButton,
@@ -28,34 +20,49 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  LinearProgress,
 } from "@mui/material";
 import { MuiTheme } from "../components/ui/MuiTheme";
 import { supabase } from "../utils/supabase";
 import { PageTitle } from "../components/ui/PageTitle";
 import { notify } from "../utils/notify";
 
-const plannedFeatures = [
-  { key: "ocorrencias", label: "Ocorrências", status: "active" },
-  { key: "suspensoes", label: "Suspensões", status: "active" },
-  { key: "horarios", label: "Horários", status: "active" },
-  { key: "chamados", label: "Chamados", status: "planned" },
-  { key: "relatorios", label: "Relatórios", status: "planned" },
-  { key: "notificacoes", label: "Notificações", status: "active" },
-];
-
 function StatCard({ icon: Icon, label, value, description }) {
   return (
-    <Card variant="outlined" sx={{ minWidth: 0, height: "100%", borderColor: "divider", borderRadius: 3, boxShadow: "0 2px 8px rgb(15 23 42 / 0.05)" }}>
-      <CardContent sx={{ p: { xs: 2, sm: 2.5 }, "&:last-child": { pb: { xs: 2, sm: 2.5 } } }}>
-        <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2 }}>
-          <Box sx={{ minWidth: 0 }}>
-            <Box component="p" sx={{ m: 0, color: "text.secondary", fontSize: 14, fontWeight: 600 }}>{label}</Box>
-            <Box component="p" sx={{ m: "8px 0 0", color: "text.primary", fontSize: { xs: 26, sm: 30 }, fontWeight: 800 }}>{value}</Box>
-            <Box component="p" sx={{ m: "4px 0 0", color: "text.secondary", fontSize: 12 }}>{description}</Box>
-          </Box>
-          <Box sx={{ display: "grid", placeItems: "center", width: 44, height: 44, flexShrink: 0, borderRadius: 3, bgcolor: "success.main", color: "success.contrastText", opacity: 0.9 }}>
+    <Card
+      variant="outlined"
+      sx={{
+        height: "100%",
+        borderRadius: 3,
+        borderColor: "divider",
+        boxShadow: "0 2px 8px rgb(15 23 42 / 0.04)",
+      }}
+    >
+      <CardContent sx={{ p: { xs: 2, sm: 2.25 }, "&:last-child": { pb: { xs: 2, sm: 2.25 } } }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Box
+            sx={{
+              display: "grid",
+              placeItems: "center",
+              width: 42,
+              height: 42,
+              flexShrink: 0,
+              borderRadius: 2.5,
+              bgcolor: "success.main",
+              color: "success.contrastText",
+            }}
+          >
             <Icon />
+          </Box>
+          <Box sx={{ minWidth: 0 }}>
+            <Box component="p" sx={{ m: 0, color: "text.secondary", fontSize: 13, fontWeight: 600 }}>
+              {label}
+            </Box>
+            <Box component="p" sx={{ m: "3px 0 0", color: "text.primary", fontSize: { xs: 24, sm: 26 }, lineHeight: 1.1, fontWeight: 800 }}>
+              {value}
+            </Box>
+            <Box component="p" sx={{ m: "4px 0 0", color: "text.secondary", fontSize: 11 }}>
+              {description}
+            </Box>
           </Box>
         </Box>
       </CardContent>
@@ -69,91 +76,141 @@ export const Admin = () => {
   const [showNewSchool, setShowNewSchool] = useState(false);
   const [creatingSchool, setCreatingSchool] = useState(false);
   const [newSchool, setNewSchool] = useState({ nome: "", cidade: "" });
-  const [audit, setAudit] = useState([]);
   const [schoolSearch, setSchoolSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("todos");
   const [statusFilter, setStatusFilter] = useState("todos");
-  const [platformStats, setPlatformStats] = useState({ usuarios: 0, alunos: 0, gestores: 0, coordenadores: 0, professores: 0 });
-  const [resourceStats, setResourceStats] = useState([]);
+  const [platformName, setPlatformName] = useState("LogView");
+  const [savedPlatformName, setSavedPlatformName] = useState("LogView");
+  const [savingPlatformName, setSavingPlatformName] = useState(false);
+  const [platformStats, setPlatformStats] = useState({ usuarios: 0, alunos: 0 });
 
   useEffect(() => {
     let mounted = true;
 
-    const loadSchools = async () => {
+    const load = async () => {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from("escolas")
-        .select("id, nome, cidade, ativo, created_at, logview_escola_config(plano_id, logview_planos(chave, nome))")
-        .order("nome", { ascending: true });
+      const [
+        schoolsResult,
+        usersResult,
+        studentsResult,
+        configResult,
+      ] = await Promise.all([
+        supabase
+          .from("escolas")
+          .select("id, nome, cidade, ativo, created_at, logview_escola_config(plano_id, logview_planos(chave, nome))")
+          .order("nome", { ascending: true }),
+        supabase.from("usuarios").select("id", { count: "exact", head: true }),
+        supabase.from("alunos").select("id", { count: "exact", head: true }),
+        supabase.from("logview_config").select("nome_aplicacao").eq("id", 1).maybeSingle(),
+      ]);
 
       if (!mounted) return;
 
-      if (error) {
-        console.error("Erro ao carregar escolas:", error);
+      if (schoolsResult.error) {
+        console.error("Erro ao carregar escolas:", schoolsResult.error);
         notify.error("Não foi possível carregar as escolas.");
       } else {
-        setSchools(data ?? []);
+        setSchools(schoolsResult.data ?? []);
       }
 
-      const [{ count: userCount }, { count: studentCount }, { data: usersByRole }, { data: resourceRows }] = await Promise.all([
-        supabase.from("usuarios").select("id", { count: "exact", head: true }),
-        supabase.from("alunos").select("id", { count: "exact", head: true }),
-        supabase.from("usuarios").select("role_id"),
-        supabase.from("logview_escola_recursos").select("habilitado, logview_recursos(chave, nome)"),
-      ]);
-
-      const roleStats = (usersByRole || []).reduce((acc, item) => {
-        const role = Number(item.role_id);
-        if (role === 2) acc.gestores += 1;
-        if (role === 3) acc.coordenadores += 1;
-        if (role === 4) acc.professores += 1;
-        return acc;
-      }, { gestores: 0, coordenadores: 0, professores: 0 });
-
-      const resourceMap = (resourceRows || []).reduce((acc, item) => {
-        const key = item.logview_recursos?.chave;
-        if (!key) return acc;
-        if (!acc[key]) acc[key] = { chave: key, nome: item.logview_recursos?.nome || key, total: 0, habilitado: 0 };
-        acc[key].total += 1;
-        if (item.habilitado) acc[key].habilitado += 1;
-        return acc;
-      }, {});
-
-      if (mounted) {
-        setPlatformStats({ usuarios: userCount ?? 0, alunos: studentCount ?? 0, ...roleStats });
-        setResourceStats(Object.values(resourceMap).sort((a, b) => b.habilitado - a.habilitado));
-      }
-
-      const { data: auditData } = await supabase
-        .from("logview_auditoria")
-        .select("id, acao, entidade, detalhes, created_at, escolas:escola_id(nome)")
-        .order("created_at", { ascending: false })
-        .limit(8);
-      if (mounted) setAudit(auditData || []);
+      const nextName = configResult.data?.nome_aplicacao?.trim() || "LogView";
+      setPlatformName(nextName);
+      setSavedPlatformName(nextName);
+      setPlatformStats({
+        usuarios: usersResult.count ?? 0,
+        alunos: studentsResult.count ?? 0,
+      });
       setLoading(false);
     };
 
-    loadSchools();
+    void load();
 
     return () => {
       mounted = false;
     };
   }, []);
 
-  const schoolCountLabel = useMemo(
-    () => (loading ? "—" : String(schools.length)),
-    [loading, schools.length]
+  const activeSchoolCount = useMemo(
+    () => schools.filter((school) => school.ativo).length,
+    [schools]
   );
+
+  const planCounts = useMemo(
+    () =>
+      schools.reduce((acc, school) => {
+        const plan = school.logview_escola_config?.[0]?.logview_planos?.nome || "Básico";
+        acc[plan] = (acc[plan] || 0) + 1;
+        return acc;
+      }, {}),
+    [schools]
+  );
+
+  const filteredSchools = useMemo(() => {
+    const query = schoolSearch.trim().toLocaleLowerCase("pt-BR");
+
+    return schools.filter((school) => {
+      const name = school.nome?.toLocaleLowerCase("pt-BR") || "";
+      const city = school.cidade?.toLocaleLowerCase("pt-BR") || "";
+      const planKey =
+        school.logview_escola_config?.[0]?.logview_planos?.chave?.toLocaleLowerCase("pt-BR") || "basico";
+
+      const matchesSearch = !query || name.includes(query) || city.includes(query);
+      const matchesPlan = planFilter === "todos" || planKey === planFilter;
+      const matchesStatus =
+        statusFilter === "todos" ||
+        (statusFilter === "ativas" ? school.ativo : !school.ativo);
+
+      return matchesSearch && matchesPlan && matchesStatus;
+    });
+  }, [schools, schoolSearch, planFilter, statusFilter]);
+
+  const savePlatformName = async (event) => {
+    event.preventDefault();
+    const name = platformName.trim();
+
+    if (!name) {
+      notify.error("Informe um nome para a plataforma.");
+      return;
+    }
+
+    if (name.length > 40) {
+      notify.error("O nome da plataforma deve ter no máximo 40 caracteres.");
+      return;
+    }
+
+    setSavingPlatformName(true);
+
+    const { error } = await supabase
+      .from("logview_config")
+      .upsert({ id: 1, nome_aplicacao: name, updated_at: new Date().toISOString() });
+
+    setSavingPlatformName(false);
+
+    if (error) {
+      console.error(error);
+      notify.error("Não foi possível salvar o nome da plataforma.");
+      return;
+    }
+
+    setSavedPlatformName(name);
+    setPlatformName(name);
+    notify.success("Nome da plataforma atualizado.");
+  };
 
   const toggleSchoolStatus = async (school) => {
     const nextStatus = !school.ativo;
-    const { error } = await supabase.from("escolas").update({ ativo: nextStatus }).eq("id", school.id);
+    const { error } = await supabase
+      .from("escolas")
+      .update({ ativo: nextStatus })
+      .eq("id", school.id);
+
     if (error) {
       console.error(error);
       notify.error("Não foi possível alterar o status da escola.");
       return;
     }
+
     await supabase.from("logview_auditoria").insert({
       escola_id: school.id,
       acao: "alterar",
@@ -161,37 +218,18 @@ export const Admin = () => {
       entidade_id: school.id,
       detalhes: { campo: "ativo", valor: nextStatus },
     });
-    const { data: auditData } = await supabase.from("logview_auditoria").select("id, acao, entidade, detalhes, created_at, escolas:escola_id(nome)").order("created_at", { ascending: false }).limit(8);
-    setAudit(auditData || []);
-    setSchools((current) => current.map((item) => item.id === school.id ? { ...item, ativo: nextStatus } : item));
+
+    setSchools((current) =>
+      current.map((item) =>
+        item.id === school.id ? { ...item, ativo: nextStatus } : item
+      )
+    );
     notify.success(nextStatus ? "Escola ativada." : "Escola desativada.");
   };
 
-  const filteredSchools = useMemo(() => {
-    const query = schoolSearch.trim().toLocaleLowerCase("pt-BR");
-    return schools.filter((school) => {
-      const name = school.nome?.toLocaleLowerCase("pt-BR") || "";
-      const city = school.cidade?.toLocaleLowerCase("pt-BR") || "";
-      const planKey = school.logview_escola_config?.[0]?.logview_planos?.chave?.toLocaleLowerCase("pt-BR") || "basico";
-      const matchesSearch = !query || name.includes(query) || city.includes(query);
-      const matchesPlan = planFilter === "todos" || planKey === planFilter;
-      const matchesStatus = statusFilter === "todos" || (statusFilter === "ativas" ? school.ativo : !school.ativo);
-      return matchesSearch && matchesPlan && matchesStatus;
-    });
-  }, [schools, schoolSearch, planFilter, statusFilter]);
-
-  const activeSchoolCount = useMemo(() => schools.filter((school) => school.ativo).length, [schools]);
-
-  const planCounts = useMemo(() => {
-    return schools.reduce((acc, school) => {
-      const plan = school.logview_escola_config?.[0]?.logview_planos?.nome || "Básico";
-      acc[plan] = (acc[plan] || 0) + 1;
-      return acc;
-    }, {});
-  }, [schools]);
-
   const createSchool = async (event) => {
     event.preventDefault();
+
     const nome = newSchool.nome.trim();
     const cidade = newSchool.cidade.trim();
 
@@ -201,6 +239,7 @@ export const Admin = () => {
     }
 
     setCreatingSchool(true);
+
     const { data: school, error } = await supabase
       .from("escolas")
       .insert({ nome, cidade: cidade || null })
@@ -214,25 +253,22 @@ export const Admin = () => {
       return;
     }
 
-    const { data: version } = await supabase
-      .from("logview_versoes")
-      .select("id")
-      .eq("ativa", true)
-      .order("numero", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const { data: plan } = await supabase
-      .from("logview_planos")
-      .select("id")
-      .eq("chave", "basico")
-      .eq("ativo", true)
-      .maybeSingle();
-
-    const { data: resources } = await supabase
-      .from("logview_recursos")
-      .select("id")
-      .eq("ativo", true);
+    const [{ data: version }, { data: plan }, { data: resources }] = await Promise.all([
+      supabase
+        .from("logview_versoes")
+        .select("id")
+        .eq("ativa", true)
+        .order("numero", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("logview_planos")
+        .select("id")
+        .eq("chave", "basico")
+        .eq("ativo", true)
+        .maybeSingle(),
+      supabase.from("logview_recursos").select("id").eq("ativo", true),
+    ]);
 
     await supabase.from("logview_escola_config").upsert({
       escola_id: school.id,
@@ -243,11 +279,17 @@ export const Admin = () => {
     });
 
     if (resources?.length) {
-      const planResources = plan?.id
-        ? await supabase.from("logview_plano_recursos").select("recurso_id, habilitado").eq("plano_id", plan.id)
+      const { data: planResources } = plan?.id
+        ? await supabase
+            .from("logview_plano_recursos")
+            .select("recurso_id, habilitado")
+            .eq("plano_id", plan.id)
         : { data: [] };
 
-      const preset = new Map((planResources.data || []).map((item) => [item.recurso_id, item.habilitado]));
+      const preset = new Map(
+        (planResources || []).map((item) => [item.recurso_id, item.habilitado])
+      );
+
       await supabase.from("logview_escola_recursos").upsert(
         resources.map((resource) => ({
           escola_id: school.id,
@@ -264,266 +306,318 @@ export const Admin = () => {
       entidade_id: school.id,
       detalhes: { nome, cidade: cidade || null },
     });
-    setSchools((current) => [...current, { ...school, ativo: true }].sort((a, b) => a.nome.localeCompare(b.nome)));
+
+    setSchools((current) =>
+      [...current, { ...school, ativo: true }].sort((a, b) =>
+        a.nome.localeCompare(b.nome)
+      )
+    );
     setNewSchool({ nome: "", cidade: "" });
     setShowNewSchool(false);
     setCreatingSchool(false);
     notify.success("Escola cadastrada e configurada com o plano Básico.");
   };
 
+  const schoolCountLabel = loading ? "—" : String(schools.length);
+  const activeLabel = loading ? "—" : String(activeSchoolCount);
+  const inactiveCount = Math.max(0, schools.length - activeSchoolCount);
+  const hasNameChanges = platformName.trim() !== savedPlatformName;
+
   return (
     <MuiTheme>
       <main className="mx-auto w-full min-w-0 max-w-7xl overflow-x-hidden px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
-      <PageTitle
-        title="Administração do LogView"
-        subtitle="Gerencie a plataforma, escolas, recursos e futuras versões em um único lugar."
-      />
-
-      <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          icon={FaBuilding}
-          label="Escolas"
-          value={schoolCountLabel}
-          description={`${activeSchoolCount} ativas · ${schools.length - activeSchoolCount} inativas`}
+        <PageTitle
+          title="Administração"
+          subtitle="Visão central da plataforma e gerenciamento das escolas."
         />
-        <StatCard
-          icon={FaLayerGroup}
-          label="Arquitetura"
-          value="Multi-escola"
-          description="Isolamento por escola_id"
-        />
-        <StatCard
-          icon={FaShieldAlt}
-          label="Acesso"
-          value="Super Admin"
-          description="Área restrita à role 1"
-        />
-        <StatCard
-          icon={FaServer}
-          label="Usuários"
-          value={loading ? "—" : platformStats.usuarios}
-          description={`${loading ? "Carregando" : platformStats.alunos} alunos cadastrados`}
-        />
-      </section>
 
-      <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={FaUsers} label="Equipe da plataforma" value={loading ? "—" : platformStats.usuarios} description={loading ? "Carregando usuários" : `${platformStats.gestores} gestores · ${platformStats.coordenadores} coord. · ${platformStats.professores} professores`} />
-        <StatCard icon={FaDatabase} label="Alunos" value={loading ? "—" : platformStats.alunos} description="Registros distribuídos entre as escolas" />
-        <StatCard icon={FaCheckCircle} label="Escolas ativas" value={loading ? "—" : activeSchoolCount} description={loading ? "Carregando status" : `${schools.length - activeSchoolCount} escolas inativas`} />
-        <StatCard icon={FaLayerGroup} label="Planos em uso" value={loading ? "—" : Object.keys(planCounts).length} description={loading ? "Carregando planos" : Object.entries(planCounts).map(([plan, count]) => `${plan}: ${count}`).join(" · ") || "Nenhuma escola"} />
-      </section>
+        <section className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            icon={FaBuilding}
+            label="Escolas"
+            value={schoolCountLabel}
+            description={loading ? "Carregando" : `${activeSchoolCount} ativas · ${inactiveCount} inativas`}
+          />
+          <StatCard
+            icon={FaCheckCircle}
+            label="Escolas ativas"
+            value={activeLabel}
+            description={loading ? "Carregando" : "Com acesso liberado"}
+          />
+          <StatCard
+            icon={FaUsers}
+            label="Usuários"
+            value={loading ? "—" : platformStats.usuarios}
+            description={loading ? "Carregando" : "Contas cadastradas"}
+          />
+          <StatCard
+            icon={FaLayerGroup}
+            label="Alunos"
+            value={loading ? "—" : platformStats.alunos}
+            description="Registros na plataforma"
+          />
+        </section>
 
-      <section className="mt-6 grid min-w-0 gap-4 lg:grid-cols-2">
-        <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <div className="flex items-start gap-3"><div className="rounded-xl bg-slate-100 p-3 text-slate-700 dark:bg-slate-800 dark:text-slate-200"><FaChartPie /></div><div><h2 className="font-semibold text-slate-900 dark:text-white">Distribuição por plano</h2><p className="text-sm text-slate-500 dark:text-slate-400">Quantidade de escolas em cada plano.</p></div></div>
-          <div className="mt-5 space-y-4">
-            {Object.entries(planCounts).length ? Object.entries(planCounts).map(([plan, count]) => {
-              const percentage = schools.length ? Math.round((count / schools.length) * 100) : 0;
-              return <div key={plan}><div className="mb-1 flex justify-between gap-3 text-sm"><span className="font-medium text-slate-700 dark:text-slate-200">{plan}</span><span className="text-slate-500 dark:text-slate-400">{count} · {percentage}%</span></div><LinearProgress variant="determinate" value={percentage} sx={{ height: 8, borderRadius: 999, bgcolor: "action.hover", "& .MuiLinearProgress-bar": { borderRadius: 999, bgcolor: "success.main" } }} /></div>;
-            }) : <p className="text-sm text-slate-500">Nenhuma escola cadastrada.</p>}
-          </div>
-        </div>
-
-        <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <div className="flex items-start gap-3"><div className="rounded-xl bg-slate-100 p-3 text-slate-700 dark:bg-slate-800 dark:text-slate-200"><FaTools /></div><div><h2 className="font-semibold text-slate-900 dark:text-white">Adoção de recursos</h2><p className="text-sm text-slate-500 dark:text-slate-400">Escolas com cada recurso habilitado.</p></div></div>
-          <div className="mt-5 space-y-4">
-            {resourceStats.length ? resourceStats.map((resource) => {
-              const percentage = resource.total ? Math.round((resource.habilitado / resource.total) * 100) : 0;
-              return <div key={resource.chave}><div className="mb-1 flex justify-between gap-3 text-sm"><span className="min-w-0 truncate font-medium text-slate-700 dark:text-slate-200">{resource.nome}</span><span className="shrink-0 text-slate-500 dark:text-slate-400">{resource.habilitado}/{resource.total}</span></div><LinearProgress variant="determinate" value={percentage} sx={{ height: 8, borderRadius: 999, bgcolor: "action.hover", "& .MuiLinearProgress-bar": { borderRadius: 999, bgcolor: "success.main" } }} /></div>;
-            }) : <p className="text-sm text-slate-500">Nenhum recurso configurado nas escolas.</p>}
-          </div>
-        </div>
-      </section>
-      <section className="mt-6 grid min-w-0 gap-4 sm:mt-8 sm:gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)]">
-        <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 dark:border-slate-700">
-            <div>
-              <h2 className="font-semibold text-slate-900 dark:text-white">Escolas cadastradas</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Esta é a base para o gerenciamento multi-escola.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Chip size="small" color="success" variant="outlined" label={`${activeSchoolCount} ativas · ${schools.length} total`} />
-              <div className="flex flex-wrap gap-2">
-                <MuiButton component={Link} to="/app/admin/usuarios" size="small" variant="outlined" startIcon={<FaUsers />}>Usuários</MuiButton>
-                <MuiButton type="button" onClick={() => setShowNewSchool(true)} size="small" variant="contained" color="success" startIcon={<FaPlus />}>Nova escola</MuiButton>
+        <section className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 dark:border-slate-700">
+              <div>
+                <h2 className="font-semibold text-slate-900 dark:text-white">Escolas</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Gerencie acesso e configurações de cada escola.
+                </p>
               </div>
+              <MuiButton
+                type="button"
+                onClick={() => setShowNewSchool(true)}
+                size="small"
+                variant="contained"
+                color="success"
+                startIcon={<FaPlus />}
+              >
+                Nova escola
+              </MuiButton>
             </div>
-          </div>
 
-          <div className="border-b border-slate-200 p-3 dark:border-slate-700">
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <div className="relative min-w-0 flex-1">
-                <FaSearch className="pointer-events-none absolute left-3 top-3 text-slate-400" />
-                <input value={schoolSearch} onChange={(e) => setSchoolSearch(e.target.value)} placeholder="Buscar por escola ou cidade..." className="w-full rounded-xl border border-slate-300 bg-transparent py-2.5 pl-9 pr-3 text-sm outline-none focus:border-green-500 dark:border-slate-600 dark:text-white" />
-              </div>
-              <div className="relative sm:w-44">
-                <FaFilter className="pointer-events-none absolute left-3 top-3 text-slate-400" />
-                <select value={planFilter} onChange={(e) => setPlanFilter(e.target.value)} className="w-full appearance-none rounded-xl border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white">
+            <div className="border-b border-slate-200 p-3 dark:border-slate-700">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="relative min-w-0 flex-1">
+                  <FaSearch className="pointer-events-none absolute left-3 top-3 text-slate-400" />
+                  <input
+                    value={schoolSearch}
+                    onChange={(e) => setSchoolSearch(e.target.value)}
+                    placeholder="Buscar escola ou cidade..."
+                    className="w-full rounded-xl border border-slate-300 bg-transparent py-2.5 pl-9 pr-3 text-sm outline-none focus:border-green-500 dark:border-slate-600 dark:text-white"
+                  />
+                </div>
+
+                <select
+                  value={planFilter}
+                  onChange={(e) => setPlanFilter(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white sm:w-40"
+                >
                   <option value="todos">Todos os planos</option>
                   <option value="basico">Básico</option>
                   <option value="profissional">Profissional</option>
                   <option value="enterprise">Enterprise</option>
                 </select>
-              </div>
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white sm:w-40">
-                <option value="todos">Todos os status</option>
-                <option value="ativas">Ativas</option>
-                <option value="inativas">Inativas</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2 border-b border-slate-200 px-3 py-3 dark:border-slate-700">
-            {Object.entries(planCounts).map(([plan, count]) => <span key={plan} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">{plan}: {count}</span>)}
-          </div>
 
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {loading ? (
-              <div className="p-8 text-center text-sm text-slate-500">Carregando escolas...</div>
-            ) : schools.length === 0 ? (
-              <div className="p-8 text-center text-sm text-slate-500">
-                {schoolSearch || planFilter !== "todos" || statusFilter !== "todos" ? "Nenhuma escola encontrada com esses filtros." : "Nenhuma escola cadastrada."}
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white sm:w-36"
+                >
+                  <option value="todos">Todos</option>
+                  <option value="ativas">Ativas</option>
+                  <option value="inativas">Inativas</option>
+                </select>
               </div>
-            ) : (
-              filteredSchools.map((school) => (
-                <div key={school.id} className="flex min-w-0 flex-col items-stretch gap-3 overflow-hidden p-3 sm:gap-4 sm:p-5 md:flex-row md:items-center md:justify-between">
-                  <div className="flex min-w-0 w-full max-w-full items-start gap-3 sm:items-center sm:gap-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                      <FaBuilding />
-                    </div>
-                    <div className="min-w-0 w-0 flex-1 overflow-hidden">
-                      <p className="max-w-full break-words text-sm font-semibold leading-5 text-slate-900 dark:text-white sm:text-base">
-                        {school.nome}
-                      </p>
-                      <p className="max-w-full break-words text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
-                        {school.cidade || "Cidade não informada"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto sm:justify-end">
-                    <span className={`hidden items-center gap-1.5 text-xs font-medium sm:flex ${school.ativo ? "text-green-600 dark:text-green-400" : "text-slate-400 dark:text-slate-500"}`}><FaCheckCircle /> {school.ativo ? "Ativa" : "Inativa"}</span>
-                    <button type="button" onClick={() => void toggleSchoolStatus(school)} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 sm:flex-none">
-                      {school.ativo ? "Desativar" : "Ativar"}
-                    </button>
-                    <Link to={`/app/admin/escolas/${school.id}`} className="inline-flex min-h-11 w-full flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 sm:w-auto sm:min-w-36">
-                      Configurar <FaArrowRight />
-                    </Link>
-                  </div>
+            </div>
+
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {loading ? (
+                <div className="p-8 text-center text-sm text-slate-500">Carregando escolas...</div>
+              ) : filteredSchools.length === 0 ? (
+                <div className="p-8 text-center text-sm text-slate-500">
+                  {schoolSearch || planFilter !== "todos" || statusFilter !== "todos"
+                    ? "Nenhuma escola encontrada com esses filtros."
+                    : "Nenhuma escola cadastrada."}
                 </div>
-              ))
-            )}
-          </div>
-        </div>
+              ) : (
+                filteredSchools.map((school) => {
+                  const planName =
+                    school.logview_escola_config?.[0]?.logview_planos?.nome || "Básico";
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <div className="flex min-w-0 items-start gap-3">
-            <div className="rounded-xl bg-slate-100 p-3 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-              <FaTools />
-            </div>
-            <div className="min-w-0 flex-1 overflow-hidden">
-              <h2 className="font-semibold text-slate-900 dark:text-white">Próxima camada</h2>
-              <p className="break-words text-sm text-slate-500 dark:text-slate-400">
-                Recursos que serão controlados pelo Admin.
-              </p>
+                  return (
+                    <div
+                      key={school.id}
+                      className="flex min-w-0 flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                          <FaBuilding />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-slate-900 dark:text-white sm:text-base">
+                            {school.nome}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                            <span>{school.cidade || "Cidade não informada"}</span>
+                            <span>·</span>
+                            <span>{planName}</span>
+                            <span className={school.ativo ? "font-medium text-green-600 dark:text-green-400" : "font-medium text-slate-400"}>
+                              · {school.ativo ? "Ativa" : "Inativa"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex w-full shrink-0 gap-2 sm:w-auto">
+                        <button
+                          type="button"
+                          onClick={() => void toggleSchoolStatus(school)}
+                          className="min-h-10 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 sm:flex-none"
+                        >
+                          {school.ativo ? "Desativar" : "Ativar"}
+                        </button>
+                        <Link
+                          to={`/app/admin/escolas/${school.id}`}
+                          className="inline-flex min-h-10 flex-1 items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 sm:flex-none"
+                        >
+                          Configurar
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 
-          <div className="mt-4 space-y-3 sm:mt-5">
-            {plannedFeatures.map((feature) => (
-              <div
-                key={feature.key}
-                className="flex min-w-0 flex-col items-start gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-950"
-              >
-                <span className="min-w-0 max-w-full break-words text-sm font-medium text-slate-700 dark:text-slate-200">
-                  {feature.label}
+          <div className="space-y-4">
+            <form
+              onSubmit={savePlatformName}
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-xl bg-green-50 p-3 text-green-700 dark:bg-green-950/40 dark:text-green-400">
+                  <FaShieldAlt />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="font-semibold text-slate-900 dark:text-white">Identidade da plataforma</h2>
+                  <p className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">
+                    Defina o nome exibido ao lado da logo no cabeçalho.
+                  </p>
+                </div>
+              </div>
+
+              <label className="mt-5 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                Nome
+                <input
+                  value={platformName}
+                  maxLength={40}
+                  onChange={(e) => setPlatformName(e.target.value)}
+                  placeholder="LogView"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-3 text-sm outline-none focus:border-green-500 dark:border-slate-600 dark:text-white"
+                />
+              </label>
+
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <span className="text-xs text-slate-400">
+                  {platformName.length}/40 caracteres
                 </span>
-                {feature.status === "active" ? (
-                  <span className="inline-flex max-w-full shrink-0 items-center gap-1 text-xs font-semibold text-green-600 dark:text-green-400">
-                    <FaCheckCircle /> disponível
-                  </span>
+                <MuiButton
+                  type="submit"
+                  size="small"
+                  variant="contained"
+                  color="success"
+                  disabled={savingPlatformName || !platformName.trim() || !hasNameChanges}
+                  startIcon={<FaCog />}
+                >
+                  {savingPlatformName ? "Salvando..." : "Salvar"}
+                </MuiButton>
+              </div>
+            </form>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold text-slate-900 dark:text-white">Planos</h2>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Distribuição atual das escolas.
+                  </p>
+                </div>
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={`${Object.keys(planCounts).length} em uso`}
+                />
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {Object.entries(planCounts).length ? (
+                  Object.entries(planCounts).map(([plan, count]) => (
+                    <div
+                      key={plan}
+                      className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5 text-sm dark:bg-slate-800/70"
+                    >
+                      <span className="font-medium text-slate-700 dark:text-slate-200">{plan}</span>
+                      <span className="text-slate-500 dark:text-slate-400">{count}</span>
+                    </div>
+                  ))
                 ) : (
-                  <span className="inline-flex max-w-full shrink-0 items-center gap-1 text-xs font-semibold text-slate-400">
-                    <FaLock /> em preparação
-                  </span>
+                  <p className="text-sm text-slate-500">Nenhuma escola cadastrada.</p>
                 )}
               </div>
-            ))}
-          </div>
-
-          <div className="mt-5 rounded-xl border border-dashed border-slate-300 p-4 dark:border-slate-700">
-            <div className="flex gap-3">
-              <FaCog className="mt-0.5 shrink-0 text-slate-400" />
-              <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
-                A administração central permite configurar identidade visual, plano, recursos, versão e usuários de cada escola.
-              </p>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {showNewSchool && (
-        <Dialog open={showNewSchool} onClose={() => !creatingSchool && setShowNewSchool(false)} fullWidth maxWidth="sm">
-          <form onSubmit={createSchool}>
-            <DialogTitle sx={{ fontWeight: 800 }}>Cadastrar escola</DialogTitle>
-            <DialogContent dividers>
-              <div className="space-y-4 pt-1">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Nome da escola
-                  <input autoFocus value={newSchool.nome} onChange={(e) => setNewSchool({ ...newSchool, nome: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-3 outline-none focus:border-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-white" placeholder="Ex.: EEEP..." />
-                </label>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Cidade
-                  <input value={newSchool.cidade} onChange={(e) => setNewSchool({ ...newSchool, cidade: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-3 outline-none focus:border-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-white" placeholder="Ex.: Milagres-CE" />
-                </label>
-              </div>
-            </DialogContent>
-            <DialogActions sx={{ px: 3, py: 2 }}>
-              <MuiButton type="button" onClick={() => setShowNewSchool(false)} disabled={creatingSchool}>Cancelar</MuiButton>
-              <MuiButton type="submit" variant="contained" color="success" disabled={creatingSchool}>{creatingSchool ? "Cadastrando..." : "Cadastrar escola"}</MuiButton>
-            </DialogActions>
-          </form>
-        </Dialog>
-      )}
-
-
-
-      <section className="mt-6 min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
-        <div className="flex items-start gap-3 border-b border-slate-200 px-4 py-4 sm:px-5 dark:border-slate-700">
-          <div className="rounded-xl bg-slate-100 p-3 text-slate-600 dark:bg-slate-800 dark:text-slate-200"><FaHistory /></div>
-          <div className="min-w-0">
-            <h2 className="font-semibold text-slate-900 dark:text-white">Atividade administrativa</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Últimas alterações realizadas pelo Super Admin.</p>
+        <section className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <FaCheckCircle className="text-green-600 dark:text-green-400" />
+            <span>Plataforma ativa · {savedPlatformName}</span>
           </div>
-        </div>
-        <div className="divide-y divide-slate-100 dark:divide-slate-800">
-          {audit.length ? audit.map((item) => (
-            <div key={item.id} className="flex min-w-0 items-start gap-3 px-4 py-3 sm:px-5">
-              <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-green-500" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-slate-700 dark:text-slate-200">
-                  <span className="font-semibold capitalize">{item.acao}</span> {item.entidade}
-                  {item.escolas?.nome ? <> em <span className="font-medium">{item.escolas.nome}</span></> : null}
-                </p>
-                <p className="mt-1 text-xs text-slate-400">{new Date(item.created_at).toLocaleString("pt-BR")}</p>
-              </div>
-            </div>
-          )) : <p className="px-4 py-6 text-sm text-slate-500 sm:px-5">Nenhuma atividade registrada ainda.</p>}
-        </div>
-      </section>
-      <section className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5 dark:border-blue-900/60 dark:bg-blue-950/20">
-        <div className="flex gap-3">
-          <FaUsers className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
-          <div>
-            <h2 className="font-semibold text-blue-900 dark:text-blue-200">
-              Fundação multi-escola pronta
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-blue-800 dark:text-blue-300">
-              O LogView continua usando <code>escola_id</code> como fronteira dos dados. A área de
-              Super Admin agora tem um ponto central para evoluirmos o gerenciamento sem alterar o
-              fluxo das escolas existentes.
-            </p>
-          </div>
-        </div>
-      </section>
+          <Link
+            to="/app/admin/auditoria"
+            className="text-sm font-semibold text-green-700 hover:underline dark:text-green-400"
+          >
+            Ver auditoria
+          </Link>
+        </section>
+
+        {showNewSchool && (
+          <Dialog
+            open={showNewSchool}
+            onClose={() => !creatingSchool && setShowNewSchool(false)}
+            fullWidth
+            maxWidth="sm"
+          >
+            <form onSubmit={createSchool}>
+              <DialogTitle sx={{ fontWeight: 800 }}>Cadastrar escola</DialogTitle>
+              <DialogContent dividers>
+                <div className="space-y-4 pt-1">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                    Nome da escola
+                    <input
+                      autoFocus
+                      value={newSchool.nome}
+                      onChange={(e) => setNewSchool({ ...newSchool, nome: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-3 outline-none focus:border-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-white"
+                      placeholder="Ex.: EEEP..."
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                    Cidade
+                    <input
+                      value={newSchool.cidade}
+                      onChange={(e) => setNewSchool({ ...newSchool, cidade: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-3 outline-none focus:border-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-white"
+                      placeholder="Ex.: Milagres-CE"
+                    />
+                  </label>
+                </div>
+              </DialogContent>
+              <DialogActions sx={{ px: 3, py: 2 }}>
+                <MuiButton
+                  type="button"
+                  onClick={() => setShowNewSchool(false)}
+                  disabled={creatingSchool}
+                >
+                  Cancelar
+                </MuiButton>
+                <MuiButton
+                  type="submit"
+                  variant="contained"
+                  color="success"
+                  disabled={creatingSchool}
+                >
+                  {creatingSchool ? "Cadastrando..." : "Cadastrar escola"}
+                </MuiButton>
+              </DialogActions>
+            </form>
+          </Dialog>
+        )}
       </main>
     </MuiTheme>
   );
