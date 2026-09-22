@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FaExclamationTriangle, FaCheckCircle } from "react-icons/fa";
-import { ResponsiveContainer, LineChart, Line, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
+import { LineChart, Line, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { useSchool } from "../hooks/useSchool";
@@ -73,75 +73,90 @@ export const Home = () => {
   };
 
   useEffect(() => {
+    let active = true;
+
     const loadDashboard = async () => {
       debugLog("HOME", "loadDashboard", { activeSchoolId, isGlobalAdmin });
       if (!activeSchoolId) {
-        setDashboardLoading(false);
-        setStats({ total: 0, mes: 0, semana: 0 });
-        setGraficoData([]);
-        setDashboardData(null);
-        setTurmas([]);
-        setSelectedTurma("");
-        setAlunos([]);
-        setSelectedAlunos([]);
+        if (active) {
+          setDashboardLoading(false);
+          setStats({ total: 0, mes: 0, semana: 0 });
+          setGraficoData([]);
+          setDashboardData(null);
+          setTurmas([]);
+          setSelectedTurma("");
+          setAlunos([]);
+          setSelectedAlunos([]);
+        }
         return;
       }
 
-      setDashboardLoading(true);
-      setDashboardData(null);
+      if (active) {
+        setDashboardLoading(true);
+        setDashboardData(null);
+      }
 
       // O dashboard é deliberadamente carregado em segundo plano. O primeiro paint
       // da página não depende desta requisição nem dos números do painel.
       await new Promise((resolve) => window.setTimeout(resolve, 0));
 
-      const { data, error } = await debugQuery(
-        "HOME",
-        "carregar dashboard completo",
-        supabase.rpc("logview_get_home_dashboard", { p_escola_id: activeSchoolId }),
-      );
+      try {
+        const { data, error } = await debugQuery(
+          "HOME",
+          "carregar dashboard completo",
+          supabase.rpc("logview_get_home_dashboard", { p_escola_id: activeSchoolId }),
+        );
 
-      if (error) {
-        debugError("HOME", "Erro ao carregar dashboard", error);
-        setTurmas([]);
-        setDashboardLoading(false);
-        return;
-      }
-
-      const payload = data || {};
-      setDashboardData(payload);
-      setTurmas(Array.isArray(payload.turmas) ? payload.turmas : []);
-
-      // O backend já consolida os registros para evitar duplicar uma ocorrência
-      // quando ela possui uma suspensão derivada.
-      const registros = consolidarOcorrencias(payload.ocorrencias || []);
-      const total = registros.length;
-      const hoje = new Date();
-      const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-      const inicioSemana = new Date(hoje);
-      inicioSemana.setDate(hoje.getDate() - hoje.getDay());
-      inicioSemana.setHours(0, 0, 0, 0);
-      const mes = registros.filter((o) => new Date(o.data_ocorrido) >= inicioMes).length;
-      const semana = registros.filter((o) => new Date(o.data_ocorrido) >= inicioSemana).length;
-
-      debugLog("HOME", "dashboard processado", { registros: registros.length, total, mes, semana });
-      setStats({ total, mes, semana });
-
-      const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-      const dadosSemana = diasSemana.map((name) => ({ name, ocorrencias: 0 }));
-      registros.forEach((ocorrencia) => {
-        if (!ocorrencia.data_ocorrido) return;
-        const [ano, mesOcorrencia, dia] = ocorrencia.data_ocorrido.split("-").map(Number);
-        const dataOcorrencia = new Date(ano, mesOcorrencia - 1, dia);
-        dataOcorrencia.setHours(0, 0, 0, 0);
-        if (dataOcorrencia >= inicioSemana) {
-          dadosSemana[dataOcorrencia.getDay()].ocorrencias += 1;
+        if (error) {
+          debugError("HOME", "Erro ao carregar dashboard", error);
+          if (active) setTurmas([]);
+          return;
         }
-      });
-      setGraficoData(dadosSemana);
-      setDashboardLoading(false);
+
+        if (!active) return;
+
+        const payload = data || {};
+        setDashboardData(payload);
+        setTurmas(Array.isArray(payload.turmas) ? payload.turmas : []);
+
+        // O backend já consolida os registros para evitar duplicar uma ocorrência
+        // quando ela possui uma suspensão derivada.
+        const registros = consolidarOcorrencias(payload.ocorrencias || []);
+        const total = registros.length;
+        const hoje = new Date();
+        const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        const inicioSemana = new Date(hoje);
+        inicioSemana.setDate(hoje.getDate() - hoje.getDay());
+        inicioSemana.setHours(0, 0, 0, 0);
+        const mes = registros.filter((o) => new Date(o.data_ocorrido) >= inicioMes).length;
+        const semana = registros.filter((o) => new Date(o.data_ocorrido) >= inicioSemana).length;
+
+        debugLog("HOME", "dashboard processado", { registros: registros.length, total, mes, semana });
+        setStats({ total, mes, semana });
+
+        const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+        const dadosSemana = diasSemana.map((name) => ({ name, ocorrencias: 0 }));
+        registros.forEach((ocorrencia) => {
+          if (!ocorrencia.data_ocorrido) return;
+          const [ano, mesOcorrencia, dia] = ocorrencia.data_ocorrido.split("-").map(Number);
+          const dataOcorrencia = new Date(ano, mesOcorrencia - 1, dia);
+          dataOcorrencia.setHours(0, 0, 0, 0);
+          if (dataOcorrencia >= inicioSemana) {
+            dadosSemana[dataOcorrencia.getDay()].ocorrencias += 1;
+          }
+        });
+        setGraficoData(dadosSemana);
+      } catch (loadError) {
+        debugError("HOME", "Falha inesperada no carregamento do dashboard", loadError);
+      } finally {
+        if (active) setDashboardLoading(false);
+      }
     };
 
     void loadDashboard();
+    return () => {
+      active = false;
+    };
   }, [activeSchoolId]);
 
   useEffect(() => {
