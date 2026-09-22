@@ -364,7 +364,7 @@ export const Home = () => {
             <div className="w-fit rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">Últimos 7 dias</div>
           </div>
           <div className="h-[250px] w-full sm:h-[300px] md:h-[350px] lg:h-[400px] min-h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={250}>
               <LineChart data={graficoData} margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="name" tick={{ fill: "#64748b", fontSize: 12 }} tickLine={false} axisLine={false} interval={0} />
