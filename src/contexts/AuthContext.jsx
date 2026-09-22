@@ -164,7 +164,7 @@ export function AuthProvider({ children }) {
       try {
         debugLog("AUTH", "inicialização: getSession");
         const result = await withTimeout(
-          supabase.auth.getSession(),
+          debugQuery("AUTH", "obter sessão inicial", supabase.auth.getSession()),
           AUTH_INIT_TIMEOUT_MS,
           "Tempo limite ao inicializar a sessão.",
         );
