@@ -20,7 +20,7 @@ export const AdminEscolas = () => {
   const [showNewUser, setShowNewUser] = useState(false);
   const [newUser, setNewUser] = useState({ nome: "", email: "", password: "", role_id: "4", pdt: false });
   const [creatingUser, setCreatingUser] = useState(false);
-  const [form, setForm] = useState({ nome: "", cidade: "", logo_url: "", cor_primaria: "#16a34a", cor_secundaria: "#0f172a", versao_id: "", plano_id: "", ativo: true });
+  const [form, setForm] = useState({ nome: "", cidade: "", nome_aplicacao: "LogView", logo_url: "", cor_primaria: "#16a34a", cor_secundaria: "#0f172a", versao_id: "", plano_id: "", ativo: true });
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState("");
   const [removeLogo, setRemoveLogo] = useState(false);
@@ -72,6 +72,7 @@ export const AdminEscolas = () => {
       setForm({
         nome: schoolRes.data?.nome || "",
         cidade: schoolRes.data?.cidade || "",
+        nome_aplicacao: configRes.data?.nome_aplicacao || "LogView",
         logo_url: configRes.data?.logo_url || "",
         cor_primaria: configRes.data?.cor_primaria || "#16a34a",
         cor_secundaria: configRes.data?.cor_secundaria || "#0f172a",
@@ -241,6 +242,7 @@ export const AdminEscolas = () => {
 
     const { error: configError } = await supabase.from("logview_escola_config").upsert({
       escola_id: id,
+      nome_aplicacao: form.nome_aplicacao.trim() || "LogView",
       logo_url: logoUrl,
       cor_primaria: form.cor_primaria,
       cor_secundaria: form.cor_secundaria,
@@ -353,6 +355,7 @@ export const AdminEscolas = () => {
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <div className="flex items-center gap-3"><div className="rounded-xl bg-slate-100 p-3 text-slate-600 dark:bg-slate-800 dark:text-slate-200"><FaBuilding /></div><div><h2 className="font-semibold text-slate-900 dark:text-white">Identidade</h2><p className="text-sm text-slate-500 dark:text-slate-400">Personalização da escola no LogView.</p></div></div>
           <label className="mt-5 block text-sm font-medium text-slate-700 dark:text-slate-200">Nome da escola<input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-green-500 dark:border-slate-600" /></label>
+          <label className="mt-4 block text-sm font-medium text-slate-700 dark:text-slate-200">Nome exibido no cabeçalho<input value={form.nome_aplicacao} onChange={(e) => setForm({ ...form, nome_aplicacao: e.target.value })} maxLength={40} placeholder="Ex.: LogZélia" className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-green-500 dark:border-slate-600" /><span className="mt-1 block text-xs font-normal text-slate-400">Este nome será usado somente nesta escola. Ex.: LogZélia.</span></label>
           <label className="mt-4 block text-sm font-medium text-slate-700 dark:text-slate-200">Cidade<input value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-green-500 dark:border-slate-600" /></label>
           <div className="mt-4">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Logo da escola</label>
