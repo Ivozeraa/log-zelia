@@ -11,7 +11,6 @@ import {
   FaUsers,
   FaArrowRight,
   FaPlus,
-  FaTimes,
   FaHistory,
   FaSearch,
   FaFilter,
@@ -19,6 +18,19 @@ import {
   FaDatabase,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
+import {
+  Box,
+  Button as MuiButton,
+  Card,
+  CardContent,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  LinearProgress,
+} from "@mui/material";
+import { MuiTheme } from "../components/ui/MuiTheme";
 import { supabase } from "../utils/supabase";
 import { PageTitle } from "../components/ui/PageTitle";
 import { notify } from "../utils/notify";
@@ -34,18 +46,20 @@ const plannedFeatures = [
 
 function StatCard({ icon: Icon, label, value, description }) {
   return (
-    <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 dark:border-slate-700 dark:bg-slate-900">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
-          <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{value}</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{description}</p>
-        </div>
-        <div className="rounded-xl bg-green-100 p-3 text-green-700 dark:bg-green-950/40 dark:text-green-400">
-          <Icon />
-        </div>
-      </div>
-    </div>
+    <Card variant="outlined" sx={{ minWidth: 0, height: "100%", borderColor: "divider", borderRadius: 3, boxShadow: "0 2px 8px rgb(15 23 42 / 0.05)" }}>
+      <CardContent sx={{ p: { xs: 2, sm: 2.5 }, "&:last-child": { pb: { xs: 2, sm: 2.5 } } }}>
+        <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Box component="p" sx={{ m: 0, color: "text.secondary", fontSize: 14, fontWeight: 600 }}>{label}</Box>
+            <Box component="p" sx={{ m: "8px 0 0", color: "text.primary", fontSize: { xs: 26, sm: 30 }, fontWeight: 800 }}>{value}</Box>
+            <Box component="p" sx={{ m: "4px 0 0", color: "text.secondary", fontSize: 12 }}>{description}</Box>
+          </Box>
+          <Box sx={{ display: "grid", placeItems: "center", width: 44, height: 44, flexShrink: 0, borderRadius: 3, bgcolor: "success.main", color: "success.contrastText", opacity: 0.9 }}>
+            <Icon />
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -258,7 +272,8 @@ export const Admin = () => {
   };
 
   return (
-    <main className="mx-auto w-full min-w-0 max-w-7xl overflow-x-hidden px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+    <MuiTheme>
+      <main className="mx-auto w-full min-w-0 max-w-7xl overflow-x-hidden px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
       <PageTitle
         title="Administração do LogView"
         subtitle="Gerencie a plataforma, escolas, recursos e futuras versões em um único lugar."
@@ -304,7 +319,7 @@ export const Admin = () => {
           <div className="mt-5 space-y-4">
             {Object.entries(planCounts).length ? Object.entries(planCounts).map(([plan, count]) => {
               const percentage = schools.length ? Math.round((count / schools.length) * 100) : 0;
-              return <div key={plan}><div className="mb-1 flex justify-between gap-3 text-sm"><span className="font-medium text-slate-700 dark:text-slate-200">{plan}</span><span className="text-slate-500 dark:text-slate-400">{count} · {percentage}%</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-green-500" style={{ width: `${percentage}%` }} /></div></div>;
+              return <div key={plan}><div className="mb-1 flex justify-between gap-3 text-sm"><span className="font-medium text-slate-700 dark:text-slate-200">{plan}</span><span className="text-slate-500 dark:text-slate-400">{count} · {percentage}%</span></div><LinearProgress variant="determinate" value={percentage} sx={{ height: 8, borderRadius: 999, bgcolor: "action.hover", "& .MuiLinearProgress-bar": { borderRadius: 999, bgcolor: "success.main" } }} /></div>;
             }) : <p className="text-sm text-slate-500">Nenhuma escola cadastrada.</p>}
           </div>
         </div>
@@ -314,7 +329,7 @@ export const Admin = () => {
           <div className="mt-5 space-y-4">
             {resourceStats.length ? resourceStats.map((resource) => {
               const percentage = resource.total ? Math.round((resource.habilitado / resource.total) * 100) : 0;
-              return <div key={resource.chave}><div className="mb-1 flex justify-between gap-3 text-sm"><span className="min-w-0 truncate font-medium text-slate-700 dark:text-slate-200">{resource.nome}</span><span className="shrink-0 text-slate-500 dark:text-slate-400">{resource.habilitado}/{resource.total}</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-green-500" style={{ width: `${percentage}%` }} /></div></div>;
+              return <div key={resource.chave}><div className="mb-1 flex justify-between gap-3 text-sm"><span className="min-w-0 truncate font-medium text-slate-700 dark:text-slate-200">{resource.nome}</span><span className="shrink-0 text-slate-500 dark:text-slate-400">{resource.habilitado}/{resource.total}</span></div><LinearProgress variant="determinate" value={percentage} sx={{ height: 8, borderRadius: 999, bgcolor: "action.hover", "& .MuiLinearProgress-bar": { borderRadius: 999, bgcolor: "success.main" } }} /></div>;
             }) : <p className="text-sm text-slate-500">Nenhum recurso configurado nas escolas.</p>}
           </div>
         </div>
@@ -329,10 +344,11 @@ export const Admin = () => {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 dark:bg-green-950/40 dark:text-green-400">
-                {activeSchoolCount} ativas · {schools.length} total
-              </span>
-              <div className="flex flex-wrap gap-2"><Link to="/app/admin/usuarios" className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><FaUsers /> Usuários</Link><button type="button" onClick={() => setShowNewSchool(true)} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700"><FaPlus /> Nova escola</button></div>
+              <Chip size="small" color="success" variant="outlined" label={`${activeSchoolCount} ativas · ${schools.length} total`} />
+              <div className="flex flex-wrap gap-2">
+                <MuiButton component={Link} to="/app/admin/usuarios" size="small" variant="outlined" startIcon={<FaUsers />}>Usuários</MuiButton>
+                <MuiButton type="button" onClick={() => setShowNewSchool(true)} size="small" variant="contained" color="success" startIcon={<FaPlus />}>Nova escola</MuiButton>
+              </div>
             </div>
           </div>
 
@@ -447,26 +463,25 @@ export const Admin = () => {
       </section>
 
       {showNewSchool && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-3 sm:p-5">
-          <form onSubmit={createSchool} className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Cadastrar escola</h2>
-              <button type="button" onClick={() => setShowNewSchool(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Fechar"><FaTimes /></button>
-            </div>
-            <div className="mt-5 space-y-4">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Nome da escola
-                <input autoFocus value={newSchool.nome} onChange={(e) => setNewSchool({ ...newSchool, nome: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-3 outline-none focus:border-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-white" placeholder="Ex.: EEEP..." />
-              </label>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Cidade
-                <input value={newSchool.cidade} onChange={(e) => setNewSchool({ ...newSchool, cidade: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-3 outline-none focus:border-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-white" placeholder="Ex.: Milagres-CE" />
-              </label>
-            </div>
-            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => setShowNewSchool(false)} className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold dark:border-slate-600 dark:text-white">Cancelar</button>
-              <button disabled={creatingSchool} className="rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">{creatingSchool ? "Cadastrando..." : "Cadastrar escola"}</button>
-            </div>
+        <Dialog open={showNewSchool} onClose={() => !creatingSchool && setShowNewSchool(false)} fullWidth maxWidth="sm">
+          <form onSubmit={createSchool}>
+            <DialogTitle sx={{ fontWeight: 800 }}>Cadastrar escola</DialogTitle>
+            <DialogContent dividers>
+              <div className="space-y-4 pt-1">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Nome da escola
+                  <input autoFocus value={newSchool.nome} onChange={(e) => setNewSchool({ ...newSchool, nome: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-3 outline-none focus:border-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-white" placeholder="Ex.: EEEP..." />
+                </label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Cidade
+                  <input value={newSchool.cidade} onChange={(e) => setNewSchool({ ...newSchool, cidade: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-3 outline-none focus:border-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-white" placeholder="Ex.: Milagres-CE" />
+                </label>
+              </div>
+            </DialogContent>
+            <DialogActions sx={{ px: 3, py: 2 }}>
+              <MuiButton type="button" onClick={() => setShowNewSchool(false)} disabled={creatingSchool}>Cancelar</MuiButton>
+              <MuiButton type="submit" variant="contained" color="success" disabled={creatingSchool}>{creatingSchool ? "Cadastrando..." : "Cadastrar escola"}</MuiButton>
+            </DialogActions>
           </form>
-        </div>
+        </Dialog>
       )}
 
 
@@ -509,6 +524,7 @@ export const Admin = () => {
           </div>
         </div>
       </section>
-    </main>
+      </main>
+    </MuiTheme>
   );
 };
