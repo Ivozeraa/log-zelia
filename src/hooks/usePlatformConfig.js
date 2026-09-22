@@ -3,6 +3,8 @@ import { supabase } from "../utils/supabase";
 
 const DEFAULT_CONFIG = {
   nome_aplicacao: "LogView",
+  cor_primaria: "#4CA65A",
+  cor_secundaria: "#F2762E",
 };
 
 export function usePlatformConfig() {
@@ -14,7 +16,7 @@ export function usePlatformConfig() {
 
     const { data, error } = await supabase
       .from("logview_config")
-      .select("nome_aplicacao")
+      .select("nome_aplicacao, cor_primaria, cor_secundaria")
       .eq("id", 1)
       .maybeSingle();
 
