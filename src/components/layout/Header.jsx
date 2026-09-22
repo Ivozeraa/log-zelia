@@ -9,6 +9,7 @@ import { FaBell, FaBars, FaComments } from "react-icons/fa"
 import { CurrentUserAvatar } from "../user/CurrentUserAvatar"
 import { useCurrentUserName } from "../../hooks/useCurrentUserName"
 import { useNotificacoes } from "../../hooks/useNotifcations"
+import { useSchoolConfig } from "../../hooks/useSchoolConfig"
 
 const formatarTempo = (isoString) => {
   if (!isoString) return ""
@@ -24,6 +25,7 @@ const formatarTempo = (isoString) => {
 export function Header() {
   const { user } = useAuth()
   const { school } = useSchool()
+  const { config: schoolConfig } = useSchoolConfig()
   const name = useCurrentUserName()
   const navigate = useNavigate()
   const { notificacoes, naoLidas, marcarComoLida, marcarTodasComoLidas } = useNotificacoes()
