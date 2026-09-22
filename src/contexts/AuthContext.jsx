@@ -103,7 +103,6 @@ export function AuthProvider({ children }) {
 
     let session = sessionData?.session ?? null;
 
-    // Há uma sessão armazenada: tente renovar o token antes da validação.
     if (session?.refresh_token) {
       const { data: refreshData, error: refreshError } = await withTimeout(
         supabase.auth.refreshSession({
@@ -127,7 +126,6 @@ export function AuthProvider({ children }) {
       return null;
     }
 
-    // getUser() consulta o Auth Server e confirma que a sessão ainda é válida.
     const { data: userData, error: userError } = await withTimeout(
       supabase.auth.getUser(),
       AUTH_INIT_TIMEOUT_MS,
@@ -178,13 +176,13 @@ export function AuthProvider({ children }) {
         if (error) debugError("AUTH", "Erro obtendo sessão", error);
         if (!mounted) return;
 
-        initialized = true;
-
         if (session?.user) {
           await loadUser(session.user);
         } else {
           setUser(null);
         }
+
+        initialized = true;
       } catch (err) {
         debugError("AUTH", "Erro inicializando autenticação", err);
         if (mounted) setUser(null);
@@ -207,9 +205,16 @@ export function AuthProvider({ children }) {
           return;
         }
 
+        // INITIAL_SESSION já é tratado por initializeAuth. Ignorar aqui
+        // evita uma segunda consulta ao perfil durante a abertura do app.
+        if (event === "INITIAL_SESSION") return;
         if (!session?.user) return;
 
-        if (initialized || event !== "INITIAL_SESSION") {
+        // TOKEN_REFRESHED renova o JWT, mas não altera o perfil do usuário.
+        // Evitamos uma nova consulta ao banco sem necessidade.
+        if (event === "TOKEN_REFRESHED") return;
+
+        if (initialized || event === "SIGNED_IN" || event === "USER_UPDATED") {
           void loadUser(session.user);
         }
       },
