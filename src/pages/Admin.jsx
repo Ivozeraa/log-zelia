@@ -81,6 +81,10 @@ export const Admin = () => {
   const [statusFilter, setStatusFilter] = useState("todos");
   const [platformName, setPlatformName] = useState("LogView");
   const [savedPlatformName, setSavedPlatformName] = useState("LogView");
+  const [primaryColor, setPrimaryColor] = useState("#4CA65A");
+  const [secondaryColor, setSecondaryColor] = useState("#F2762E");
+  const [savedPrimaryColor, setSavedPrimaryColor] = useState("#4CA65A");
+  const [savedSecondaryColor, setSavedSecondaryColor] = useState("#F2762E");
   const [savingPlatformName, setSavingPlatformName] = useState(false);
   const [platformStats, setPlatformStats] = useState({ usuarios: 0, alunos: 0 });
 
@@ -102,7 +106,7 @@ export const Admin = () => {
           .order("nome", { ascending: true }),
         supabase.from("usuarios").select("id", { count: "exact", head: true }),
         supabase.from("alunos").select("id", { count: "exact", head: true }),
-        supabase.from("logview_config").select("nome_aplicacao").eq("id", 1).maybeSingle(),
+        supabase.from("logview_config").select("nome_aplicacao, cor_primaria, cor_secundaria").eq("id", 1).maybeSingle(),
       ]);
 
       if (!mounted) return;
@@ -116,6 +120,12 @@ export const Admin = () => {
 
       const nextName = configResult.data?.nome_aplicacao?.trim() || "LogView";
       setPlatformName(nextName);
+      const nextPrimary = configResult.data?.cor_primaria || "#4CA65A";
+      const nextSecondary = configResult.data?.cor_secundaria || "#F2762E";
+      setPrimaryColor(nextPrimary);
+      setSecondaryColor(nextSecondary);
+      setSavedPrimaryColor(nextPrimary);
+      setSavedSecondaryColor(nextSecondary);
       setSavedPlatformName(nextName);
       setPlatformStats({
         usuarios: usersResult.count ?? 0,
@@ -168,6 +178,7 @@ export const Admin = () => {
   const savePlatformName = async (event) => {
     event.preventDefault();
     const name = platformName.trim();
+    const isHex = (value) => /^#[0-9A-Fa-f]{6}$/.test(value);
 
     if (!name) {
       notify.error("Informe um nome para a plataforma.");
@@ -179,11 +190,16 @@ export const Admin = () => {
       return;
     }
 
+    if (!isHex(primaryColor) || !isHex(secondaryColor)) {
+      notify.error("Use cores no formato hexadecimal, por exemplo #4CA65A.");
+      return;
+    }
+
     setSavingPlatformName(true);
 
     const { error } = await supabase
       .from("logview_config")
-      .upsert({ id: 1, nome_aplicacao: name, updated_at: new Date().toISOString() });
+      .upsert({ id: 1, nome_aplicacao: name, cor_primaria: primaryColor.toUpperCase(), cor_secundaria: secondaryColor.toUpperCase(), updated_at: new Date().toISOString() });
 
     setSavingPlatformName(false);
 
@@ -193,8 +209,14 @@ export const Admin = () => {
       return;
     }
 
+    const nextPrimary = primaryColor.toUpperCase();
+    const nextSecondary = secondaryColor.toUpperCase();
     setSavedPlatformName(name);
     setPlatformName(name);
+    setPrimaryColor(nextPrimary);
+    setSecondaryColor(nextSecondary);
+    setSavedPrimaryColor(nextPrimary);
+    setSavedSecondaryColor(nextSecondary);
     notify.success("Nome da plataforma atualizado.");
   };
 
@@ -321,7 +343,7 @@ export const Admin = () => {
   const schoolCountLabel = loading ? "—" : String(schools.length);
   const activeLabel = loading ? "—" : String(activeSchoolCount);
   const inactiveCount = Math.max(0, schools.length - activeSchoolCount);
-  const hasNameChanges = platformName.trim() !== savedPlatformName;
+  const hasNameChanges = platformName.trim() !== savedPlatformName || primaryColor.toUpperCase() !== savedPrimaryColor || secondaryColor.toUpperCase() !== savedSecondaryColor;
 
   return (
     <MuiTheme>
@@ -501,6 +523,33 @@ export const Admin = () => {
                   className="mt-1.5 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-3 text-sm outline-none focus:border-green-500 dark:border-slate-600 dark:text-white"
                 />
               </label>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {[
+                  ["Cor principal", primaryColor, setPrimaryColor],
+                  ["Cor secundária", secondaryColor, setSecondaryColor],
+                ].map(([label, value, setter]) => (
+                  <label key={label} className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                    {label}
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={value}
+                        onChange={(e) => setter(e.target.value.toUpperCase())}
+                        className="h-11 w-12 cursor-pointer rounded-xl border border-slate-300 bg-white p-1 dark:border-slate-600 dark:bg-slate-950"
+                        aria-label={label}
+                      />
+                      <input
+                        value={value}
+                        maxLength={7}
+                        onChange={(e) => setter(e.target.value.toUpperCase())}
+                        className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-transparent px-3 py-2.5 font-mono text-sm outline-none focus:border-green-500 dark:border-slate-600 dark:text-white"
+                        aria-label={`${label} em hexadecimal`}
+                      />
+                    </div>
+                  </label>
+                ))}
+              </div>
 
               <div className="mt-3 flex items-center justify-between gap-3">
                 <span className="text-xs text-slate-400">
