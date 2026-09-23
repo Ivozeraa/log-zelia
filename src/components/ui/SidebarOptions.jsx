@@ -1,10 +1,10 @@
 import { NavLink } from "react-router-dom"
 
-export const SidebarOptions = ({ to, icon, text, onClick }) => {
+export const SidebarOptions = ({ to, icon, text, onClick, end = false }) => {
   const IconComponent = icon
 
   return (
-    <NavLink to={to} onClick={onClick}>
+    <NavLink to={to} end={end} onClick={onClick}>
       {({ isActive }) => (
         <div
           className={`relative flex items-center gap-2 p-2 cursor-pointer group ${isActive

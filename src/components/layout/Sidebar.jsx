@@ -1,10 +1,14 @@
+import { useState } from 'react'
+import { NavLink } from 'react-router-dom'
 import { SidebarOptions as So } from '../ui/SidebarOptions'
-import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey } from 'react-icons/fa'
+import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey, FaShieldAlt, FaHistory, FaTools, FaChevronDown } from 'react-icons/fa'
 import { useAuth } from '../../hooks/useAuth'
 import { SectionTitle } from '../ui/SectionTitle'
+import { useSchoolFeatures } from '../../hooks/useSchoolFeatures'
 
 export const Sidebar = ({ open, setOpen }) => {
   const { user } = useAuth()
+  const [adminOpen, setAdminOpen] = useState(false)
 
   const handleClick = () => {
     if (window.innerWidth < 768) {
@@ -14,7 +18,11 @@ export const Sidebar = ({ open, setOpen }) => {
 
   const canSeeManagement = [1, 2, 3].includes(user?.role_id)
   const canManageAnnouncements = Number(user?.role_id) === 1
+  const canAccessPlatformAdmin = Number(user?.role_id) === 1
   const canSeeSchedules = Number(user?.role_id) !== 4
+  const { hasFeature, loading: featuresLoading } = useSchoolFeatures()
+  const canSeeOccurrences = featuresLoading || hasFeature('ocorrencias')
+  const canSeeHorarios = featuresLoading || hasFeature('horarios')
 
   return (
     <>
@@ -31,31 +39,61 @@ export const Sidebar = ({ open, setOpen }) => {
           md:translate-x-0 md:top-16 md:h-[calc(100vh-4rem)]
         `}
       >
-        <div className="md:hidden">
+        <div className="md:hidden shrink-0">
           <SectionTitle text="Menu" />
         </div>
 
-        <So to="/app" end icon={FaHome} text="Início" onClick={handleClick} />
-        <So to="/app/advertencias" icon={FaExclamationCircle} text="Advertências" onClick={handleClick} />
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 space-y-2">
+          <So to="/app" end icon={FaHome} text="Início" onClick={handleClick} />
+          {canSeeOccurrences && <So to="/app/advertencias" icon={FaExclamationCircle} text="Advertências" onClick={handleClick} />}
 
-        {canSeeSchedules && (
-          <So to="/app/horarios" icon={FaCalendarAlt} text="Horários" onClick={handleClick} />
-        )}
+          {canSeeSchedules && canSeeHorarios && (
+            <So to="/app/horarios" icon={FaCalendarAlt} text="Horários" onClick={handleClick} />
+          )}
 
-        {canSeeManagement && (
-          <>
-            <So to="/app/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
-            <So to="/app/gestao/senhas-alunos" icon={FaKey} text="Senhas dos alunos" onClick={handleClick} />
-          </>
-        )}
+          {canSeeManagement && (
+            <>
+              <So to="/app/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
+              <So to="/app/gestao/senhas-alunos" icon={FaKey} text="Senhas dos alunos" onClick={handleClick} />
+            </>
+          )}
 
-        {canManageAnnouncements && (
-          <So to="/app/avisos" icon={FaBullhorn} text="Avisos" onClick={handleClick} />
-        )}
+          {canAccessPlatformAdmin && (
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setAdminOpen((current) => !current)}
+                className="w-full flex items-center gap-2 p-2 rounded-xl text-gray-700 hover:text-green-800 hover:bg-gray-50 dark:text-slate-400 dark:hover:text-green-700 dark:hover:bg-slate-900 transition-colors"
+                aria-expanded={adminOpen}
+              >
+                <FaShieldAlt />
+                <span className="flex-1 text-left">Administração</span>
+                <FaChevronDown
+                  className={`text-xs transition-transform duration-200 ${adminOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
 
-        <So to="/app/suporte" icon={FaWrench} text="Suporte" onClick={handleClick} />
+              <div
+                className={`overflow-hidden transition-all duration-200 ${adminOpen ? 'max-h-60 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}
+              >
+                <div className="ml-3 pl-3 border-l border-gray-200 dark:border-slate-700 space-y-1">
+                  <So to="/app/admin" icon={FaShieldAlt} text="Dashboard" onClick={handleClick} />
+                  <So to="/app/admin/usuarios" icon={FaKey} text="Usuários da plataforma" onClick={handleClick} />
+                  <So to="/app/admin/auditoria" icon={FaHistory} text="Auditoria" onClick={handleClick} />
+                  <So to="/app/admin/recursos" icon={FaTools} text="Recursos" onClick={handleClick} />
+                </div>
+              </div>
+            </div>
+          )}
 
-        <div className="mt-auto border-t-2 border-gray-300 dark:border-slate-700 pt-4">
+          {canManageAnnouncements && (
+            <So to="/app/avisos" icon={FaBullhorn} text="Avisos" onClick={handleClick} />
+          )}
+
+          <So to="/app/suporte" icon={FaWrench} text="Suporte" onClick={handleClick} />
+        </div>
+
+        <div className="shrink-0 border-t-2 border-gray-300 dark:border-slate-700 pt-4">
           <So to="/app/configuracoes" icon={FaCog} text="Configurações" onClick={handleClick} />
         </div>
       </aside>

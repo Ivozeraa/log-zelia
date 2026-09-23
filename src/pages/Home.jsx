@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaExclamationTriangle, FaCheckCircle } from "react-icons/fa";
-import { ResponsiveContainer, LineChart, Line, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
+import { LineChart, Line, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { useSchool } from "../hooks/useSchool";
@@ -16,10 +16,11 @@ import { SectionTitle } from "../components/ui/SectionTitle";
 import { RankingOcorrencias } from "../components/ui/Ranking";
 import { SuspensionDecisionPopup } from "../components/ui/SuspensionDecisionPopup";
 import { notify } from "../utils/notify";
+import { debugError, debugLog, debugQuery } from "../utils/debug";
 
 export const Home = () => {
   const { user } = useAuth();
-  const { schoolId, isGlobalAdmin } = useSchool();
+  const { school, schoolId, isGlobalAdmin } = useSchool();
   const [open, setOpen] = useState(false);
   const [escolas, setEscolas] = useState([]);
   const [selectedEscola, setSelectedEscola] = useState("");
@@ -39,9 +40,25 @@ export const Home = () => {
   const [formMessage, setFormMessage] = useState("");
   const [graficoData, setGraficoData] = useState([]);
   const [stats, setStats] = useState({ total: 0, mes: 0, semana: 0 });
+  const [dashboardLoading, setDashboardLoading] = useState(false);
   const [suspensionQueue, setSuspensionQueue] = useState([]);
+  const [dashboardData, setDashboardData] = useState(null);
+  const chartContainerRef = useRef(null);
+  const [chartWidth, setChartWidth] = useState(0);
 
   const activeSchoolId = isGlobalAdmin ? selectedEscola : schoolId || "";
+
+  useEffect(() => {
+    const element = chartContainerRef.current;
+    if (!element) return undefined;
+
+    const updateWidth = () => setChartWidth(Math.max(0, Math.floor(element.getBoundingClientRect().width)));
+    updateWidth();
+
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   const resetForm = () => {
     setSelectedTurma("");
@@ -56,117 +73,123 @@ export const Home = () => {
   };
 
   useEffect(() => {
+    let active = true;
+
     const loadDashboard = async () => {
+      debugLog("HOME", "loadDashboard", { activeSchoolId, isGlobalAdmin });
       if (!activeSchoolId) {
-        setStats({ total: 0, mes: 0, semana: 0 });
-        setGraficoData([]);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("ocorrencias")
-        .select("*")
-        .eq("escola_id", activeSchoolId);
-
-      if (error) {
-        console.error("Erro ao carregar dashboard:", error);
-        return;
-      }
-
-      // Uma suspensão automática aponta para a ocorrência que atingiu o limite.
-      // Para os indicadores, essa ocorrência de origem não é contada novamente:
-      // o evento passa a ser representado pela suspensão uma única vez.
-      const registros = consolidarOcorrencias(data || []);
-      const total = registros.length;
-      const hoje = new Date();
-      const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-      const inicioSemana = new Date(hoje);
-      inicioSemana.setDate(hoje.getDate() - hoje.getDay());
-      inicioSemana.setHours(0, 0, 0, 0);
-      const mes = registros.filter((o) => new Date(o.data_ocorrido) >= inicioMes).length;
-      const semana = registros.filter((o) => new Date(o.data_ocorrido) >= inicioSemana).length;
-
-      setStats({ total, mes, semana });
-
-      const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-      const dadosSemana = diasSemana.map((name) => ({ name, ocorrencias: 0 }));
-      registros.forEach((ocorrencia) => {
-        if (!ocorrencia.data_ocorrido) return;
-        const [ano, mesOcorrencia, dia] = ocorrencia.data_ocorrido.split("-").map(Number);
-        const dataOcorrencia = new Date(ano, mesOcorrencia - 1, dia);
-        dataOcorrencia.setHours(0, 0, 0, 0);
-        if (dataOcorrencia >= inicioSemana) {
-          dadosSemana[dataOcorrencia.getDay()].ocorrencias += 1;
+        if (active) {
+          setDashboardLoading(false);
+          setStats({ total: 0, mes: 0, semana: 0 });
+          setGraficoData([]);
+          setDashboardData(null);
+          setTurmas([]);
+          setSelectedTurma("");
+          setAlunos([]);
+          setSelectedAlunos([]);
         }
-      });
-      setGraficoData(dadosSemana);
+        return;
+      }
+
+      if (active) {
+        setDashboardLoading(true);
+        setDashboardData(null);
+      }
+
+      // O dashboard é deliberadamente carregado em segundo plano. O primeiro paint
+      // da página não depende desta requisição nem dos números do painel.
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+
+      try {
+        const { data, error } = await debugQuery(
+          "HOME",
+          "carregar dashboard completo",
+          supabase.rpc("logview_get_home_dashboard", { p_escola_id: activeSchoolId }),
+        );
+
+        if (error) {
+          debugError("HOME", "Erro ao carregar dashboard", error);
+          if (active) setTurmas([]);
+          return;
+        }
+
+        if (!active) return;
+
+        const payload = data || {};
+        setDashboardData(payload);
+        setTurmas(Array.isArray(payload.turmas) ? payload.turmas : []);
+
+        // O backend já consolida os registros para evitar duplicar uma ocorrência
+        // quando ela possui uma suspensão derivada.
+        const registros = consolidarOcorrencias(payload.ocorrencias || []);
+        const total = registros.length;
+        const hoje = new Date();
+        const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        const inicioSemana = new Date(hoje);
+        inicioSemana.setDate(hoje.getDate() - hoje.getDay());
+        inicioSemana.setHours(0, 0, 0, 0);
+        const mes = registros.filter((o) => new Date(o.data_ocorrido) >= inicioMes).length;
+        const semana = registros.filter((o) => new Date(o.data_ocorrido) >= inicioSemana).length;
+
+        debugLog("HOME", "dashboard processado", { registros: registros.length, total, mes, semana });
+        setStats({ total, mes, semana });
+
+        const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+        const dadosSemana = diasSemana.map((name) => ({ name, ocorrencias: 0 }));
+        registros.forEach((ocorrencia) => {
+          if (!ocorrencia.data_ocorrido) return;
+          const [ano, mesOcorrencia, dia] = ocorrencia.data_ocorrido.split("-").map(Number);
+          const dataOcorrencia = new Date(ano, mesOcorrencia - 1, dia);
+          dataOcorrencia.setHours(0, 0, 0, 0);
+          if (dataOcorrencia >= inicioSemana) {
+            dadosSemana[dataOcorrencia.getDay()].ocorrencias += 1;
+          }
+        });
+        setGraficoData(dadosSemana);
+      } catch (loadError) {
+        debugError("HOME", "Falha inesperada no carregamento do dashboard", loadError);
+      } finally {
+        if (active) setDashboardLoading(false);
+      }
     };
 
-    loadDashboard();
+    void loadDashboard();
+    return () => {
+      active = false;
+    };
   }, [activeSchoolId]);
 
   useEffect(() => {
     const loadEscolas = async () => {
       if (!user) return;
-      const query = supabase.from("escolas").select("id, nome").order("nome", { ascending: true });
 
-      if (isGlobalAdmin) {
-        const { data, error } = await query;
-        if (error) {
-          notify.error("Erro carregando as escolas");
-          console.error(error);
+      if (!isGlobalAdmin) {
+        if (!schoolId) {
           setEscolas([]);
+          setSelectedEscola("");
           return;
         }
-        setEscolas(data || []);
-        if (data?.length > 0 && !selectedEscola) setSelectedEscola(data[0].id);
+        setEscolas(school ? [school] : []);
+        setSelectedEscola((current) => current || schoolId);
         return;
       }
 
-      if (!schoolId) {
-        setEscolas([]);
-        setSelectedEscola("");
-        return;
-      }
-
-      const { data, error } = await query.eq("id", schoolId).maybeSingle();
+      const { data, error } = await debugQuery(
+        "HOME",
+        "carregar escolas",
+        supabase.from("escolas").select("id, nome").order("nome", { ascending: true }),
+      );
       if (error) {
-        notify.error("Erro carregando a escola");
-        console.error(error);
+        notify.error("Erro carregando as escolas");
+        debugError("HOME", "Erro carregando escolas", error);
         setEscolas([]);
         return;
       }
-      setEscolas(data ? [data] : []);
-      setSelectedEscola(schoolId);
+      setEscolas(data || []);
+      if (data?.length > 0) setSelectedEscola((current) => current || data[0].id);
     };
     loadEscolas();
-  }, [user, schoolId, isGlobalAdmin, selectedEscola]);
-
-  useEffect(() => {
-    const loadTurmas = async () => {
-      if (!activeSchoolId) {
-        setTurmas([]);
-        setSelectedTurma("");
-        setAlunos([]);
-        setSelectedAlunos([]);
-        return;
-      }
-      setLoadingTurmas(true);
-      const { data, error } = await supabase
-        .from("turmas")
-        .select("id, nome")
-        .eq("escola_id", activeSchoolId)
-        .order("nome", { ascending: true });
-      if (error) {
-        console.error(error);
-        setTurmas([]);
-      } else {
-        setTurmas(data || []);
-      }
-      setLoadingTurmas(false);
-    };
-    loadTurmas();
-  }, [activeSchoolId]);
+  }, [user, school, schoolId, isGlobalAdmin]);
 
   useEffect(() => {
     const loadAlunos = async () => {
@@ -176,11 +199,11 @@ export const Home = () => {
         return;
       }
       setLoadingAlunos(true);
-      const { data, error } = await supabase
+      const { data, error } = await debugQuery("HOME", "carregar alunos", supabase
         .from("alunos")
         .select("id, nome, matricula")
         .eq("turma_id", selectedTurma)
-        .order("nome", { ascending: true });
+        .order("nome", { ascending: true }));
       if (error) {
         console.error(error);
         setAlunos([]);
@@ -326,7 +349,7 @@ export const Home = () => {
     if (suspensoesPendentes.length > 0) setSuspensionQueue(suspensoesPendentes);
   };
 
-  const fluxoAlto = stats.semana > stats.mes * 0.4;
+  const fluxoAlto = !dashboardLoading && stats.semana > stats.mes * 0.4;
 
   return (
     <div className="flex w-full flex-col gap-10">
@@ -344,27 +367,35 @@ export const Home = () => {
       <div className="flex flex-col gap-3">
         <SectionTitle text="Visão Geral" />
         <div className="grid w-full grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-          <Card title="Ocorrências totais" content={stats.total} />
-          <Card title="Este mês" content={stats.mes} />
-          <Card title="Esta semana" content={stats.semana} />
+          {[
+            ["Ocorrências totais", stats.total],
+            ["Este mês", stats.mes],
+            ["Esta semana", stats.semana],
+          ].map(([title, value]) => (
+            <Card
+              key={title}
+              title={title}
+              content={dashboardLoading ? <span className="inline-block h-9 w-16 animate-pulse rounded-lg bg-slate-200 align-middle dark:bg-slate-800" aria-label="Carregando" /> : value}
+            />
+          ))}
         </div>
 
-        <div className={`relative mt-1 overflow-hidden rounded-2xl border px-4 py-3.5 shadow-sm ${fluxoAlto ? "border-red-200 bg-red-50/80 dark:border-red-900/60 dark:bg-red-950/20" : "border-green-200 bg-green-50/80 dark:border-green-900/60 dark:bg-green-950/20"}`}>
+        <div className={`relative mt-1 overflow-hidden rounded-2xl border px-4 py-3.5 shadow-sm ${dashboardLoading ? "border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900" : fluxoAlto ? "border-red-200 bg-red-50/80 dark:border-red-900/60 dark:bg-red-950/20" : "border-green-200 bg-green-50/80 dark:border-green-900/60 dark:bg-green-950/20"}`}>
           <div className="flex items-center gap-3">
             <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${fluxoAlto ? "bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400" : "bg-green-100 text-green-600 dark:bg-green-950/60 dark:text-green-400"}`}>
-              {fluxoAlto ? <FaExclamationTriangle className="text-sm" /> : <FaCheckCircle className="text-sm" />}
+              {dashboardLoading ? <span className="h-4 w-4 animate-pulse rounded-full bg-slate-300 dark:bg-slate-700" /> : fluxoAlto ? <FaExclamationTriangle className="text-sm" /> : <FaCheckCircle className="text-sm" />}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <p className={`text-sm font-extrabold ${fluxoAlto ? "text-red-800 dark:text-red-300" : "text-green-800 dark:text-green-300"}`}>
-                  {fluxoAlto ? "Atenção ao fluxo de ocorrências" : "Fluxo de ocorrências dentro do normal"}
+                  {dashboardLoading ? "Carregando fluxo de ocorrências" : fluxoAlto ? "Atenção ao fluxo de ocorrências" : "Fluxo de ocorrências dentro do normal"}
                 </p>
                 <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${fluxoAlto ? "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300" : "bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300"}`}>
-                  {fluxoAlto ? "Atenção" : "Normal"}
+                  {dashboardLoading ? "Atualizando" : fluxoAlto ? "Atenção" : "Normal"}
                 </span>
               </div>
               <p className={`mt-0.5 text-xs leading-5 ${fluxoAlto ? "text-red-700/75 dark:text-red-300/70" : "text-green-700/75 dark:text-green-300/70"}`}>
-                {fluxoAlto ? "Houve uma concentração acima do esperado nos últimos dias." : "Os registros recentes permanecem em um nível estável."}
+                {dashboardLoading ? "Os números estão sendo atualizados em segundo plano." : fluxoAlto ? "Houve uma concentração acima do esperado nos últimos dias." : "Os registros recentes permanecem em um nível estável."}
               </p>
             </div>
           </div>
@@ -378,21 +409,21 @@ export const Home = () => {
             </div>
             <div className="w-fit rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">Últimos 7 dias</div>
           </div>
-          <div className="h-62.5 w-full sm:h-75 md:h-87.5 lg:h-100">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={graficoData} margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+          <div ref={chartContainerRef} className="h-[250px] w-full min-h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px]">
+            {chartWidth > 0 ? (
+              <LineChart width={chartWidth} height={350} data={graficoData} margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="name" tick={{ fill: "#64748b", fontSize: 12 }} tickLine={false} axisLine={false} interval={0} />
                 <YAxis allowDecimals={false} tick={{ fill: "#64748b", fontSize: 12 }} tickLine={false} axisLine={false} width={30} />
                 <Tooltip contentStyle={{ borderRadius: "14px", border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }} />
                 <Line type="monotone" dataKey="ocorrencias" stroke="#16a34a" strokeWidth={3} dot={{ r: 4, fill: "#16a34a" }} activeDot={{ r: 6 }} />
               </LineChart>
-            </ResponsiveContainer>
+            ) : null}
           </div>
         </div>
       </div>
 
-      <div><RankingOcorrencias escolaId={activeSchoolId} /></div>
+      <div><RankingOcorrencias escolaId={activeSchoolId} dashboardData={dashboardData} /></div>
 
       <Modal isOpen={open} onClose={() => setOpen(false)} title="Adicionar Advertência">
         <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>

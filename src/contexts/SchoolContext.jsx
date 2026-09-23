@@ -3,6 +3,7 @@ import { supabase } from "../utils/supabase";
 import { SchoolContext } from "./SchoolContextImpl";
 import { useAuth } from "../hooks/useAuth";
 import { canSelectSchool, resolveSchoolId } from "../utils/schoolScope";
+import { debugError, debugLog, debugQuery } from "../utils/debug";
 
 const SELECTED_SCHOOL_STORAGE_KEY = "logview:selected-school-id";
 
@@ -24,12 +25,14 @@ export function SchoolProvider({ children }) {
       return [];
     }
 
-    const { data, error: schoolsError } = await supabase
+    debugLog("SCHOOL", "carregando lista global de escolas");
+    const { data, error: schoolsError } = await debugQuery("SCHOOL", "listar escolas", supabase
       .from("escolas")
-      .select("id, nome, cidade, created_at")
-      .order("nome", { ascending: true });
+      .select("id, nome, cidade, ativo, created_at")
+      .order("nome", { ascending: true }));
 
     if (schoolsError) {
+      debugError("SCHOOL", "Erro ao listar escolas", schoolsError);
       throw schoolsError;
     }
 
@@ -39,8 +42,12 @@ export function SchoolProvider({ children }) {
   }, [isGlobalAdmin]);
 
   const loadSchool = useCallback(async () => {
-    if (authLoading) return;
+    if (authLoading) {
+      debugLog("SCHOOL", "aguardando AuthProvider");
+      return;
+    }
 
+    debugLog("SCHOOL", "iniciando carregamento do contexto", { isGlobalAdmin, escolaId: user?.escola_id });
     setLoading(true);
     setError(null);
 
@@ -70,24 +77,42 @@ export function SchoolProvider({ children }) {
         return;
       }
 
-      const { data, error: schoolError } = await supabase
+      // A escola já está determinada pelo perfil autenticado. Não bloqueamos
+      // o restante da aplicação esperando nome/cidade: esses dados são carregados
+      // em segundo plano.
+      const immediateSchool = {
+        id: user.escola_id,
+        nome: "Escola atual",
+      };
+
+      setSchool((current) => current?.id === user.escola_id ? current : immediateSchool);
+      setSelectedSchoolId(String(user.escola_id));
+      setSchools((current) => current.length > 0 ? current : [immediateSchool]);
+      setLoading(false);
+
+      void debugQuery("SCHOOL", "carregar detalhes da escola", supabase
         .from("escolas")
-        .select("id, nome, cidade, created_at")
+        .select("id, nome, cidade, created_at, ativo")
         .eq("id", user.escola_id)
-        .maybeSingle();
+        .maybeSingle())
+        .then(({ data, error: schoolError }) => {
+          if (schoolError) {
+            debugError("SCHOOL", "Erro ao carregar detalhes da escola", schoolError);
+            return;
+          }
 
-      if (schoolError) throw schoolError;
-
-      setSchool(data ?? null);
-      setSelectedSchoolId(data?.id ? String(data.id) : null);
-      setSchools(data ? [data] : []);
+          if (!data) return;
+          setSchool(data);
+          setSchools([data]);
+        });
     } catch (loadError) {
-      console.error("Erro carregando escolas:", loadError);
+      debugError("SCHOOL", "Erro carregando contexto de escola", loadError);
       setSchool(null);
       setSchools([]);
       setError(loadError);
     } finally {
       setLoading(false);
+      debugLog("SCHOOL", "contexto de escola finalizado", { schoolId: selectedSchoolId });
     }
   }, [authLoading, isGlobalAdmin, loadSchools, user?.escola_id]);
 
