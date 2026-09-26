@@ -214,7 +214,10 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
             const registered = await onConfirm();
             if (registered) {
               setAttendanceConfirmed(true);
-              window.setTimeout(() => onClose?.(), 1000);
+              window.setTimeout(() => {
+                confirmationTriggeredRef.current = false;
+                setAttendanceConfirmed(false);
+              }, 1800);
             } else {
               confirmationTriggeredRef.current = false;
             }
