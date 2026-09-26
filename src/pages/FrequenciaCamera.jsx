@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { FaArrowLeft, FaCamera, FaCheckCircle, FaSyncAlt, FaStop } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
 import { useSchoolFeatures } from "../hooks/useSchoolFeatures";
 
 const MEDIAPIPE_MODULE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs";
@@ -199,7 +198,7 @@ export const FrequenciaCamera = () => {
   return (
     <main className="fixed inset-0 z-[1100] flex min-h-screen flex-col bg-black text-white">
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent px-4 pb-12 pt-5 sm:px-6">
-        <button type="button" onClick={() => navigate("/app/frequencia/ponto")} className="flex min-h-11 items-center gap-2 rounded-full bg-black/45 px-4 text-sm font-semibold backdrop-blur-md transition hover:bg-black/65">
+        <button type="button" onClick={() => onClose?.()} className="flex min-h-11 items-center gap-2 rounded-full bg-black/45 px-4 text-sm font-semibold backdrop-blur-md transition hover:bg-black/65">
           <FaArrowLeft /> Voltar
         </button>
         <div className="text-center">
