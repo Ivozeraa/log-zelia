@@ -29,7 +29,8 @@ export const FrequenciaPonto = () => {
   const [error, setError] = useState("");
   const [faceDetectorReady, setFaceDetectorReady] = useState(false);
   const [faceDetectionError, setFaceDetectionError] = useState("");
-  const [faces, setFaces] = useState([]);\n  const [faceQuality, setFaceQuality] = useState({ ready: false, message: "Aproxime o rosto da câmera." });
+  const [faces, setFaces] = useState([]);
+  const [faceQuality, setFaceQuality] = useState({ ready: false, message: "Aproxime o rosto da câmera." });
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const detectorRef = useRef(null);
@@ -39,7 +40,8 @@ export const FrequenciaPonto = () => {
   const stopFaceDetection = () => {
     if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
     detectionFrameRef.current = null;
-    setFaces([]);\n    setFaceQuality({ ready: false, message: "Aproxime o rosto da câmera." });
+    setFaces([]);
+    setFaceQuality({ ready: false, message: "Aproxime o rosto da câmera." });
   };
 
   const stopCamera = () => {
