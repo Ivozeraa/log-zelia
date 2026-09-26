@@ -43,7 +43,7 @@ const getNormalizedFaceBox = (face, videoWidth, videoHeight) => {
   };
 };
 
-export const FrequenciaCamera = ({ onClose }) => {
+export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfirm, confirming = false }) => {
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("logzelia:frequencia-camera", { detail: { active: true } }));
     return () => window.dispatchEvent(new CustomEvent("logzelia:frequencia-camera", { detail: { active: false } }));
@@ -67,6 +67,7 @@ export const FrequenciaCamera = ({ onClose }) => {
   const lastDetectionRef = useRef(0);
   const cameraReadyRef = useRef(false);
   const detectionBusyRef = useRef(false);
+  const readyRef = useRef(false);
 
   const stopFaceDetection = () => {
     if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
@@ -75,6 +76,7 @@ export const FrequenciaCamera = ({ onClose }) => {
     setFaceQuality({ ready: false, message: "Olhe diretamente para a câmera." });
     setFaceDistance(0);
     stableFramesRef.current = 0;
+    readyRef.current = false;
   };
 
   const stopCamera = () => {
@@ -204,6 +206,7 @@ export const FrequenciaCamera = ({ onClose }) => {
           else if (ready) message = "ROSTO PRONTO";
 
           setFaceQuality({ ready, message });
+          readyRef.current = ready;
         }
 
         lastDetectionRef.current = performance.now();
