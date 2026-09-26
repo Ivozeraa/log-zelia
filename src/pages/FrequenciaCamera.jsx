@@ -56,7 +56,7 @@ export const FrequenciaCamera = ({ onClose }) => {
       const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM);
       detectorRef.current = await FaceDetector.createFromOptions(vision, {
         baseOptions: { modelAssetPath: FACE_MODEL, delegate: "CPU" },
-        runningMode: "IMAGE",
+        runningMode: "VIDEO",
         minDetectionConfidence: 0.35,
         minSuppressionThreshold: 0.3,
       });
@@ -80,7 +80,7 @@ export const FrequenciaCamera = ({ onClose }) => {
 
     if (timestamp - lastDetectionRef.current >= 100) {
       try {
-        const result = detector.detect(video);
+        const result = detector.detectForVideo(video, Math.round(timestamp));
         const detections = result?.detections || [];
         setFaces(detections);
 
