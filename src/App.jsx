@@ -25,7 +25,6 @@ const Horarios = lazy(() => import("./pages/Horarios").then((module) => ({ defau
 const Frequencia = lazy(() => import("./pages/Frequencia").then((module) => ({ default: module.Frequencia })));
 const FrequenciaManagement = lazy(() => import("./pages/FrequenciaManagement").then((module) => ({ default: module.FrequenciaManagement })));
 const FrequenciaPonto = lazy(() => import("./pages/FrequenciaPonto").then((module) => ({ default: module.FrequenciaPonto })));
-const FrequenciaCamera = lazy(() => import("./pages/FrequenciaCamera").then((module) => ({ default: module.FrequenciaCamera })));
 const AdminFeedbacks = lazy(() => import("./pages/AdminFeedbacks").then((module) => ({ default: module.AdminFeedbacks })));
 const AdminAvisos = lazy(() => import("./pages/AdminAvisos").then((module) => ({ default: module.AdminAvisos })));
 const Admin = lazy(() => import("./pages/Admin").then((module) => ({ default: module.Admin })));
@@ -66,7 +65,6 @@ function App() {
           <Route path="horarios" element={<FeatureRoute feature="horarios"><Horarios /></FeatureRoute>} />
           <Route path="frequencia" element={<FeatureRoute feature="frequencia"><Frequencia /></FeatureRoute>} />
           <Route path="frequencia/ponto" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><FeatureRoute feature="frequencia"><FrequenciaPonto /></FeatureRoute></ProtectedRoute>} />
-          <Route path="frequencia/camera" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><FeatureRoute feature="frequencia"><FrequenciaCamera /></FeatureRoute></ProtectedRoute>} />
           <Route path="gestao/frequencia" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><FrequenciaManagement /></ProtectedRoute>} />
           <Route path="editar-perfil" element={<EditProfile />} />
           <Route path="suporte" element={<Suporte />} />
