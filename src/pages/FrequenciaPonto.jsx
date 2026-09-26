@@ -125,8 +125,8 @@ export const FrequenciaPonto = () => {
     const registered = await register(student, type);
     if (registered) {
       setPendingAttendance(null);
-      setShowCamera(false);
     }
+    return registered;
   };
 
   const totalStudents = students.length;
