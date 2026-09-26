@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FaArrowLeft, FaCamera, FaCheckCircle, FaSyncAlt, FaStop } from "react-icons/fa";
+import { FaArrowLeft, FaCamera, FaCheckCircle, FaSyncAlt } from "react-icons/fa";
 import { useSchoolFeatures } from "../hooks/useSchoolFeatures";
 
 const MEDIAPIPE_MODULE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs";
@@ -24,6 +24,7 @@ export const FrequenciaCamera = ({ onClose }) => {
   const detectorRef = useRef(null);
   const detectionFrameRef = useRef(null);
   const lastDetectionRef = useRef(0);
+  const cameraReadyRef = useRef(false);
 
   const stopFaceDetection = () => {
     if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
@@ -39,6 +40,7 @@ export const FrequenciaCamera = ({ onClose }) => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
+    cameraReadyRef.current = false;
     setCameraReady(false);
     setFaceDetectorReady(false);
   };
@@ -71,7 +73,7 @@ export const FrequenciaCamera = ({ onClose }) => {
     const video = videoRef.current;
     const detector = detectorRef.current;
 
-    if (!video || !detector || !cameraReady || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+    if (!video || !detector || !cameraReadyRef.current || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
       detectionFrameRef.current = requestAnimationFrame(runFaceDetection);
       return;
     }
@@ -123,7 +125,7 @@ export const FrequenciaCamera = ({ onClose }) => {
           else if (centerX > 0.70) message = "Mova o rosto para a esquerda.";
           else if (centerY < 0.27) message = "Mova o rosto um pouco para baixo.";
           else if (centerY > 0.73) message = "Mova o rosto um pouco para cima.";
-          else if (ready) message = "Rosto pronto!";
+          else if (ready) message = "ROSTO PRONTO";
 
           setFaceQuality({ ready, message });
         }
@@ -178,9 +180,10 @@ export const FrequenciaCamera = ({ onClose }) => {
       });
       await video.play();
 
+      cameraReadyRef.current = true;
       setCameraReady(true);
       setCameraStarting(false);
-      window.setTimeout(() => void startFaceDetection(), 150);
+      window.setTimeout(() => void startFaceDetection(), 100);
     } catch (cameraErr) {
       console.error(cameraErr);
       setCameraStarting(false);
@@ -225,14 +228,14 @@ export const FrequenciaCamera = ({ onClose }) => {
         </div>
       </header>
 
-      <section className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-3 sm:px-6 sm:py-5">
+      <section className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-3 sm:px-6 sm:py-4">
         <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col">
-          <div className="mb-3 rounded-xl border border-amber-400/70 bg-amber-500/10 px-4 py-3 text-center sm:mb-4">
-            <p className="text-sm font-bold sm:text-base">Olhe diretamente para a câmera</p>
-            <p className="mt-0.5 text-[11px] text-white/55 sm:text-xs">Posicione o rosto dentro da moldura para validar o enquadramento.</p>
+          <div className="mb-3 rounded-xl border border-amber-400/60 bg-amber-500/10 px-4 py-2.5 text-center sm:mb-3">
+            <p className="text-sm font-bold sm:text-base">OLHE DIRETAMENTE PARA A CÂMERA</p>
+            <p className="mt-0.5 text-[11px] text-white/55 sm:text-xs">Mantenha o rosto centralizado dentro da moldura.</p>
           </div>
 
-          <div className="relative min-h-[48vh] flex-1 overflow-hidden rounded-2xl border-2 border-white/20 bg-black shadow-2xl sm:min-h-[58vh]">
+          <div className="relative min-h-[56vh] flex-1 overflow-hidden rounded-2xl border-2 border-white/20 bg-black shadow-2xl sm:min-h-[60vh]">
             <video ref={videoRef} autoPlay muted playsInline webkit-playsinline="true" className={`absolute inset-0 h-full w-full object-cover object-center ${cameraReady ? "opacity-100" : "opacity-0"}`} />
 
             {!cameraReady && (
@@ -249,9 +252,9 @@ export const FrequenciaCamera = ({ onClose }) => {
               <>
                 <div className="pointer-events-none absolute inset-0 bg-black/10" />
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-5 sm:p-10">
-                  <div className={`relative h-[min(62vh,620px)] w-[min(76vw,390px)] max-w-[390px] rounded-[48%] border-[3px] transition-all duration-200 ${faceQuality.ready ? "border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(52,211,153,.55)]" : "border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,.34)]"}`}>
+                  <div className={`relative h-[min(64vh,620px)] w-[min(72vw,380px)] max-w-[390px] rounded-[48%] border-[3px] transition-all duration-200 ${faceQuality.ready ? "border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(52,211,153,.55)]" : "border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,.34)]"}`}>
                     <div className={`absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold backdrop-blur-md ${faceQuality.ready ? "bg-emerald-500 text-white" : "bg-black/65 text-white"}`}>
-                      {faceQuality.ready ? "✓ Rosto pronto" : "Centralize seu rosto"}
+                      {faceQuality.ready ? "✓ Rosto pronto" : "CENTRALIZE SEU ROSTO"}
                     </div>
                     <div className="absolute -left-[3px] -top-[3px] h-10 w-10 rounded-tl-[48%] border-l-4 border-t-4 border-white sm:h-14 sm:w-14" />
                     <div className="absolute -right-[3px] -top-[3px] h-10 w-10 rounded-tr-[48%] border-r-4 border-t-4 border-white sm:h-14 sm:w-14" />
@@ -285,13 +288,11 @@ export const FrequenciaCamera = ({ onClose }) => {
               <div className={`mx-auto max-w-xl rounded-xl border px-3 py-2.5 text-center backdrop-blur-md ${faceQuality.ready ? "border-emerald-400/70 bg-emerald-950/70 text-emerald-100" : "border-white/10 bg-black/65 text-white/90"}`}>
                 <div className="flex items-center justify-center gap-2 text-xs font-bold sm:text-sm">
                   {faceQuality.ready && <FaCheckCircle className="text-emerald-300" />}
-                  <span>{cameraReady ? faceDetectorReady ? faces.length === 0 ? "Procurando rosto..." : faceQuality.message : "Carregando detecção facial..." : cameraStarting ? "Abrindo câmera..." : "Câmera desligada"}</span>
+                  <span>{cameraReady ? faceDetectorReady ? faces.length === 0 ? "PROCURANDO ROSTO..." : faceQuality.message : "Carregando detecção facial..." : cameraStarting ? "Abrindo câmera..." : "Câmera desligada"}</span>
                 </div>
               </div>
-              <div className="mt-2 flex justify-center">
-                <button type="button" onClick={() => void (cameraReady ? stopCamera() : startCamera())} disabled={cameraStarting} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 text-xs font-bold backdrop-blur-md transition hover:bg-white/15 disabled:opacity-50 sm:px-7 sm:text-sm">
-                  {cameraReady ? <><FaStop /> Parar câmera</> : <><FaCamera /> {cameraStarting ? "Abrindo..." : "Iniciar câmera"}</>}
-                </button>
+              <div className="mt-2 text-center text-[10px] text-white/45 sm:text-xs">
+                A câmera permanece ativa enquanto esta tela estiver aberta.
               </div>
             </div>
           </div>
