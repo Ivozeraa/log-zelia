@@ -391,13 +391,6 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
               <div className="mt-2 text-center text-[10px] text-white/45 sm:text-xs">
                 A câmera permanece ativa enquanto esta tela estiver aberta.
               </div>
-              {studentName && (
-                <div className="mx-auto mt-3 max-w-xl rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-center backdrop-blur-md">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Aluno selecionado</p>
-                  <p className="mt-1 truncate text-sm font-bold text-white">{studentName}</p>
-                  <p className="mt-0.5 text-[11px] text-white/50">{attendanceType === "entrada" ? "Confirmação de entrada" : "Confirmação de saída"}</p>
-                </div>
-              )}
               {!studentName && (
                 <div className="mx-auto mt-3 max-w-xl rounded-xl border border-white/10 bg-black/70 p-3 backdrop-blur-md">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Próximo aluno</p>
