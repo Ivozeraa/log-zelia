@@ -92,13 +92,13 @@ export const FrequenciaPonto = () => {
     });
   }, [students, access, query]);
 
-  const register = async (student, type) => {
+  const register = async (student, type, method = "manual") => {
     setSavingId(student.id);
 
     const { data, error: rpcError } = await supabase.rpc("registrar_acesso_frequencia", {
       p_aluno_id: student.id,
       p_tipo: type,
-      p_metodo: "manual",
+      p_metodo: method,
       p_ponto_id: pointId || null,
       p_confidence_score: null,
     });
@@ -124,7 +124,7 @@ export const FrequenciaPonto = () => {
   const confirmCameraAttendance = async () => {
     if (!pendingAttendance || savingId) return false;
     const { student, type } = pendingAttendance;
-    const registered = await register(student, type);
+    const registered = await register(student, type, "facial");
     if (registered) {
       setPendingAttendance(null);
     }
