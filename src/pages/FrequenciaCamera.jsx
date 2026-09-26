@@ -6,8 +6,7 @@ const MEDIAPIPE_MODULE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/v
 const MEDIAPIPE_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
 const FACE_MODEL = "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite";
 
-export const FrequenciaCamera = () => {
-  const navigate = useNavigate();
+export const FrequenciaCamera = ({ onClose }) => {
   const { hasFeature, loading: featureLoading } = useSchoolFeatures();
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraStarting, setCameraStarting] = useState(false);
