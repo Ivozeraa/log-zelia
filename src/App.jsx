@@ -22,6 +22,8 @@ const Settings = lazy(() => import("./pages/Settings").then((module) => ({ defau
 const EditProfile = lazy(() => import("./components/user/EditProfile").then((module) => ({ default: module.EditProfile })));
 const Suporte = lazy(() => import("./pages/Suport").then((module) => ({ default: module.Suporte })));
 const Horarios = lazy(() => import("./pages/Horarios").then((module) => ({ default: module.Horarios })));
+const Frequencia = lazy(() => import("./pages/Frequencia").then((module) => ({ default: module.Frequencia })));
+const FrequenciaManagement = lazy(() => import("./pages/FrequenciaManagement").then((module) => ({ default: module.FrequenciaManagement })));
 const AdminFeedbacks = lazy(() => import("./pages/AdminFeedbacks").then((module) => ({ default: module.AdminFeedbacks })));
 const AdminAvisos = lazy(() => import("./pages/AdminAvisos").then((module) => ({ default: module.AdminAvisos })));
 const Admin = lazy(() => import("./pages/Admin").then((module) => ({ default: module.Admin })));
@@ -60,6 +62,8 @@ function App() {
           <Route path="avisos" element={<ProtectedRoute allowedRoles={[1]}><AdminAvisos /></ProtectedRoute>} />
           <Route path="configuracoes" element={<Settings />} />
           <Route path="horarios" element={<FeatureRoute feature="horarios"><Horarios /></FeatureRoute>} />
+          <Route path="frequencia" element={<FeatureRoute feature="frequencia"><Frequencia /></FeatureRoute>} />
+          <Route path="gestao/frequencia" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><FrequenciaManagement /></ProtectedRoute>} />
           <Route path="editar-perfil" element={<EditProfile />} />
           <Route path="suporte" element={<Suporte />} />
           <Route path="*" element={<h1 className="mt-20 text-center text-2xl">404 - Página Não Encontrada</h1>} />
