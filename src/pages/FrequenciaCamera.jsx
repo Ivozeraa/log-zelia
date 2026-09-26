@@ -103,7 +103,7 @@ export const FrequenciaCamera = ({ onClose }) => {
         face: {
           enabled: true,
           detector: {
-            rotation: false,
+            rotation: true,
             maxDetected: 5,
             minConfidence: 0.35,
             minSize: 80,
@@ -111,7 +111,7 @@ export const FrequenciaCamera = ({ onClose }) => {
           },
           mesh: { enabled: false },
           attention: { enabled: false },
-          iris: { enabled: false },
+          iris: { enabled: true },
           description: { enabled: false },
           emotion: { enabled: false },
           antispoof: { enabled: false },
@@ -120,7 +120,7 @@ export const FrequenciaCamera = ({ onClose }) => {
         body: { enabled: false },
         hand: { enabled: false },
         object: { enabled: false },
-        gesture: { enabled: false },
+        gesture: { enabled: true },
         segmentation: { enabled: false },
       });
 
@@ -151,6 +151,7 @@ export const FrequenciaCamera = ({ onClose }) => {
       try {
         const result = await human.detect(video);
         const detections = result?.face || [];
+        const gestures = (result?.gesture || []).map((item) => item?.gesture).filter(Boolean);
         setFaces(detections);
 
         const width = video.videoWidth;
@@ -181,7 +182,9 @@ export const FrequenciaCamera = ({ onClose }) => {
           const centered = centerX >= 0.25 && centerX <= 0.75 && centerY >= 0.20 && centerY <= 0.80;
           const goodSize = faceHeight >= 0.20 && faceHeight <= 0.85 && faceWidth >= 0.10 && faceWidth <= 0.75;
           const goodConfidence = score >= 0.40;
-          const readyNow = centered && goodSize && goodConfidence;
+          const facingCenter = gestures.length === 0 || gestures.includes("facing center");
+          const lookingCenter = gestures.length === 0 || gestures.includes("looking center");
+          const readyNow = centered && goodSize && goodConfidence && facingCenter && lookingCenter;
 
           if (readyNow) stableFramesRef.current += 1;
           else stableFramesRef.current = 0;
@@ -195,7 +198,9 @@ export const FrequenciaCamera = ({ onClose }) => {
           else if (centerX < 0.30) message = "Mova o rosto para a direita.";
           else if (centerX > 0.70) message = "Mova o rosto para a esquerda.";
           else if (centerY < 0.27) message = "Mova o rosto um pouco para baixo.";
-          else if (centerY > 0.73) message = "Mova o rosto um pouco para cima.";
+          else if (centerY > 0.80) message = "Mova o rosto um pouco para cima.";
+          else if (!facingCenter) message = "Vire o rosto para a câmera.";
+          else if (!lookingCenter) message = "Olhe diretamente para a câmera.";
           else if (ready) message = "ROSTO PRONTO";
 
           setFaceQuality({ ready, message });
