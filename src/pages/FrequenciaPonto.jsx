@@ -29,7 +29,7 @@ export const FrequenciaPonto = () => {
   const [error, setError] = useState("");
   const [faceDetectorReady, setFaceDetectorReady] = useState(false);
   const [faceDetectionError, setFaceDetectionError] = useState("");
-  const [faces, setFaces] = useState([]);
+  const [faces, setFaces] = useState([]);\n  const [faceQuality, setFaceQuality] = useState({ ready: false, message: "Aproxime o rosto da câmera." });
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const detectorRef = useRef(null);
@@ -39,7 +39,7 @@ export const FrequenciaPonto = () => {
   const stopFaceDetection = () => {
     if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
     detectionFrameRef.current = null;
-    setFaces([]);
+    setFaces([]);\n    setFaceQuality({ ready: false, message: "Aproxime o rosto da câmera." });
   };
 
   const stopCamera = () => {
@@ -307,10 +307,10 @@ export const FrequenciaPonto = () => {
             <div className="space-y-2 p-4">
               {cameraError && <p className="rounded-lg bg-red-950/40 p-2 text-xs text-red-300">{cameraError}</p>}
               {faceDetectionError && <p className="rounded-lg bg-amber-950/40 p-2 text-xs text-amber-300">{faceDetectionError}</p>}
-              <div className="rounded-lg bg-slate-900 px-3 py-2 text-xs text-slate-300">
+              <div className={`rounded-lg px-3 py-2 text-xs ${faceQuality.ready ? "bg-green-950/40 text-green-300" : "bg-slate-900 text-slate-300"}`}>
                 {cameraReady
                   ? faceDetectorReady
-                    ? faces.length === 0 ? "Câmera ativa · procurando rosto..." : `${faces.length} rosto(s) detectado(s) · reconhecimento ainda não executado`
+                    ? faces.length === 0 ? "Câmera ativa · procurando rosto..." : `${faces.length} rosto(s) detectado(s) · ${faceQuality.message}`
                     : "Câmera ativa · carregando detector facial..."
                   : "Câmera desligada"}
               </div>
