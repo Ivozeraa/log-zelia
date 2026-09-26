@@ -15,7 +15,9 @@ export const FrequenciaCamera = ({ onClose }) => {
   const [faces, setFaces] = useState([]);
   const [faceDetectorReady, setFaceDetectorReady] = useState(false);
   const [faceDetectionError, setFaceDetectionError] = useState("");
-  const [faceQuality, setFaceQuality] = useState({ ready: false, message: "Posicione o rosto dentro da moldura." });
+  const [faceQuality, setFaceQuality] = useState({ ready: false, message: "Olhe diretamente para a câmera." });
+  const [faceDistance, setFaceDistance] = useState(0);
+  const stableFramesRef = useRef(0);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -27,7 +29,9 @@ export const FrequenciaCamera = ({ onClose }) => {
     if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
     detectionFrameRef.current = null;
     setFaces([]);
-    setFaceQuality({ ready: false, message: "Posicione o rosto dentro da moldura." });
+    setFaceQuality({ ready: false, message: "Olhe diretamente para a câmera." });
+    setFaceDistance(0);
+    stableFramesRef.current = 0;
   };
 
   const stopCamera = () => {
@@ -51,7 +55,7 @@ export const FrequenciaCamera = ({ onClose }) => {
       detectorRef.current = await FaceDetector.createFromOptions(vision, {
         baseOptions: { modelAssetPath: FACE_MODEL, delegate: "CPU" },
         runningMode: "VIDEO",
-        minDetectionConfidence: 0.5,
+        minDetectionConfidence: 0.35,
         minSuppressionThreshold: 0.3,
       });
       setFaceDetectorReady(true);
@@ -66,65 +70,72 @@ export const FrequenciaCamera = ({ onClose }) => {
   const runFaceDetection = (timestamp = performance.now()) => {
     const video = videoRef.current;
     const detector = detectorRef.current;
-    if (!video || !detector || !cameraReady || video.readyState < 2) return;
 
-    if (timestamp - lastDetectionRef.current >= 120) {
+    if (!video || !detector || !cameraReady || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+      detectionFrameRef.current = requestAnimationFrame(runFaceDetection);
+      return;
+    }
+
+    if (timestamp - lastDetectionRef.current >= 100) {
       try {
         const result = detector.detectForVideo(video, timestamp);
         const detections = result?.detections || [];
         setFaces(detections);
 
-        const videoWidth = video.videoWidth || 0;
-        const videoHeight = video.videoHeight || 0;
+        const width = video.videoWidth;
+        const height = video.videoHeight;
         const face = detections.length === 1 ? detections[0] : null;
         const box = face?.boundingBox;
         const score = face?.categories?.[0]?.score ?? 0;
-        const centerX = box && videoWidth ? (box.originX + box.width / 2) / videoWidth : 0;
-        const centerY = box && videoHeight ? (box.originY + box.height / 2) / videoHeight : 0;
-        const area = box && videoWidth && videoHeight ? (box.width * box.height) / (videoWidth * videoHeight) : 0;
 
-        const frameLeft = 0.18;
-        const frameRight = 0.82;
-        const frameTop = 0.13;
-        const frameBottom = 0.87;
-        const horizontalInside = box
-          ? box.originX / videoWidth >= frameLeft && (box.originX + box.width) / videoWidth <= frameRight
-          : false;
-        const verticalInside = box
-          ? box.originY / videoHeight >= frameTop && (box.originY + box.height) / videoHeight <= frameBottom
-          : false;
+        if (!box || detections.length !== 1) {
+          stableFramesRef.current = 0;
+          setFaceDistance(0);
+          setFaceQuality({
+            ready: false,
+            message: detections.length > 1
+              ? "Apenas uma pessoa deve estar diante da câmera."
+              : "Olhe diretamente para a câmera.",
+          });
+        } else {
+          const centerX = (box.originX + box.width / 2) / width;
+          const centerY = (box.originY + box.height / 2) / height;
+          const area = (box.width * box.height) / (width * height);
+          const faceWidth = box.width / width;
+          const distance = Math.max(0, Math.min(1, 1 - ((faceWidth - 0.22) / 0.28)));
+          setFaceDistance(distance);
 
-        const ready = Boolean(
-          face &&
-          score >= 0.65 &&
-          area >= 0.08 &&
-          area <= 0.5 &&
-          centerX >= 0.3 &&
-          centerX <= 0.7 &&
-          centerY >= 0.25 &&
-          centerY <= 0.75 &&
-          horizontalInside &&
-          verticalInside
-        );
+          const centered = centerX >= 0.30 && centerX <= 0.70 && centerY >= 0.27 && centerY <= 0.73;
+          const goodSize = area >= 0.055 && area <= 0.42 && faceWidth >= 0.18 && faceWidth <= 0.70;
+          const goodConfidence = score >= 0.40;
+          const readyNow = centered && goodSize && goodConfidence;
 
-        let message = "Posicione o rosto dentro da moldura.";
-        if (detections.length > 1) message = "Apenas uma pessoa deve estar diante da câmera.";
-        else if (detections.length === 0) message = "Posicione o rosto dentro da moldura.";
-        else if (score < 0.65) message = "Mantenha o rosto visível e procure boa iluminação.";
-        else if (area < 0.08) message = "Aproxime o rosto um pouco.";
-        else if (area > 0.5) message = "Afaste o rosto um pouco.";
-        else if (!horizontalInside || centerX < 0.3 || centerX > 0.7) message = centerX < 0.5 ? "Mova o rosto um pouco para a direita." : "Mova o rosto um pouco para a esquerda.";
-        else if (!verticalInside || centerY < 0.25 || centerY > 0.75) message = centerY < 0.5 ? "Mova o rosto um pouco para baixo." : "Mova o rosto um pouco para cima.";
-        else if (ready) message = "Rosto bem posicionado.";
+          if (readyNow) stableFramesRef.current += 1;
+          else stableFramesRef.current = 0;
 
-        setFaceQuality({ ready, message });
+          const ready = stableFramesRef.current >= 2;
+          let message = "Rosto detectado.";
+
+          if (!goodConfidence) message = "Melhore a iluminação e olhe para a câmera.";
+          else if (faceWidth < 0.18 || area < 0.055) message = "Aproxime-se um pouco da câmera.";
+          else if (faceWidth > 0.70 || area > 0.42) message = "Afaste-se um pouco da câmera.";
+          else if (centerX < 0.30) message = "Mova o rosto para a direita.";
+          else if (centerX > 0.70) message = "Mova o rosto para a esquerda.";
+          else if (centerY < 0.27) message = "Mova o rosto um pouco para baixo.";
+          else if (centerY > 0.73) message = "Mova o rosto um pouco para cima.";
+          else if (ready) message = "Rosto pronto!";
+
+          setFaceQuality({ ready, message });
+        }
+
         lastDetectionRef.current = timestamp;
       } catch (detectionError) {
         console.error(detectionError);
         setFaceDetectionError("A detecção facial foi interrompida.");
-        return;
+        stableFramesRef.current = 0;
       }
     }
+
     detectionFrameRef.current = requestAnimationFrame(runFaceDetection);
   };
 
@@ -195,7 +206,7 @@ export const FrequenciaCamera = ({ onClose }) => {
   if (featureLoading || !hasFeature("frequencia")) return null;
 
   return (
-    <main className="fixed inset-0 z-[1100] flex h-[100dvh] min-h-0 w-screen flex-col overflow-hidden bg-black text-white">
+    <main className="fixed inset-0 z-[99999] flex h-[100dvh] min-h-0 w-screen flex-col overflow-hidden bg-black text-white">
       <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between bg-gradient-to-b from-black/85 via-black/45 to-transparent px-3 pb-14 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6 sm:pt-5">
         <button type="button" onClick={() => onClose?.()} className="flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-black/50 px-3 text-xs font-semibold backdrop-blur-md transition hover:bg-black/65 sm:px-4 sm:text-sm">
           <FaArrowLeft /> Voltar
