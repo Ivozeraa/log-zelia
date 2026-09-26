@@ -6,7 +6,7 @@ import { useSchoolFeatures } from "../hooks/useSchoolFeatures";
 
 const formatTime = (value) =>
   value
-    ? new Date(value).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    ? new Date(value).toLocaleTimeString("pt-BR", { timeZone: "America/Fortaleza", hour: "2-digit", minute: "2-digit" })
     : "—";
 
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Fortaleza" }).format(new Date());
@@ -51,6 +51,12 @@ export const Frequencia = () => {
     };
 
     void load();
+  }, [date, featureLoading, hasFeature]);
+
+  useEffect(() => {
+    if (featureLoading || !hasFeature("frequencia")) return undefined;
+    const interval = window.setInterval(() => void reload(), 30000);
+    return () => window.clearInterval(interval);
   }, [date, featureLoading, hasFeature]);
 
   const reload = async () => {
