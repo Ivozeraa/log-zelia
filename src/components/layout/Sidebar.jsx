@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { SidebarOptions as So } from '../ui/SidebarOptions'
-import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey, FaShieldAlt, FaHistory, FaTools, FaChevronDown, FaUserCheck } from 'react-icons/fa'
+import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey, FaShieldAlt, FaHistory, FaTools, FaChevronDown, FaUserCheck, FaCamera } from 'react-icons/fa'
 import { useAuth } from '../../hooks/useAuth'
 import { SectionTitle } from '../ui/SectionTitle'
 import { useSchoolFeatures } from '../../hooks/useSchoolFeatures'
@@ -92,6 +92,7 @@ export const Sidebar = ({ open, setOpen }) => {
                 <div className="ml-4 pl-3 border-l border-gray-200 dark:border-slate-700 space-y-1">
                   <So to="/app/frequencia" end icon={FaUserCheck} text="Visão geral" onClick={handleClick} />
                   <So to="/app/frequencia/ponto" icon={FaUserCheck} text="Ponto de frequência" onClick={handleClick} />
+                  {canSeeManagement && <So to="/app/frequencia/biometria" icon={FaCamera} text="Cadastro facial" onClick={handleClick} />}
                   <So to="/app/gestao/frequencia" icon={FaCog} text="Configurar frequência" onClick={handleClick} />
                 </div>
               </div>

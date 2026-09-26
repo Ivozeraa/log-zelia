@@ -1,307 +1,172 @@
-import { useEffect, useRef, useState } from "react";
-import { FaArrowLeft, FaCamera, FaCheckCircle, FaSyncAlt } from "react-icons/fa";
-import Human from "@vladmandic/human";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FaArrowLeft, FaCamera, FaCheckCircle, FaExclamationTriangle, FaSyncAlt, FaUserCheck } from "react-icons/fa";
+import { supabase } from "../utils/supabase";
 import { useSchoolFeatures } from "../hooks/useSchoolFeatures";
+import { getNormalizedFaceBox, useFaceScanner } from "../hooks/useFaceScanner";
 
+const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Fortaleza" }).format(new Date());
+const nowLabel = () => new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
-const getFaceBox = (face) => {
-  const box = face?.box;
-  if (Array.isArray(box)) {
-    return {
-      x: Number(box[0] ?? 0),
-      y: Number(box[1] ?? 0),
-      width: Number(box[2] ?? 0),
-      height: Number(box[3] ?? 0),
-    };
-  }
+const RESET_DELAY_MS = { confirmado: 3200, ja_registrado: 2200, nao_identificado: 1800, erro: 2200 };
+const IDENTIFICATION_COOLDOWN_MS = 8000;
 
-  return {
-    x: Number(box?.x ?? box?.originX ?? 0),
-    y: Number(box?.y ?? box?.originY ?? 0),
-    width: Number(box?.width ?? 0),
-    height: Number(box?.height ?? 0),
-  };
-};
-
-const getNormalizedFaceBox = (face, videoWidth, videoHeight) => {
-  const raw = face?.boxRaw;
-  if (Array.isArray(raw)) {
-    return {
-      x: Math.max(0, Math.min(1, Number(raw[0] ?? 0))),
-      y: Math.max(0, Math.min(1, Number(raw[1] ?? 0))),
-      width: Math.max(0, Math.min(1, Number(raw[2] ?? 0))),
-      height: Math.max(0, Math.min(1, Number(raw[3] ?? 0))),
-    };
-  }
-
-  const box = getFaceBox(face);
-  return {
-    x: box.x / videoWidth,
-    y: box.y / videoHeight,
-    width: box.width / videoWidth,
-    height: box.height / videoHeight,
-  };
-};
-
-export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfirm, confirming = false, students = [], onSelectAttendance }) => {
+/**
+ * Terminal de frequência facial: câmera sempre aberta, identifica o aluno
+ * automaticamente e registra entrada/saída sem seleção manual.
+ */
+export const FrequenciaCamera = ({ onExit, points = [], pointId, onPointChange }) => {
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("logzelia:frequencia-camera", { detail: { active: true } }));
     return () => window.dispatchEvent(new CustomEvent("logzelia:frequencia-camera", { detail: { active: false } }));
   }, []);
+
   const { hasFeature, loading: featureLoading } = useSchoolFeatures();
-  const [cameraReady, setCameraReady] = useState(false);
-  const [cameraStarting, setCameraStarting] = useState(false);
-  const [cameraError, setCameraError] = useState("");
-  const [facingMode, setFacingMode] = useState("user");
-  const [faces, setFaces] = useState([]);
-  const [faceDetectorReady, setFaceDetectorReady] = useState(false);
-  const [faceDetectionError, setFaceDetectionError] = useState("");
-  const [faceQuality, setFaceQuality] = useState({ ready: false, message: "Olhe diretamente para a câmera." });
-  const [faceDistance, setFaceDistance] = useState(0);
-  const [attendanceConfirmed, setAttendanceConfirmed] = useState(false);
-  const [studentSearch, setStudentSearch] = useState("");
-  const stableFramesRef = useRef(0);
+  const scanner = useFaceScanner();
+  const { videoRef, cameraReady, cameraStarting, cameraError, faces, faceDetectorReady, faceDetectionError, faceQuality, faceDistance, switchCamera, getDescriptor, getConfidence } = scanner;
 
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const detectorRef = useRef(null);
-  const detectionFrameRef = useRef(null);
-  const lastDetectionRef = useRef(0);
-  const cameraReadyRef = useRef(false);
-  const detectionBusyRef = useRef(false);
-  const confirmationTriggeredRef = useRef(false);
+  const [phase, setPhase] = useState("aguardando");
+  const [confirmation, setConfirmation] = useState(null);
+  const [statusDetail, setStatusDetail] = useState("");
 
-  const stopFaceDetection = () => {
-    if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
-    detectionFrameRef.current = null;
-    setFaces([]);
-    setFaceQuality({ ready: false, message: "Olhe diretamente para a câmera." });
-    setFaceDistance(0);
-    stableFramesRef.current = 0;
-    confirmationTriggeredRef.current = false;
-    setAttendanceConfirmed(false);
+  const processingRef = useRef(false);
+  const cooldownRef = useRef(new Map());
+  const resetTimeoutRef = useRef(null);
+
+  const scheduleReset = (nextPhase, delay) => {
+    if (resetTimeoutRef.current) window.clearTimeout(resetTimeoutRef.current);
+    resetTimeoutRef.current = window.setTimeout(() => {
+      setPhase("aguardando");
+      setStatusDetail("");
+      processingRef.current = false;
+    }, delay ?? RESET_DELAY_MS[nextPhase] ?? 2000);
   };
 
-  const stopCamera = () => {
-    stopFaceDetection();
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-    if (videoRef.current) videoRef.current.srcObject = null;
-    cameraReadyRef.current = false;
-    setCameraReady(false);
-    setFaceDetectorReady(false);
-  };
-
-  const initializeFaceDetector = async () => {
-    if (detectorRef.current) {
-      setFaceDetectorReady(true);
-      return true;
-    }
-
-    setFaceDetectionError("");
-
-    try {
-      const human = new Human({
-        backend: "webgl",
-        modelBasePath: "https://vladmandic.github.io/human-models/models/",
-        filter: { enabled: true, equalization: false, flip: false },
-        face: {
-          enabled: true,
-          detector: {
-            rotation: true,
-            maxDetected: 5,
-            minConfidence: 0.35,
-            minSize: 80,
-            return: false,
-          },
-          mesh: { enabled: false },
-          attention: { enabled: false },
-          iris: { enabled: true },
-          description: { enabled: false },
-          emotion: { enabled: false },
-          antispoof: { enabled: false },
-          liveness: { enabled: false },
-        },
-        body: { enabled: false },
-        hand: { enabled: false },
-        object: { enabled: false },
-        gesture: { enabled: true },
-        segmentation: { enabled: false },
-      });
-
-      await human.load();
-      await human.warmup();
-      detectorRef.current = human;
-      setFaceDetectorReady(true);
-      return true;
-    } catch (detectorError) {
-      console.error("Human initialization error:", detectorError);
-      setFaceDetectionError("Não foi possível carregar o motor facial neste navegador.");
-      return false;
-    }
-  };
-
-  const runFaceDetection = async (timestamp = performance.now()) => {
-    const video = videoRef.current;
-    const human = detectorRef.current;
-
-    if (!video || !human || !cameraReadyRef.current || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
-      detectionFrameRef.current = requestAnimationFrame(runFaceDetection);
+  const handleIdentifiedStudent = async (alunoId, nome, similaridade) => {
+    const cooldownUntil = cooldownRef.current.get(alunoId);
+    if (cooldownUntil && cooldownUntil > Date.now()) {
+      setPhase("ja_registrado");
+      setStatusDetail(nome);
+      scheduleReset("ja_registrado");
       return;
     }
 
-    if (timestamp - lastDetectionRef.current >= 100 && !detectionBusyRef.current) {
-      detectionBusyRef.current = true;
+    setPhase("identificado");
+    setStatusDetail(nome);
 
-      try {
-        const result = await human.detect(video);
-        const detections = result?.face || [];
-        const gestures = (result?.gesture || []).map((item) => item?.gesture).filter(Boolean);
-        setFaces(detections);
+    const { data: ultimoRegistro } = await supabase
+      .from("registros_acesso")
+      .select("tipo")
+      .eq("aluno_id", alunoId)
+      .eq("data", today())
+      .eq("status", "registrado")
+      .order("registrado_em", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-        const width = video.videoWidth;
-        const height = video.videoHeight;
-        const face = detections.length === 1 ? detections[0] : null;
-        const box = face?.box;
-        const score = face?.boxScore ?? face?.score ?? 0;
+    const tipo = ultimoRegistro?.tipo === "entrada" ? "saida" : "entrada";
 
-        if (!box || detections.length !== 1) {
-          stableFramesRef.current = 0;
-          setFaceDistance(0);
-          setFaceQuality({
-            ready: false,
-            message: detections.length > 1
-              ? "Apenas uma pessoa deve estar diante da câmera."
-              : "Olhe diretamente para a câmera.",
-          });
-        } else {
-          const normalizedBox = getNormalizedFaceBox(face, width, height);
-          const centerX = normalizedBox.x + normalizedBox.width / 2;
-          const centerY = normalizedBox.y + normalizedBox.height / 2;
-          const area = normalizedBox.width * normalizedBox.height;
-          const faceWidth = normalizedBox.width;
-          const faceHeight = normalizedBox.height;
-          const distance = Math.max(0, Math.min(1, (faceHeight - 0.20) / 0.55));
-          setFaceDistance(distance);
+    setPhase("registrando");
 
-          const centered = centerX >= 0.25 && centerX <= 0.75 && centerY >= 0.20 && centerY <= 0.80;
-          const goodSize = faceHeight >= 0.20 && faceHeight <= 0.85 && faceWidth >= 0.10 && faceWidth <= 0.75;
-          const goodConfidence = score >= 0.40;
-          const facingCenter = gestures.length === 0 || gestures.includes("facing center");
-          const lookingCenter = gestures.length === 0 || gestures.includes("looking center");
-          const readyNow = centered && goodSize && goodConfidence && facingCenter && lookingCenter;
+    const confidence = Math.min(1, Math.max(0, similaridade ?? getConfidence() ?? 0));
+    const { data: registro, error: rpcError } = await supabase.rpc("registrar_acesso_frequencia", {
+      p_aluno_id: alunoId,
+      p_tipo: tipo,
+      p_metodo: "facial",
+      p_ponto_id: pointId || null,
+      p_confidence_score: confidence,
+    });
 
-          if (readyNow) stableFramesRef.current += 1;
-          else stableFramesRef.current = 0;
-
-          const ready = stableFramesRef.current >= 2;
-          let message = "Rosto detectado.";
-
-          if (!goodConfidence) message = "Melhore a iluminação e olhe para a câmera.";
-          else if (faceHeight < 0.20 || area < 0.025) message = "Aproxime-se um pouco da câmera.";
-          else if (faceHeight > 0.85 || area > 0.60) message = "Afaste-se um pouco da câmera.";
-          else if (centerX < 0.30) message = "Mova o rosto para a direita.";
-          else if (centerX > 0.70) message = "Mova o rosto para a esquerda.";
-          else if (centerY < 0.27) message = "Mova o rosto um pouco para baixo.";
-          else if (centerY > 0.80) message = "Mova o rosto um pouco para cima.";
-          else if (!facingCenter) message = "Vire o rosto para a câmera.";
-          else if (!lookingCenter) message = "Olhe diretamente para a câmera.";
-          else if (ready) message = "ROSTO PRONTO";
-
-          setFaceQuality({ ready, message });
-
-          if (ready && studentName && onConfirm && !confirmationTriggeredRef.current) {
-            confirmationTriggeredRef.current = true;
-            const registered = await onConfirm();
-            if (registered) {
-              setAttendanceConfirmed(true);
-              window.setTimeout(() => {
-                confirmationTriggeredRef.current = false;
-                setAttendanceConfirmed(false);
-              }, 1800);
-            } else {
-              confirmationTriggeredRef.current = false;
-            }
-          }
-        }
-
-        lastDetectionRef.current = performance.now();
-      } catch (detectionError) {
-        console.error("Human detection error:", detectionError);
-        setFaceDetectionError("A detecção facial foi interrompida.");
-        stableFramesRef.current = 0;
-      } finally {
-        detectionBusyRef.current = false;
+    if (rpcError) {
+      const mensagem = rpcError.message || "";
+      if (mensagem.includes("já possui uma entrada ativa") || mensagem.includes("Não existe uma entrada ativa")) {
+        cooldownRef.current.set(alunoId, Date.now() + IDENTIFICATION_COOLDOWN_MS);
+        setPhase("ja_registrado");
+        setStatusDetail(nome);
+        scheduleReset("ja_registrado");
+        return;
       }
+
+      console.error(rpcError);
+      setPhase("erro");
+      setStatusDetail("Não foi possível registrar a frequência.");
+      scheduleReset("erro");
+      return;
     }
 
-    detectionFrameRef.current = requestAnimationFrame(runFaceDetection);
+    cooldownRef.current.set(alunoId, Date.now() + IDENTIFICATION_COOLDOWN_MS);
+    setConfirmation({ nome, tipo, horario: registro?.registrado_em ? new Date(registro.registrado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : nowLabel() });
+    setPhase("confirmado");
+    scheduleReset("confirmado");
   };
 
-  const startFaceDetection = async () => {
-    if (!await initializeFaceDetector()) return;
-    stopFaceDetection();
-    detectionFrameRef.current = requestAnimationFrame(runFaceDetection);
-  };
+  const handleFaceReady = async () => {
+    if (processingRef.current) return;
+    processingRef.current = true;
+    setPhase("identificando");
+    setStatusDetail("");
 
-  const startCamera = async () => {
-    setCameraError("");
-    setCameraStarting(true);
-    stopCamera();
-
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraError("Este navegador ou dispositivo não disponibiliza acesso à câmera.");
-      setCameraStarting(false);
+    const descritor = getDescriptor();
+    if (!descritor) {
+      setPhase("erro");
+      setStatusDetail("Não foi possível processar o rosto.");
+      scheduleReset("erro");
       return;
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-      });
-      const video = videoRef.current;
-      if (!video) {
-        stream.getTracks().forEach((track) => track.stop());
-        throw new Error("VIDEO_ELEMENT_NOT_READY");
+      const { data, error } = await supabase.rpc("identificar_aluno_frequencia", { p_descritor: descritor });
+      if (error) throw error;
+
+      const match = Array.isArray(data) ? data[0] : data;
+      if (!match?.aluno_id) {
+        setPhase("nao_identificado");
+        setStatusDetail("Rosto não reconhecido. Tente novamente.");
+        scheduleReset("nao_identificado");
+        return;
       }
 
-      streamRef.current = stream;
-      video.srcObject = stream;
-      video.muted = true;
-      video.setAttribute("playsinline", "true");
-
-      await new Promise((resolve) => {
-        if (video.readyState >= 1) resolve();
-        else video.onloadedmetadata = () => resolve();
-      });
-      await video.play();
-
-      cameraReadyRef.current = true;
-      setCameraReady(true);
-      setCameraStarting(false);
-      window.setTimeout(() => void startFaceDetection(), 100);
-    } catch (cameraErr) {
-      console.error(cameraErr);
-      setCameraStarting(false);
-      setCameraError(cameraErr?.name === "NotAllowedError"
-        ? "Permissão da câmera negada. Libere o acesso à câmera nas configurações do navegador."
-        : "Não foi possível iniciar a câmera neste dispositivo.");
-      setCameraReady(false);
+      await handleIdentifiedStudent(match.aluno_id, match.nome, match.similaridade);
+    } catch (identificationError) {
+      console.error(identificationError);
+      setPhase("erro");
+      setStatusDetail("Falha temporária na identificação.");
+      scheduleReset("erro");
     }
   };
-
-  const switchCamera = async () => setFacingMode((current) => (current === "user" ? "environment" : "user"));
 
   useEffect(() => {
-    void startCamera();
-  }, [facingMode]);
+    if (faceQuality.ready && phase === "aguardando" && !processingRef.current) {
+      void handleFaceReady();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [faceQuality.ready, phase]);
 
   useEffect(() => () => {
-    stopCamera();
-    detectorRef.current?.tf?.disposeVariables?.();
-    detectorRef.current = null;
+    if (resetTimeoutRef.current) window.clearTimeout(resetTimeoutRef.current);
   }, []);
+
+  const bigMessage = useMemo(() => {
+    if (cameraError) return "CÂMERA INDISPONÍVEL";
+    if (!cameraReady) return cameraStarting ? "INICIALIZANDO CÂMERA..." : "CÂMERA INDISPONÍVEL";
+    if (!faceDetectorReady) return "INICIALIZANDO CÂMERA...";
+
+    switch (phase) {
+      case "identificando": return "IDENTIFICANDO...";
+      case "identificado": return "ALUNO IDENTIFICADO";
+      case "registrando": return "REGISTRANDO FREQUÊNCIA...";
+      case "confirmado": return "FREQUÊNCIA REGISTRADA";
+      case "ja_registrado": return "ALUNO JÁ REGISTRADO";
+      case "nao_identificado": return "ERRO TEMPORÁRIO";
+      case "erro": return "ERRO TEMPORÁRIO";
+      default:
+        if (faces.length === 0) return "PROCURANDO ROSTO...";
+        if (faceQuality.ready) return "ROSTO PRONTO";
+        return faceQuality.message === "Rosto detectado." ? "ROSTO DETECTADO" : faceQuality.message.toUpperCase();
+    }
+  }, [cameraError, cameraReady, cameraStarting, faceDetectorReady, faces.length, faceQuality, phase]);
+
+  const isBusyPhase = ["identificando", "identificado", "registrando"].includes(phase);
+  const panelTone = phase === "confirmado" ? "success" : phase === "ja_registrado" ? "warning" : phase === "erro" || phase === "nao_identificado" ? "danger" : "neutral";
 
   if (featureLoading || !hasFeature("frequencia")) return null;
 
@@ -309,27 +174,44 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
     <main className="fixed inset-0 z-[99999] flex h-[100dvh] min-h-0 w-screen flex-col overflow-hidden bg-[#101419] text-white">
       <header className="z-30 shrink-0 border-b border-white/10 bg-[#151a20]/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md sm:px-6">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-          <button type="button" onClick={() => onClose?.()} className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 sm:px-4 sm:text-sm">
+          <button type="button" onClick={() => onExit?.()} className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 sm:px-4 sm:text-sm">
             <FaArrowLeft /> Voltar
           </button>
           <div className="min-w-0 text-center">
             <p className="truncate text-lg font-black tracking-tight sm:text-2xl">FREQUÊNCIA</p>
             <div className="mt-0.5 flex items-center justify-center gap-2 text-[10px] font-semibold text-white/55 sm:text-xs">
               <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.8)]" />
-              ONLINE <span>•</span> LEITOR DE PRESENÇA
+              ONLINE <span>•</span> TERMINAL DE PRESENÇA
             </div>
           </div>
-          <button type="button" onClick={() => void switchCamera()} disabled={!cameraReady} aria-label="Alternar câmera" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-base transition hover:bg-white/10 disabled:opacity-40">
-            <FaSyncAlt />
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {points.length > 1 && (
+              <select
+                value={pointId || ""}
+                onChange={(event) => onPointChange?.(event.target.value)}
+                className="hidden max-w-[9rem] truncate rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-[11px] font-semibold text-white/80 outline-none sm:block"
+              >
+                {points.map((point) => <option key={point.id} value={point.id} className="text-black">{point.nome}</option>)}
+              </select>
+            )}
+            <button type="button" onClick={() => void switchCamera()} disabled={!cameraReady} aria-label="Alternar câmera" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-base transition hover:bg-white/10 disabled:opacity-40">
+              <FaSyncAlt />
+            </button>
+          </div>
         </div>
       </header>
 
       <section className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-3 sm:px-6 sm:py-4">
         <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col">
-          <div className="mb-3 rounded-xl border border-amber-400/60 bg-amber-500/10 px-4 py-2.5 text-center sm:mb-3">
-            <p className="text-sm font-bold sm:text-base">OLHE DIRETAMENTE PARA A CÂMERA</p>
-            <p className="mt-0.5 text-[11px] text-white/55 sm:text-xs">Mantenha o rosto centralizado dentro da moldura.</p>
+          <div className={`mb-3 rounded-xl border px-4 py-2.5 text-center transition-colors sm:mb-3 ${
+            panelTone === "success" ? "border-emerald-400/60 bg-emerald-500/10"
+            : panelTone === "warning" ? "border-amber-400/60 bg-amber-500/10"
+            : panelTone === "danger" ? "border-red-400/60 bg-red-500/10"
+            : "border-amber-400/60 bg-amber-500/10"
+          }`}>
+            <p className="text-sm font-bold tracking-wide sm:text-base">{bigMessage}</p>
+            {statusDetail && <p className="mt-0.5 text-[11px] text-white/70 sm:text-xs">{statusDetail}</p>}
+            {!statusDetail && phase === "aguardando" && <p className="mt-0.5 text-[11px] text-white/55 sm:text-xs">Mantenha o rosto centralizado dentro da moldura.</p>}
           </div>
 
           <div className="relative min-h-[56vh] flex-1 overflow-hidden rounded-2xl border-2 border-white/20 bg-black shadow-2xl sm:min-h-[60vh]">
@@ -338,9 +220,14 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
             {!cameraReady && (
               <div className="absolute inset-0 flex items-center justify-center px-8 text-center">
                 <div>
-                  <FaCamera className="mx-auto text-5xl text-white/30" />
-                  <p className="mt-4 text-lg font-bold">Preparando a câmera...</p>
-                  <p className="mt-1 text-sm text-white/50">Permita o acesso à câmera quando solicitado.</p>
+                  {cameraError ? <FaExclamationTriangle className="mx-auto text-5xl text-red-400/70" /> : <FaCamera className="mx-auto text-5xl text-white/30" />}
+                  <p className="mt-4 text-lg font-bold">{cameraError ? "Câmera indisponível" : "Preparando a câmera..."}</p>
+                  <p className="mt-1 text-sm text-white/50">{cameraError || "Permita o acesso à câmera quando solicitado."}</p>
+                  {cameraError && (
+                    <button type="button" onClick={() => window.location.reload()} className="mt-4 rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20">
+                      Tentar novamente
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -349,9 +236,20 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
               <>
                 <div className="pointer-events-none absolute inset-0 bg-black/10" />
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-5 sm:p-10">
-                  <div className={`relative h-[min(64vh,620px)] w-[min(72vw,380px)] max-w-[390px] rounded-[48%] border-[3px] transition-all duration-200 ${faceQuality.ready ? "border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(52,211,153,.55)]" : "border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,.34)]"}`}>
-                    <div className={`absolute left-1/2 top-4 z-20 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1.5 text-[10px] font-bold shadow-lg backdrop-blur-md sm:px-4 sm:py-2 sm:text-xs ${faceQuality.ready ? "bg-emerald-500 text-white" : "bg-black/65 text-white"}`}>
-                      {faceQuality.ready ? "✓ Rosto pronto" : "CENTRALIZE SEU ROSTO"}
+                  <div className={`relative h-[min(64vh,620px)] w-[min(72vw,380px)] max-w-[390px] rounded-[48%] border-[3px] transition-all duration-200 ${
+                    panelTone === "success" ? "border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(52,211,153,.55)]"
+                    : panelTone === "warning" ? "border-amber-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(251,191,36,.5)]"
+                    : panelTone === "danger" ? "border-red-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(248,113,113,.5)]"
+                    : faceQuality.ready ? "border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(52,211,153,.55)]" : "border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,.34)]"
+                  }`}>
+                    <div className={`absolute left-1/2 top-4 z-20 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1.5 text-[10px] font-bold shadow-lg backdrop-blur-md sm:px-4 sm:py-2 sm:text-xs ${
+                      panelTone === "success" ? "bg-emerald-500 text-white"
+                      : panelTone === "warning" ? "bg-amber-500 text-white"
+                      : panelTone === "danger" ? "bg-red-500 text-white"
+                      : faceQuality.ready ? "bg-emerald-500 text-white" : "bg-black/65 text-white"
+                    }`}>
+                      {isBusyPhase && <FaUserCheck className="mr-1 inline" />}
+                      {phase === "aguardando" ? (faceQuality.ready ? "✓ Rosto pronto" : "CENTRALIZE SEU ROSTO") : bigMessage}
                     </div>
                     <div className="absolute -left-[3px] -top-[3px] h-10 w-10 rounded-tl-[48%] border-l-4 border-t-4 border-white sm:h-14 sm:w-14" />
                     <div className="absolute -right-[3px] -top-[3px] h-10 w-10 rounded-tr-[48%] border-r-4 border-t-4 border-white sm:h-14 sm:w-14" />
@@ -382,59 +280,34 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent px-3 pb-3 pt-24 sm:px-5 sm:pb-5">
               {cameraError && <div className="mx-auto mb-2 max-w-xl rounded-xl bg-red-950/85 p-3 text-center text-xs text-red-200">{cameraError}</div>}
               {faceDetectionError && <div className="mx-auto mb-2 max-w-xl rounded-xl bg-amber-950/85 p-3 text-center text-xs text-amber-200">{faceDetectionError}</div>}
-              <div className={`mx-auto max-w-xl rounded-xl border px-3 py-2.5 text-center backdrop-blur-md ${faceQuality.ready ? "border-emerald-400/70 bg-emerald-950/70 text-emerald-100" : "border-white/10 bg-black/65 text-white/90"}`}>
-                <div className="flex items-center justify-center gap-2 text-xs font-bold sm:text-sm">
-                  {faceQuality.ready && <FaCheckCircle className="text-emerald-300" />}
-                  <span>{cameraReady ? faceDetectorReady ? faces.length === 0 ? "PROCURANDO ROSTO..." : faceQuality.message : "Carregando detecção facial..." : cameraStarting ? "Abrindo câmera..." : "Câmera desligada"}</span>
-                </div>
-              </div>
-              <div className="mt-2 text-center text-[10px] text-white/45 sm:text-xs">
-                A câmera permanece ativa enquanto esta tela estiver aberta.
-              </div>
-              {!studentName && (
-                <div className="mx-auto mt-3 max-w-xl rounded-xl border border-white/10 bg-black/70 p-3 backdrop-blur-md">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Próximo aluno</p>
-                  <input
-                    value={studentSearch}
-                    onChange={(event) => setStudentSearch(event.target.value)}
-                    placeholder="Buscar aluno..."
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/35 focus:border-emerald-400"
-                  />
-                  <div className="mt-2 max-h-32 space-y-1 overflow-y-auto">
-                    {students
-                      .filter((student) => !studentSearch.trim() || student.nome.toLocaleLowerCase("pt-BR").includes(studentSearch.trim().toLocaleLowerCase("pt-BR")))
-                      .slice(0, 5)
-                      .map((student) => (
-                        <button
-                          key={student.id}
-                          type="button"
-                          onClick={() => {
-                            setStudentSearch("");
-                            onSelectAttendance?.(student);
-                          }}
-                          className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-white/90 transition hover:bg-white/10"
-                        >
-                          <span className="truncate">{student.nome}</span>
-                          <span className="ml-3 shrink-0 text-[10px] text-white/40">{student.active ? "Saída" : "Entrada"}</span>
-                        </button>
-                      ))}
+
+              {phase === "confirmado" && confirmation ? (
+                <div className="mx-auto max-w-xl rounded-xl border border-emerald-400/70 bg-emerald-950/80 px-4 py-3 text-center backdrop-blur-md">
+                  <div className="flex items-center justify-center gap-2 text-sm font-bold sm:text-base">
+                    <FaCheckCircle className="text-emerald-300" />
+                    <span>FREQUÊNCIA REGISTRADA</span>
                   </div>
+                  <p className="mt-1 truncate text-sm font-semibold text-white">{confirmation.nome}</p>
+                  <p className="mt-0.5 text-[11px] text-emerald-200 sm:text-xs">
+                    {confirmation.tipo === "entrada" ? "Entrada" : "Saída"} registrada às {confirmation.horario}
+                  </p>
+                </div>
+              ) : (
+                <div className={`mx-auto max-w-xl rounded-xl border px-3 py-2.5 text-center backdrop-blur-md ${
+                  panelTone === "warning" ? "border-amber-400/70 bg-amber-950/70 text-amber-100"
+                  : panelTone === "danger" ? "border-red-400/70 bg-red-950/70 text-red-100"
+                  : "border-white/10 bg-black/65 text-white/90"
+                }`}>
+                  <div className="flex items-center justify-center gap-2 text-xs font-bold sm:text-sm">
+                    <span>{cameraReady ? (faceDetectorReady ? bigMessage : "Carregando detecção facial...") : cameraStarting ? "Abrindo câmera..." : "Câmera desligada"}</span>
+                  </div>
+                  {statusDetail && <p className="mt-1 text-[11px] font-semibold text-white/80">{statusDetail}</p>}
                 </div>
               )}
 
-              {studentName && (
-                <div className={`mx-auto mt-3 max-w-xl rounded-xl border px-4 py-3 text-center backdrop-blur-md ${attendanceConfirmed ? "border-emerald-400/70 bg-emerald-950/80" : "border-white/10 bg-white/5"}`}>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Aluno selecionado</p>
-                  <p className="mt-1 truncate text-sm font-bold text-white">{studentName}</p>
-                  <p className={`mt-0.5 text-[11px] font-semibold ${attendanceConfirmed ? "text-emerald-300" : "text-white/50"}`}>
-                    {attendanceConfirmed
-                      ? `✓ ${attendanceType === "entrada" ? "Entrada" : "Saída"} confirmada`
-                      : confirming
-                        ? "Registrando presença..."
-                        : attendanceType === "entrada" ? "Aguardando validação do rosto..." : "Aguardando validação do rosto..."}
-                  </p>
-                </div>
-              )}
+              <div className="mt-2 text-center text-[10px] text-white/45 sm:text-xs">
+                A câmera permanece ativa continuamente. Nenhuma imagem é armazenada.
+              </div>
             </div>
           </div>
         </div>
