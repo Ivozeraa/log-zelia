@@ -58,6 +58,7 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
   const [faceDetectionError, setFaceDetectionError] = useState("");
   const [faceQuality, setFaceQuality] = useState({ ready: false, message: "Olhe diretamente para a câmera." });
   const [faceDistance, setFaceDistance] = useState(0);
+  const [attendanceConfirmed, setAttendanceConfirmed] = useState(false);
   const stableFramesRef = useRef(0);
 
   const videoRef = useRef(null);
@@ -67,6 +68,7 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
   const lastDetectionRef = useRef(0);
   const cameraReadyRef = useRef(false);
   const detectionBusyRef = useRef(false);
+  const confirmationTriggeredRef = useRef(false);
 
   const stopFaceDetection = () => {
     if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
@@ -75,6 +77,8 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
     setFaceQuality({ ready: false, message: "Olhe diretamente para a câmera." });
     setFaceDistance(0);
     stableFramesRef.current = 0;
+    confirmationTriggeredRef.current = false;
+    setAttendanceConfirmed(false);
   };
 
   const stopCamera = () => {
@@ -204,6 +208,17 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
           else if (ready) message = "ROSTO PRONTO";
 
           setFaceQuality({ ready, message });
+
+          if (ready && studentName && onConfirm && !confirmationTriggeredRef.current) {
+            confirmationTriggeredRef.current = true;
+            const registered = await onConfirm();
+            if (registered) {
+              setAttendanceConfirmed(true);
+              window.setTimeout(() => onClose?.(), 1000);
+            } else {
+              confirmationTriggeredRef.current = false;
+            }
+          }
         }
 
         lastDetectionRef.current = performance.now();
@@ -379,11 +394,18 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
                   <p className="mt-0.5 text-[11px] text-white/50">{attendanceType === "entrada" ? "Confirmação de entrada" : "Confirmação de saída"}</p>
                 </div>
               )}
-              {studentName && faceQuality.ready && onConfirm && (
-                <button type="button" onClick={() => void onConfirm()} disabled={confirming} className="mx-auto mt-3 flex min-h-12 w-full max-w-xl items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-black text-white shadow-lg transition hover:bg-emerald-400 disabled:cursor-wait disabled:opacity-60">
-                  <FaCheckCircle />
-                  {confirming ? "Registrando..." : `Confirmar ${attendanceType === "entrada" ? "entrada" : "saída"}`}
-                </button>
+              {studentName && (
+                <div className={`mx-auto mt-3 max-w-xl rounded-xl border px-4 py-3 text-center backdrop-blur-md ${attendanceConfirmed ? "border-emerald-400/70 bg-emerald-950/80" : "border-white/10 bg-white/5"}`}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Aluno selecionado</p>
+                  <p className="mt-1 truncate text-sm font-bold text-white">{studentName}</p>
+                  <p className={`mt-0.5 text-[11px] font-semibold ${attendanceConfirmed ? "text-emerald-300" : "text-white/50"}`}>
+                    {attendanceConfirmed
+                      ? `✓ ${attendanceType === "entrada" ? "Entrada" : "Saída"} confirmada`
+                      : confirming
+                        ? "Registrando presença..."
+                        : attendanceType === "entrada" ? "Aguardando validação do rosto..." : "Aguardando validação do rosto..."}
+                  </p>
+                </div>
               )}
             </div>
           </div>
