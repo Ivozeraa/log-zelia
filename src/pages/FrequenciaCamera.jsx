@@ -67,7 +67,6 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
   const lastDetectionRef = useRef(0);
   const cameraReadyRef = useRef(false);
   const detectionBusyRef = useRef(false);
-  const readyRef = useRef(false);
 
   const stopFaceDetection = () => {
     if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
@@ -76,7 +75,6 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
     setFaceQuality({ ready: false, message: "Olhe diretamente para a câmera." });
     setFaceDistance(0);
     stableFramesRef.current = 0;
-    readyRef.current = false;
   };
 
   const stopCamera = () => {
@@ -206,7 +204,6 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
           else if (ready) message = "ROSTO PRONTO";
 
           setFaceQuality({ ready, message });
-          readyRef.current = ready;
         }
 
         lastDetectionRef.current = performance.now();
