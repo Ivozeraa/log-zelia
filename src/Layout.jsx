@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
@@ -22,6 +22,13 @@ function AppPageFallback() {
 function Layout() {
   const location = useLocation()
   const isHome = location.pathname === '/app' || location.pathname === '/app/'
+  const [cameraMode, setCameraMode] = useState(false)
+
+  useEffect(() => {
+    const handleCameraMode = (event) => setCameraMode(Boolean(event.detail?.active))
+    window.addEventListener('logzelia:frequencia-camera', handleCameraMode)
+    return () => window.removeEventListener('logzelia:frequencia-camera', handleCameraMode)
+  }, [])
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
@@ -30,17 +37,19 @@ function Layout() {
   }, [location.pathname])
 
   return (
-    <div className="min-h-screen overflow-x-hidden font-inter bg-neutral-100 dark:bg-gray-950">
-      <Header />
+    <div className={`min-h-screen overflow-x-hidden font-inter ${cameraMode ? 'bg-[#101419]' : 'bg-neutral-100 dark:bg-gray-950'}`}>
+      {!cameraMode && <Header />}
 
-      <div className="pt-16 flex min-h-screen">
-        <aside className="hidden md:block fixed top-16 left-0 w-64 h-[calc(100vh-4rem)] z-40">
-          <Sidebar />
-        </aside>
+      <div className={`${cameraMode ? 'min-h-screen' : 'pt-16 flex min-h-screen'}`}>
+        {!cameraMode && (
+          <aside className="hidden md:block fixed top-16 left-0 w-64 h-[calc(100vh-4rem)] z-40">
+            <Sidebar />
+          </aside>
+        )}
 
-        <main className="w-full min-w-0 md:ml-64 px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6 z-10 relative">
-          <div className="mx-auto w-full max-w-[1600px] min-w-0">
-            {isHome && <TeacherSchedule />}
+        <main className={`w-full min-w-0 z-10 relative ${cameraMode ? 'min-h-screen' : 'md:ml-64 px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6'}`}>
+          <div className={`w-full min-w-0 ${cameraMode ? 'min-h-screen' : 'mx-auto max-w-[1600px]'}`}>
+            {isHome && !cameraMode && <TeacherSchedule />}
             <Suspense fallback={<AppPageFallback />}>
               <Outlet />
             </Suspense>
