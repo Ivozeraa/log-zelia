@@ -83,7 +83,25 @@ export const FrequenciaPonto = () => {
     if (timestamp - lastDetectionRef.current >= 120) {
       try {
         const result = detector.detectForVideo(video, timestamp);
-        setFaces(result?.detections || []);
+        const detections = result?.detections || [];
+        setFaces(detections);
+        const videoWidth = video.videoWidth || 0;
+        const videoHeight = video.videoHeight || 0;
+        const face = detections.length === 1 ? detections[0] : null;
+        const box = face?.boundingBox;
+        const score = face?.categories?.[0]?.score ?? 0;
+        const centerX = box && videoWidth ? (box.originX + box.width / 2) / videoWidth : 0;
+        const centerY = box && videoHeight ? (box.originY + box.height / 2) / videoHeight : 0;
+        const area = box && videoWidth && videoHeight ? (box.width * box.height) / (videoWidth * videoHeight) : 0;
+        const ready = Boolean(face && score >= 0.65 && area >= 0.08 && area <= 0.65 && centerX >= 0.2 && centerX <= 0.8 && centerY >= 0.2 && centerY <= 0.8);
+        let message = "Aproxime o rosto da câmera.";
+        if (detections.length > 1) message = "Apenas uma pessoa deve estar diante da câmera.";
+        else if (detections.length === 1 && score < 0.65) message = "Mantenha o rosto visível e com boa iluminação.";
+        else if (detections.length === 1 && area < 0.08) message = "Aproxime-se um pouco da câmera.";
+        else if (detections.length === 1 && area > 0.65) message = "Afaste-se um pouco da câmera.";
+        else if (detections.length === 1 && (centerX < 0.2 || centerX > 0.8 || centerY < 0.2 || centerY > 0.8)) message = "Centralize o rosto no enquadramento.";
+        else if (ready) message = "Rosto bem enquadrado.";
+        setFaceQuality({ ready, message });
         lastDetectionRef.current = timestamp;
       } catch (detectionError) {
         console.error(detectionError);
