@@ -23,6 +23,7 @@ export const FrequenciaPonto = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [showCamera, setShowCamera] = useState(false);
+  const [pendingAttendance, setPendingAttendance] = useState(null);
   const load = async () => {
     if (!schoolId || !hasFeature("frequencia")) return;
     setLoading(true);
@@ -104,12 +105,28 @@ export const FrequenciaPonto = () => {
     if (rpcError) {
       notify.error(rpcError.message || "Não foi possível registrar o acesso.");
       setSavingId("");
-      return;
+      return false;
     }
 
     setAccess((current) => [...current, data]);
     notify.success(type === "entrada" ? `${student.nome} entrou.` : `${student.nome} saiu.`);
     setSavingId("");
+    return true;
+  };
+
+  const openCameraFor = (student, type) => {
+    setPendingAttendance({ student, type });
+    setShowCamera(true);
+  };
+
+  const confirmCameraAttendance = async () => {
+    if (!pendingAttendance || savingId) return;
+    const { student, type } = pendingAttendance;
+    const registered = await register(student, type);
+    if (registered) {
+      setPendingAttendance(null);
+      setShowCamera(false);
+    }
   };
 
   const totalStudents = students.length;
@@ -126,7 +143,18 @@ export const FrequenciaPonto = () => {
   if (featureLoading || !hasFeature("frequencia")) return null;
 
   if (showCamera) {
-    return <FrequenciaCamera onClose={() => setShowCamera(false)} />;
+    return (
+      <FrequenciaCamera
+        onClose={() => {
+          setShowCamera(false);
+          setPendingAttendance(null);
+        }}
+        studentName={pendingAttendance?.student?.nome}
+        attendanceType={pendingAttendance?.type}
+        onConfirm={pendingAttendance ? confirmCameraAttendance : undefined}
+        confirming={Boolean(pendingAttendance && savingId === pendingAttendance.student.id)}
+      />
+    );
   }
 
   return (
@@ -183,13 +211,23 @@ export const FrequenciaPonto = () => {
                 </div>
                 <div className="flex w-full shrink-0 gap-2 sm:w-auto">
                   {student.active ? (
-                    <button type="button" disabled={savingId === student.id} onClick={() => void register(student, "saida")} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-900 disabled:opacity-50 dark:bg-slate-700 sm:w-auto">
-                      <FaSignOutAlt /> Saída
-                    </button>
+                    <>
+                      <button type="button" disabled={savingId === student.id} onClick={() => void register(student, "saida")} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-900 disabled:opacity-50 dark:bg-slate-700 sm:w-auto sm:flex-none">
+                        <FaSignOutAlt /> Saída
+                      </button>
+                      <button type="button" disabled={savingId === student.id} onClick={() => openCameraFor(student, "saida")} aria-label={`Validar saída de ${student.nome} pela câmera`} className="flex min-h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+                        <FaCamera />
+                      </button>
+                    </>
                   ) : (
-                    <button type="button" disabled={savingId === student.id} onClick={() => void register(student, "entrada")} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 sm:w-auto">
-                      <FaSignInAlt /> Entrada
-                    </button>
+                    <>
+                      <button type="button" disabled={savingId === student.id} onClick={() => void register(student, "entrada")} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 sm:w-auto sm:flex-none">
+                        <FaSignInAlt /> Entrada
+                      </button>
+                      <button type="button" disabled={savingId === student.id} onClick={() => openCameraFor(student, "entrada")} aria-label={`Validar entrada de ${student.nome} pela câmera`} className="flex min-h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+                        <FaCamera />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -206,7 +244,7 @@ export const FrequenciaPonto = () => {
               <div className="min-w-0">
                 <h3 className="font-bold text-white">Câmera de presença</h3>
                 <p className="mt-1 text-sm leading-5 text-slate-400">
-                  Abra a câmera em uma tela exclusiva para posicionar o rosto dentro da moldura.
+                  Use a câmera para validar o enquadramento antes de confirmar o registro do aluno selecionado.
                 </p>
               </div>
             </div>
@@ -214,7 +252,7 @@ export const FrequenciaPonto = () => {
               <FaCamera /> Abrir câmera
             </button>
             <p className="mt-3 text-center text-[11px] text-slate-500">
-              A câmera faz apenas detecção e enquadramento do rosto nesta etapa.
+              A câmera não identifica o aluno: a seleção continua sendo feita manualmente.
             </p>
           </div>
 
