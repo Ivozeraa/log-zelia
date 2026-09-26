@@ -289,7 +289,7 @@ export const FrequenciaCamera = ({ onClose }) => {
                 <div className="pointer-events-none absolute inset-0 bg-black/10" />
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-5 sm:p-10">
                   <div className={`relative h-[min(64vh,620px)] w-[min(72vw,380px)] max-w-[390px] rounded-[48%] border-[3px] transition-all duration-200 ${faceQuality.ready ? "border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(52,211,153,.55)]" : "border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,.34)]"}`}>
-                    <div className={`absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold backdrop-blur-md ${faceQuality.ready ? "bg-emerald-500 text-white" : "bg-black/65 text-white"}`}>
+                    <div className={`absolute left-1/2 top-4 z-20 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1.5 text-[10px] font-bold shadow-lg backdrop-blur-md sm:px-4 sm:py-2 sm:text-xs ${faceQuality.ready ? "bg-emerald-500 text-white" : "bg-black/65 text-white"}`}>
                       {faceQuality.ready ? "✓ Rosto pronto" : "CENTRALIZE SEU ROSTO"}
                     </div>
                     <div className="absolute -left-[3px] -top-[3px] h-10 w-10 rounded-tl-[48%] border-l-4 border-t-4 border-white sm:h-14 sm:w-14" />
@@ -298,8 +298,8 @@ export const FrequenciaCamera = ({ onClose }) => {
                     <div className="absolute -bottom-[3px] -right-[3px] h-10 w-10 rounded-br-[48%] border-b-4 border-r-4 border-white sm:h-14 sm:w-14" />
 
                     {faces.map((face, index) => {
-                      const box = face.boundingBox;
-                      const confidence = face.categories?.[0]?.score ?? 0;
+                      const box = face.box;
+                      const confidence = face.boxScore ?? face.score ?? 0;
                       if (!box || !videoRef.current?.videoWidth || !videoRef.current?.videoHeight) return null;
                       return (
                         <div key={index} className={`pointer-events-none absolute rounded-2xl border-2 ${faceQuality.ready ? "border-emerald-300" : "border-amber-300"}`} style={{ left: `${((box.x ?? box.originX ?? 0) / videoRef.current.videoWidth) * 100}%`, top: `${((box.y ?? box.originY ?? 0) / videoRef.current.videoHeight) * 100}%`, width: `${((box.width ?? 0) / videoRef.current.videoWidth) * 100}%`, height: `${((box.height ?? 0) / videoRef.current.videoHeight) * 100}%` }}>
