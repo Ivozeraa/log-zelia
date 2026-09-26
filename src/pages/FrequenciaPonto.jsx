@@ -8,6 +8,9 @@ import { useSchoolFeatures } from "../hooks/useSchoolFeatures";
 import { notify } from "../utils/notify";
 
 const today = () => new Date().toISOString().slice(0, 10);
+const MEDIAPIPE_MODULE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs";
+const MEDIAPIPE_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
+const FACE_MODEL = "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite";
 
 export const FrequenciaPonto = () => {
   const { user } = useAuth();
@@ -24,14 +27,77 @@ export const FrequenciaPonto = () => {
   const [cameraError, setCameraError] = useState("");
   const [facingMode, setFacingMode] = useState("user");
   const [error, setError] = useState("");
+  const [faceDetectorReady, setFaceDetectorReady] = useState(false);
+  const [faceDetectionError, setFaceDetectionError] = useState("");
+  const [faces, setFaces] = useState([]);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const detectorRef = useRef(null);
+  const detectionFrameRef = useRef(null);
+  const lastDetectionRef = useRef(0);
+
+  const stopFaceDetection = () => {
+    if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
+    detectionFrameRef.current = null;
+    setFaces([]);
+  };
 
   const stopCamera = () => {
+    stopFaceDetection();
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     setCameraReady(false);
+    setFaceDetectorReady(false);
+  };
+
+  const initializeFaceDetector = async () => {
+    if (detectorRef.current) {
+      setFaceDetectorReady(true);
+      return true;
+    }
+    setFaceDetectionError("");
+    try {
+      const { FilesetResolver, FaceDetector } = await import(/* @vite-ignore */ MEDIAPIPE_MODULE);
+      const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM);
+      detectorRef.current = await FaceDetector.createFromOptions(vision, {
+        baseOptions: { modelAssetPath: FACE_MODEL, delegate: "CPU" },
+        runningMode: "VIDEO",
+        minDetectionConfidence: 0.5,
+        minSuppressionThreshold: 0.3,
+      });
+      setFaceDetectorReady(true);
+      return true;
+    } catch (detectorError) {
+      console.error(detectorError);
+      setFaceDetectionError("Não foi possível carregar o detector facial neste navegador.");
+      return false;
+    }
+  };
+
+  const runFaceDetection = (timestamp = performance.now()) => {
+    const video = videoRef.current;
+    const detector = detectorRef.current;
+    if (!video || !detector || !cameraReady || video.readyState < 2) return;
+
+    if (timestamp - lastDetectionRef.current >= 120) {
+      try {
+        const result = detector.detectForVideo(video, timestamp);
+        setFaces(result?.detections || []);
+        lastDetectionRef.current = timestamp;
+      } catch (detectionError) {
+        console.error(detectionError);
+        setFaceDetectionError("A detecção facial foi interrompida.");
+        return;
+      }
+    }
+    detectionFrameRef.current = requestAnimationFrame(runFaceDetection);
+  };
+
+  const startFaceDetection = async () => {
+    if (!await initializeFaceDetector()) return;
+    stopFaceDetection();
+    detectionFrameRef.current = requestAnimationFrame(runFaceDetection);
   };
 
   const startCamera = async () => {
@@ -54,6 +120,7 @@ export const FrequenciaPonto = () => {
         await videoRef.current.play();
       }
       setCameraReady(true);
+      window.setTimeout(() => void startFaceDetection(), 150);
     } catch (cameraErr) {
       console.error(cameraErr);
       setCameraError(
@@ -74,7 +141,11 @@ export const FrequenciaPonto = () => {
     void startCamera();
   }, [facingMode]);
 
-  useEffect(() => () => stopCamera(), []);
+  useEffect(() => () => {
+    stopCamera();
+    detectorRef.current?.close?.();
+    detectorRef.current = null;
+  }, []);
 
   const load = async () => {
     if (!schoolId || !hasFeature("frequencia")) return;
@@ -214,10 +285,35 @@ export const FrequenciaPonto = () => {
                   </div>
                 </div>
               )}
-              {cameraReady && <div className="pointer-events-none absolute inset-x-8 top-1/2 h-28 -translate-y-1/2 rounded-3xl border-2 border-white/60" />}
+              {cameraReady && faces.map((face, index) => {
+                const box = face.boundingBox;
+                const confidence = face.categories?.[0]?.score ?? 0;
+                if (!box || !videoRef.current?.videoWidth || !videoRef.current?.videoHeight) return null;
+                return (
+                  <div key={index} className="pointer-events-none absolute rounded-2xl border-2 border-green-400"
+                    style={{
+                      left: `${(box.originX / videoRef.current.videoWidth) * 100}%`,
+                      top: `${(box.originY / videoRef.current.videoHeight) * 100}%`,
+                      width: `${(box.width / videoRef.current.videoWidth) * 100}%`,
+                      height: `${(box.height / videoRef.current.videoHeight) * 100}%`,
+                    }}>
+                    <span className="absolute -top-7 left-0 rounded-md bg-green-500 px-2 py-1 text-[10px] font-bold text-white">
+                      Rosto ${Math.round(confidence * 100)}%
+                    </span>
+                  </div>
+                );
+              })}
             </div>
             <div className="space-y-2 p-4">
               {cameraError && <p className="rounded-lg bg-red-950/40 p-2 text-xs text-red-300">{cameraError}</p>}
+              {faceDetectionError && <p className="rounded-lg bg-amber-950/40 p-2 text-xs text-amber-300">{faceDetectionError}</p>}
+              <div className="rounded-lg bg-slate-900 px-3 py-2 text-xs text-slate-300">
+                {cameraReady
+                  ? faceDetectorReady
+                    ? faces.length === 0 ? "Câmera ativa · procurando rosto..." : `${faces.length} rosto(s) detectado(s) · reconhecimento ainda não executado`
+                    : "Câmera ativa · carregando detector facial..."
+                  : "Câmera desligada"}
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => void (cameraReady ? stopCamera() : startCamera())} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-600 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800">
                   {cameraReady ? <><FaStop /> Parar</> : <><FaCamera /> Iniciar</>}
