@@ -206,78 +206,97 @@ export const FrequenciaCamera = ({ onClose }) => {
   if (featureLoading || !hasFeature("frequencia")) return null;
 
   return (
-    <main className="fixed inset-0 z-[99999] flex h-[100dvh] min-h-0 w-screen flex-col overflow-hidden bg-black text-white">
-      <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between bg-gradient-to-b from-black/85 via-black/45 to-transparent px-3 pb-14 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6 sm:pt-5">
-        <button type="button" onClick={() => onClose?.()} className="flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-black/50 px-3 text-xs font-semibold backdrop-blur-md transition hover:bg-black/65 sm:px-4 sm:text-sm">
-          <FaArrowLeft /> Voltar
-        </button>
-        <div className="min-w-0 px-2 text-center">
-          <p className="truncate text-xs font-bold sm:text-sm">Ponto de frequência</p>
-          <p className="text-[10px] text-white/65 sm:text-[11px]">{facingMode === "user" ? "Câmera frontal" : "Câmera traseira"}</p>
-        </div>
-        <button type="button" onClick={() => void switchCamera()} disabled={!cameraReady} aria-label="Alternar câmera" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/50 text-base backdrop-blur-md transition hover:bg-black/65 disabled:opacity-40">
-          <FaSyncAlt />
-        </button>
-      </div>
-
-      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden pb-[env(safe-area-inset-bottom)]">
-        <video ref={videoRef} autoPlay muted playsInline webkit-playsinline="true" className={`h-full w-full object-cover object-center ${cameraReady ? "opacity-100" : "opacity-0"}`} />
-
-        {!cameraReady && (
-          <div className="absolute inset-0 flex items-center justify-center px-8 text-center">
-            <div>
-              <FaCamera className="mx-auto text-5xl text-white/35" />
-              <p className="mt-4 text-lg font-semibold">Preparando a câmera...</p>
-              <p className="mt-1 text-sm text-white/55">Permita o acesso à câmera quando solicitado.</p>
+    <main className="fixed inset-0 z-[99999] flex h-[100dvh] min-h-0 w-screen flex-col overflow-hidden bg-[#101419] text-white">
+      <header className="z-30 shrink-0 border-b border-white/10 bg-[#151a20]/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md sm:px-6">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
+          <button type="button" onClick={() => onClose?.()} className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 sm:px-4 sm:text-sm">
+            <FaArrowLeft /> Voltar
+          </button>
+          <div className="min-w-0 text-center">
+            <p className="truncate text-lg font-black tracking-tight sm:text-2xl">FREQUÊNCIA</p>
+            <div className="mt-0.5 flex items-center justify-center gap-2 text-[10px] font-semibold text-white/55 sm:text-xs">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.8)]" />
+              ONLINE <span>•</span> LEITOR DE PRESENÇA
             </div>
           </div>
-        )}
+          <button type="button" onClick={() => void switchCamera()} disabled={!cameraReady} aria-label="Alternar câmera" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-base transition hover:bg-white/10 disabled:opacity-40">
+            <FaSyncAlt />
+          </button>
+        </div>
+      </header>
 
-        {cameraReady && (
-          <>
-            <div className="pointer-events-none absolute inset-0 bg-black/25" />
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-5 pb-40 pt-24 sm:px-12 sm:pb-48 sm:pt-24">
-              <div className={`relative h-[min(54dvh,500px)] max-h-[500px] w-[min(72vw,330px)] max-w-[330px] rounded-[48%] border-[3px] shadow-[0_0_0_9999px_rgba(0,0,0,0.28)] transition-all duration-200 sm:h-[62vh] sm:w-[min(58vw,380px)] ${faceQuality.ready ? "border-green-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.22),0_0_28px_rgba(74,222,128,0.55)]" : "border-white/85"}`}>
-                <div className="absolute -top-11 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/60 px-3 py-2 text-[10px] font-semibold backdrop-blur-md sm:-top-14 sm:px-4 sm:text-xs">
-                  {faceQuality.ready ? "Rosto bem posicionado" : "Centralize seu rosto"}
+      <section className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-3 sm:px-6 sm:py-5">
+        <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col">
+          <div className="mb-3 rounded-xl border border-amber-400/70 bg-amber-500/10 px-4 py-3 text-center sm:mb-4">
+            <p className="text-sm font-bold sm:text-base">Olhe diretamente para a câmera</p>
+            <p className="mt-0.5 text-[11px] text-white/55 sm:text-xs">Posicione o rosto dentro da moldura para validar o enquadramento.</p>
+          </div>
+
+          <div className="relative min-h-[48vh] flex-1 overflow-hidden rounded-2xl border-2 border-white/20 bg-black shadow-2xl sm:min-h-[58vh]">
+            <video ref={videoRef} autoPlay muted playsInline webkit-playsinline="true" className={`absolute inset-0 h-full w-full object-cover object-center ${cameraReady ? "opacity-100" : "opacity-0"}`} />
+
+            {!cameraReady && (
+              <div className="absolute inset-0 flex items-center justify-center px-8 text-center">
+                <div>
+                  <FaCamera className="mx-auto text-5xl text-white/30" />
+                  <p className="mt-4 text-lg font-bold">Preparando a câmera...</p>
+                  <p className="mt-1 text-sm text-white/50">Permita o acesso à câmera quando solicitado.</p>
                 </div>
-                <div className="absolute -left-[3px] -top-[3px] h-9 w-9 sm:h-12 sm:w-12 rounded-tl-[48%] border-l-4 border-t-4 border-white" />
-                <div className="absolute -right-[3px] -top-[3px] h-9 w-9 sm:h-12 sm:w-12 rounded-tr-[48%] border-r-4 border-t-4 border-white" />
-                <div className="absolute -bottom-[3px] -left-[3px] h-9 w-9 sm:h-12 sm:w-12 rounded-bl-[48%] border-b-4 border-l-4 border-white" />
-                <div className="absolute -bottom-[3px] -right-[3px] h-9 w-9 sm:h-12 sm:w-12 rounded-br-[48%] border-b-4 border-r-4 border-white" />
+              </div>
+            )}
 
-                {faces.map((face, index) => {
-                  const box = face.boundingBox;
-                  const confidence = face.categories?.[0]?.score ?? 0;
-                  if (!box || !videoRef.current?.videoWidth || !videoRef.current?.videoHeight) return null;
-                  return (
-                    <div key={index} className={`pointer-events-none absolute rounded-2xl border-2 ${faceQuality.ready ? "border-green-300" : "border-amber-300"}`} style={{ left: `${(box.originX / videoRef.current.videoWidth) * 100}%`, top: `${(box.originY / videoRef.current.videoHeight) * 100}%`, width: `${(box.width / videoRef.current.videoWidth) * 100}%`, height: `${(box.height / videoRef.current.videoHeight) * 100}%` }}>
-                      <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/65 px-2 py-1 text-[10px] font-bold backdrop-blur">Rosto {Math.round(confidence * 100)}%</span>
+            {cameraReady && (
+              <>
+                <div className="pointer-events-none absolute inset-0 bg-black/10" />
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-5 sm:p-10">
+                  <div className={`relative h-[min(62vh,620px)] w-[min(76vw,390px)] max-w-[390px] rounded-[48%] border-[3px] transition-all duration-200 ${faceQuality.ready ? "border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(52,211,153,.55)]" : "border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,.34)]"}`}>
+                    <div className={`absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold backdrop-blur-md ${faceQuality.ready ? "bg-emerald-500 text-white" : "bg-black/65 text-white"}`}>
+                      {faceQuality.ready ? "✓ Rosto pronto" : "Centralize seu rosto"}
                     </div>
-                  );
-                })}
+                    <div className="absolute -left-[3px] -top-[3px] h-10 w-10 rounded-tl-[48%] border-l-4 border-t-4 border-white sm:h-14 sm:w-14" />
+                    <div className="absolute -right-[3px] -top-[3px] h-10 w-10 rounded-tr-[48%] border-r-4 border-t-4 border-white sm:h-14 sm:w-14" />
+                    <div className="absolute -bottom-[3px] -left-[3px] h-10 w-10 rounded-bl-[48%] border-b-4 border-l-4 border-white sm:h-14 sm:w-14" />
+                    <div className="absolute -bottom-[3px] -right-[3px] h-10 w-10 rounded-br-[48%] border-b-4 border-r-4 border-white sm:h-14 sm:w-14" />
+
+                    {faces.map((face, index) => {
+                      const box = face.boundingBox;
+                      const confidence = face.categories?.[0]?.score ?? 0;
+                      if (!box || !videoRef.current?.videoWidth || !videoRef.current?.videoHeight) return null;
+                      return (
+                        <div key={index} className={`pointer-events-none absolute rounded-2xl border-2 ${faceQuality.ready ? "border-emerald-300" : "border-amber-300"}`} style={{ left: `${(box.originX / videoRef.current.videoWidth) * 100}%`, top: `${(box.originY / videoRef.current.videoHeight) * 100}%`, width: `${(box.width / videoRef.current.videoWidth) * 100}%`, height: `${(box.height / videoRef.current.videoHeight) * 100}%` }}>
+                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/70 px-2 py-1 text-[10px] font-bold backdrop-blur">Rosto {Math.round(confidence * 100)}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="absolute left-3 top-3 rounded-xl border border-white/10 bg-black/55 px-3 py-2 backdrop-blur-md sm:left-5 sm:top-5">
+                  <p className="text-[9px] font-semibold uppercase tracking-wider text-white/50">Distância</p>
+                  <p className="text-xl font-black leading-none text-amber-300 sm:text-2xl">{faceDistance > 0 ? faceDistance.toFixed(2) : "--"}</p>
+                  <p className="mt-1 text-[9px] text-white/45">faixa de enquadramento</p>
+                </div>
+              </>
+            )}
+
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent px-3 pb-3 pt-24 sm:px-5 sm:pb-5">
+              {cameraError && <div className="mx-auto mb-2 max-w-xl rounded-xl bg-red-950/85 p-3 text-center text-xs text-red-200">{cameraError}</div>}
+              {faceDetectionError && <div className="mx-auto mb-2 max-w-xl rounded-xl bg-amber-950/85 p-3 text-center text-xs text-amber-200">{faceDetectionError}</div>}
+              <div className={`mx-auto max-w-xl rounded-xl border px-3 py-2.5 text-center backdrop-blur-md ${faceQuality.ready ? "border-emerald-400/70 bg-emerald-950/70 text-emerald-100" : "border-white/10 bg-black/65 text-white/90"}`}>
+                <div className="flex items-center justify-center gap-2 text-xs font-bold sm:text-sm">
+                  {faceQuality.ready && <FaCheckCircle className="text-emerald-300" />}
+                  <span>{cameraReady ? faceDetectorReady ? faces.length === 0 ? "Procurando rosto..." : faceQuality.message : "Carregando detecção facial..." : cameraStarting ? "Abrindo câmera..." : "Câmera desligada"}</span>
+                </div>
+              </div>
+              <div className="mt-2 flex justify-center">
+                <button type="button" onClick={() => void (cameraReady ? stopCamera() : startCamera())} disabled={cameraStarting} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 text-xs font-bold backdrop-blur-md transition hover:bg-white/15 disabled:opacity-50 sm:px-7 sm:text-sm">
+                  {cameraReady ? <><FaStop /> Parar câmera</> : <><FaCamera /> {cameraStarting ? "Abrindo..." : "Iniciar câmera"}</>}
+                </button>
               </div>
             </div>
-          </>
-        )}
-
-        <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/70 to-transparent px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-24 sm:px-8 sm:pb-7">
-          {cameraError && <div className="mx-auto mb-3 max-w-xl rounded-xl bg-red-950/80 p-3 text-center text-xs text-red-200">{cameraError}</div>}
-          {faceDetectionError && <div className="mx-auto mb-3 max-w-xl rounded-xl bg-amber-950/80 p-3 text-center text-xs text-amber-200">{faceDetectionError}</div>}
-          <div className={`mx-auto max-w-xl rounded-2xl border px-4 py-3 text-center backdrop-blur-md ${faceQuality.ready ? "border-green-400/60 bg-green-950/65 text-green-100" : "border-white/15 bg-black/55 text-white/85"}`}>
-            <div className="flex items-center justify-center gap-2 text-xs font-semibold sm:text-sm">
-              {faceQuality.ready && <FaCheckCircle className="text-green-300" />}
-              <span>{cameraReady ? faceDetectorReady ? faces.length === 0 ? "Nenhum rosto detectado" : faceQuality.message : "Carregando detecção facial..." : cameraStarting ? "Abrindo câmera..." : "Câmera desligada"}</span>
-            </div>
-            <p className="mt-1 text-[10px] leading-4 text-white/55 sm:text-[11px]">Posicione o rosto dentro da moldura e mantenha a cabeça centralizada.</p>
-          </div>
-          <div className="mx-auto mt-3 flex max-w-xl justify-center">
-            <button type="button" onClick={() => void (cameraReady ? stopCamera() : startCamera())} disabled={cameraStarting} className="flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/20 bg-black/60 px-5 text-xs font-semibold sm:min-h-12 sm:px-6 sm:text-sm backdrop-blur-md transition hover:bg-black/75 disabled:opacity-50">
-              {cameraReady ? <><FaStop /> Parar câmera</> : <><FaCamera /> {cameraStarting ? "Abrindo..." : "Iniciar câmera"}</>}
-            </button>
           </div>
         </div>
-      </div>
+      </section>
     </main>
   );
 };
