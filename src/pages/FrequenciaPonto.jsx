@@ -312,14 +312,20 @@ export const FrequenciaPonto = () => {
         <aside className="space-y-4">
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-sm dark:border-slate-700">
             <div className="relative aspect-video overflow-hidden bg-slate-900">
-              {cameraReady ? (
-                <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full items-center justify-center p-6 text-center">
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                webkit-playsinline="true"
+                className={cameraReady ? "h-full w-full object-cover" : "absolute h-full w-full object-cover opacity-0"}
+              />
+              {!cameraReady && (
+                <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
                   <div>
                     <FaCamera className="mx-auto text-4xl text-slate-500" />
                     <p className="mt-3 font-semibold text-white">Câmera de reconhecimento</p>
-                    <p className="mt-1 text-xs text-slate-400">A câmera será usada nesta etapa apenas para captura/preview.</p>
+                    <p className="mt-1 text-xs text-slate-400">Toque em iniciar para ativar a câmera.</p>
                   </div>
                 </div>
               )}
