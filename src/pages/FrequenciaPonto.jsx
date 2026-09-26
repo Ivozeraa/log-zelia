@@ -130,12 +130,12 @@ export const FrequenciaPonto = () => {
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
+    <main className="mx-auto w-full max-w-7xl overflow-x-hidden px-3 py-3 sm:px-6 sm:py-6">
       <PageTitle title="Ponto de frequência" subtitle="Registre entradas e saídas enquanto o reconhecimento facial é conectado." />
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_340px]">
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
-          <div className="flex flex-col gap-3 border-b border-slate-100 pb-5 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
+        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+          <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between sm:pb-5">
             <button type="button" onClick={() => void refreshAccess()} disabled={refreshing} className="flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
               <FaSyncAlt className={refreshing ? "animate-spin" : ""} /> Atualizar
             </button>
@@ -148,19 +148,19 @@ export const FrequenciaPonto = () => {
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
             <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><p className="text-xs text-slate-500">Alunos</p><p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{totalStudents}</p></div>
             <div className="rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-900/50 dark:bg-green-950/20"><p className="text-xs text-green-700 dark:text-green-300">Presentes</p><p className="mt-1 text-2xl font-black text-green-800 dark:text-green-200">{presentStudents}</p></div>
             <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><p className="text-xs text-slate-500">Saídas</p><p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{exitedStudents}</p></div>
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/50 dark:bg-blue-950/20"><p className="text-xs text-blue-700 dark:text-blue-300">Registrados</p><p className="mt-1 text-2xl font-black text-blue-800 dark:text-blue-200">{registeredStudents}</p></div>
           </div>
 
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:gap-3">
             <div className="relative flex-1">
               <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar aluno pelo nome..." className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-3 text-sm outline-none focus:border-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
             </div>
-            <select value={pointId} onChange={(event) => setPointId(event.target.value)} className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-white">
+            <select value={pointId} onChange={(event) => setPointId(event.target.value)} className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-white sm:w-auto sm:min-w-40">
               <option value="">Ponto padrão</option>
               {points.map((point) => <option key={point.id} value={point.id}>{point.nome}</option>)}
             </select>
@@ -168,7 +168,7 @@ export const FrequenciaPonto = () => {
 
           {error && <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">{error}</div>}
 
-          <div className="mt-5 space-y-2">
+          <div className="mt-4 space-y-2">
             {loading ? (
               <div className="py-10 text-center text-sm text-slate-500">Carregando alunos...</div>
             ) : visibleStudents.length === 0 ? (
@@ -181,13 +181,13 @@ export const FrequenciaPonto = () => {
                     {student.lastEvent ? `${student.lastEvent.tipo === "entrada" ? "Entrada" : "Saída"} às ${new Date(student.lastEvent.registrado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} · ${student.lastEvent.metodo}` : "Nenhum registro hoje"}
                   </p>
                 </div>
-                <div className="flex shrink-0 gap-2">
+                <div className="flex w-full shrink-0 gap-2 sm:w-auto">
                   {student.active ? (
-                    <button type="button" disabled={savingId === student.id} onClick={() => void register(student, "saida")} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-900 disabled:opacity-50 dark:bg-slate-700">
+                    <button type="button" disabled={savingId === student.id} onClick={() => void register(student, "saida")} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-900 disabled:opacity-50 dark:bg-slate-700 sm:w-auto">
                       <FaSignOutAlt /> Saída
                     </button>
                   ) : (
-                    <button type="button" disabled={savingId === student.id} onClick={() => void register(student, "entrada")} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">
+                    <button type="button" disabled={savingId === student.id} onClick={() => void register(student, "entrada")} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 sm:w-auto">
                       <FaSignInAlt /> Entrada
                     </button>
                   )}
