@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { FaArrowLeft, FaCamera, FaCheckCircle, FaSyncAlt } from "react-icons/fa";
+import Human from "@vladmandic/human";
 import { useSchoolFeatures } from "../hooks/useSchoolFeatures";
 
-const MEDIAPIPE_MODULE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs";
-const MEDIAPIPE_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
-const FACE_MODEL = "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite";
 
 export const FrequenciaCamera = ({ onClose }) => {
   const { hasFeature, loading: featureLoading } = useSchoolFeatures();
@@ -25,6 +23,7 @@ export const FrequenciaCamera = ({ onClose }) => {
   const detectionFrameRef = useRef(null);
   const lastDetectionRef = useRef(0);
   const cameraReadyRef = useRef(false);
+  const detectionBusyRef = useRef(false);
 
   const stopFaceDetection = () => {
     if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
@@ -50,45 +49,72 @@ export const FrequenciaCamera = ({ onClose }) => {
       setFaceDetectorReady(true);
       return true;
     }
+
     setFaceDetectionError("");
+
     try {
-      const { FilesetResolver, FaceDetector } = await import(/* @vite-ignore */ MEDIAPIPE_MODULE);
-      const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM);
-      detectorRef.current = await FaceDetector.createFromOptions(vision, {
-        baseOptions: { modelAssetPath: FACE_MODEL, delegate: "CPU" },
-        runningMode: "VIDEO",
-        minDetectionConfidence: 0.35,
-        minSuppressionThreshold: 0.3,
+      const human = new Human({
+        backend: "webgl",
+        modelBasePath: "https://vladmandic.github.io/human-models/models/",
+        filter: { enabled: true, equalization: false, flip: false },
+        face: {
+          enabled: true,
+          detector: {
+            rotation: false,
+            maxDetected: 5,
+            minConfidence: 0.35,
+            minSize: 80,
+            return: false,
+          },
+          mesh: { enabled: false },
+          attention: { enabled: false },
+          iris: { enabled: false },
+          description: { enabled: false },
+          emotion: { enabled: false },
+          antispoof: { enabled: false },
+          liveness: { enabled: false },
+        },
+        body: { enabled: false },
+        hand: { enabled: false },
+        object: { enabled: false },
+        gesture: { enabled: false },
+        segmentation: { enabled: false },
       });
+
+      await human.load();
+      await human.warmup();
+      detectorRef.current = human;
       setFaceDetectorReady(true);
       return true;
     } catch (detectorError) {
-      console.error(detectorError);
-      setFaceDetectionError("Não foi possível carregar a detecção facial neste navegador.");
+      console.error("Human initialization error:", detectorError);
+      setFaceDetectionError("Não foi possível carregar o motor facial neste navegador.");
       return false;
     }
   };
 
-  const runFaceDetection = (timestamp = performance.now()) => {
+  const runFaceDetection = async (timestamp = performance.now()) => {
     const video = videoRef.current;
-    const detector = detectorRef.current;
+    const human = detectorRef.current;
 
-    if (!video || !detector || !cameraReadyRef.current || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+    if (!video || !human || !cameraReadyRef.current || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
       detectionFrameRef.current = requestAnimationFrame(runFaceDetection);
       return;
     }
 
-    if (timestamp - lastDetectionRef.current >= 100) {
+    if (timestamp - lastDetectionRef.current >= 100 && !detectionBusyRef.current) {
+      detectionBusyRef.current = true;
+
       try {
-        const result = detector.detectForVideo(video, Math.round(timestamp));
-        const detections = result?.detections || [];
+        const result = await human.detect(video);
+        const detections = result?.face || [];
         setFaces(detections);
 
         const width = video.videoWidth;
         const height = video.videoHeight;
         const face = detections.length === 1 ? detections[0] : null;
-        const box = face?.boundingBox;
-        const score = face?.categories?.[0]?.score ?? 0;
+        const box = face?.box;
+        const score = face?.boxScore ?? face?.score ?? 0;
 
         if (!box || detections.length !== 1) {
           stableFramesRef.current = 0;
@@ -100,10 +126,14 @@ export const FrequenciaCamera = ({ onClose }) => {
               : "Olhe diretamente para a câmera.",
           });
         } else {
-          const centerX = (box.originX + box.width / 2) / width;
-          const centerY = (box.originY + box.height / 2) / height;
-          const area = (box.width * box.height) / (width * height);
-          const faceWidth = box.width / width;
+          const originX = Number(box.x ?? box.originX ?? 0);
+          const originY = Number(box.y ?? box.originY ?? 0);
+          const boxWidth = Number(box.width ?? 0);
+          const boxHeight = Number(box.height ?? 0);
+          const centerX = (originX + boxWidth / 2) / width;
+          const centerY = (originY + boxHeight / 2) / height;
+          const area = (boxWidth * boxHeight) / (width * height);
+          const faceWidth = boxWidth / width;
           const distance = Math.max(0, Math.min(1, 1 - ((faceWidth - 0.22) / 0.28)));
           setFaceDistance(distance);
 
@@ -130,11 +160,13 @@ export const FrequenciaCamera = ({ onClose }) => {
           setFaceQuality({ ready, message });
         }
 
-        lastDetectionRef.current = timestamp;
+        lastDetectionRef.current = performance.now();
       } catch (detectionError) {
-        console.error(detectionError);
+        console.error("Human detection error:", detectionError);
         setFaceDetectionError("A detecção facial foi interrompida.");
         stableFramesRef.current = 0;
+      } finally {
+        detectionBusyRef.current = false;
       }
     }
 
@@ -202,7 +234,7 @@ export const FrequenciaCamera = ({ onClose }) => {
 
   useEffect(() => () => {
     stopCamera();
-    detectorRef.current?.close?.();
+    detectorRef.current?.tf?.disposeVariables?.();
     detectorRef.current = null;
   }, []);
 
@@ -266,7 +298,7 @@ export const FrequenciaCamera = ({ onClose }) => {
                       const confidence = face.categories?.[0]?.score ?? 0;
                       if (!box || !videoRef.current?.videoWidth || !videoRef.current?.videoHeight) return null;
                       return (
-                        <div key={index} className={`pointer-events-none absolute rounded-2xl border-2 ${faceQuality.ready ? "border-emerald-300" : "border-amber-300"}`} style={{ left: `${(box.originX / videoRef.current.videoWidth) * 100}%`, top: `${(box.originY / videoRef.current.videoHeight) * 100}%`, width: `${(box.width / videoRef.current.videoWidth) * 100}%`, height: `${(box.height / videoRef.current.videoHeight) * 100}%` }}>
+                        <div key={index} className={`pointer-events-none absolute rounded-2xl border-2 ${faceQuality.ready ? "border-emerald-300" : "border-amber-300"}`} style={{ left: `${((box.x ?? box.originX ?? 0) / videoRef.current.videoWidth) * 100}%`, top: `${((box.y ?? box.originY ?? 0) / videoRef.current.videoHeight) * 100}%`, width: `${((box.width ?? 0) / videoRef.current.videoWidth) * 100}%`, height: `${((box.height ?? 0) / videoRef.current.videoHeight) * 100}%` }}>
                           <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/70 px-2 py-1 text-[10px] font-bold backdrop-blur">Rosto {Math.round(confidence * 100)}%</span>
                         </div>
                       );
