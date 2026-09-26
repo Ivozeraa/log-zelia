@@ -5,6 +5,10 @@ import { useSchoolFeatures } from "../hooks/useSchoolFeatures";
 
 
 export const FrequenciaCamera = ({ onClose }) => {
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("logzelia:frequencia-camera", { detail: { active: true } }));
+    return () => window.dispatchEvent(new CustomEvent("logzelia:frequencia-camera", { detail: { active: false } }));
+  }, []);
   const { hasFeature, loading: featureLoading } = useSchoolFeatures();
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraStarting, setCameraStarting] = useState(false);
