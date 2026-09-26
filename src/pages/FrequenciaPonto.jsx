@@ -25,7 +25,7 @@ export const FrequenciaPonto = () => {
   const [savingId, setSavingId] = useState("");
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState("");
-  const [cameraStarting, setCameraStarting] = useState(false);\n  const [cameraStarting, setCameraStarting] = useState(false);
+  const [cameraStarting, setCameraStarting] = useState(false);
   const [facingMode, setFacingMode] = useState("user");
   const [error, setError] = useState("");
   const [faceDetectorReady, setFaceDetectorReady] = useState(false);
