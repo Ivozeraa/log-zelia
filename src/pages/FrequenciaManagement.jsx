@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FaCamera, FaClock, FaDoorOpen, FaShieldAlt } from "react-icons/fa";
+import { FaCamera, FaClock, FaDoorOpen, FaEdit, FaPlus, FaShieldAlt, FaTrash, FaSave } from "react-icons/fa";
 import { PageTitle } from "../components/ui/PageTitle";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
@@ -21,6 +21,11 @@ export const FrequenciaManagement = () => {
   const [resourceId, setResourceId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [points, setPoints] = useState([]);
+  const [pointLoading, setPointLoading] = useState(false);
+  const [pointSaving, setPointSaving] = useState(false);
+  const [editingPointId, setEditingPointId] = useState("");
+  const [pointForm, setPointForm] = useState({ nome: "", local: "", device_id: "", ativo: true });
 
   const selectedSchool = useMemo(
     () => schools.find((item) => String(item.id) === String(schoolId)) || school,
@@ -37,7 +42,7 @@ export const FrequenciaManagement = () => {
 
     setLoading(true);
 
-    const [configRes, resourceRes] = await Promise.all([
+    const [configRes, resourceRes, pointsRes] = await Promise.all([
       supabase
         .from("frequencia_configuracoes")
         .select("id, habilitado, reconhecimento_facial_ativo, saida_padrao, permitir_saida_antecipada, permitir_reentrada")
@@ -48,10 +53,15 @@ export const FrequenciaManagement = () => {
         .select("id")
         .eq("chave", "frequencia")
         .maybeSingle(),
+      supabase
+        .from("pontos_verificacao")
+        .select("id, nome, local, device_id, ativo")
+        .eq("escola_id", schoolId)
+        .order("nome"),
     ]);
 
-    if (configRes.error || resourceRes.error) {
-      console.error(configRes.error || resourceRes.error);
+    if (configRes.error || resourceRes.error || pointsRes.error) {
+      console.error(configRes.error || resourceRes.error || pointsRes.error);
       notify.error("Não foi possível carregar as configurações de frequência.");
       setLoading(false);
       return;
@@ -62,6 +72,7 @@ export const FrequenciaManagement = () => {
       ...(configRes.data || {}),
     });
     setResourceId(resourceRes.data?.id || null);
+    setPoints(pointsRes.data || []);
     setLoading(false);
   };
 
@@ -79,6 +90,55 @@ export const FrequenciaManagement = () => {
       .eq("recurso_id", resourceId);
 
     if (error) throw error;
+  };
+
+  const resetPointForm = () => {
+    setEditingPointId("");
+    setPointForm({ nome: "", local: "", device_id: "", ativo: true });
+  };
+
+  const editPoint = (point) => {
+    setEditingPointId(point.id);
+    setPointForm({ nome: point.nome || "", local: point.local || "", device_id: point.device_id || "", ativo: Boolean(point.ativo) });
+  };
+
+  const savePoint = async () => {
+    if (!schoolId || !canManage || !pointForm.nome.trim()) {
+      notify.error("Informe o nome do ponto.");
+      return;
+    }
+    setPointSaving(true);
+    try {
+      const payload = { escola_id: schoolId, nome: pointForm.nome.trim(), local: pointForm.local.trim() || null, device_id: pointForm.device_id.trim() || null, ativo: Boolean(pointForm.ativo) };
+      const result = editingPointId
+        ? await supabase.from("pontos_verificacao").update(payload).eq("id", editingPointId).eq("escola_id", schoolId).select("id, nome, local, device_id, ativo").single()
+        : await supabase.from("pontos_verificacao").insert(payload).select("id, nome, local, device_id, ativo").single();
+      if (result.error) throw result.error;
+      await supabase.from("auditoria_frequencia").insert({ escola_id: schoolId, acao: editingPointId ? "alterar_ponto_verificacao" : "criar_ponto_verificacao", usuario_id: user?.id || null, detalhes: result.data });
+      setPoints((current) => editingPointId ? current.map((item) => item.id === editingPointId ? result.data : item) : [...current, result.data].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
+      resetPointForm();
+      notify.success(editingPointId ? "Ponto atualizado." : "Ponto criado.");
+    } catch (pointError) {
+      console.error(pointError);
+      notify.error(pointError.message || "Não foi possível salvar o ponto.");
+    } finally {
+      setPointSaving(false);
+    }
+  };
+
+  const togglePoint = async (point) => {
+    setPointLoading(true);
+    try {
+      const { data, error: pointError } = await supabase.from("pontos_verificacao").update({ ativo: !point.ativo }).eq("id", point.id).eq("escola_id", schoolId).select("id, nome, local, device_id, ativo").single();
+      if (pointError) throw pointError;
+      setPoints((current) => current.map((item) => item.id === point.id ? data : item));
+      notify.success(data.ativo ? "Ponto ativado." : "Ponto desativado.");
+    } catch (pointError) {
+      console.error(pointError);
+      notify.error(pointError.message || "Não foi possível alterar o ponto.");
+    } finally {
+      setPointLoading(false);
+    }
   };
 
   const save = async () => {
@@ -259,6 +319,33 @@ export const FrequenciaManagement = () => {
               >
                 {saving ? "Salvando..." : "Salvar configurações"}
               </button>
+            </div>
+          </section>
+
+          <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+            <div className="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
+              <div><p className="text-sm text-slate-500">Infraestrutura</p><h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">Pontos de verificação</h2><p className="mt-1 text-sm text-slate-500">Locais ou dispositivos onde a frequência será registrada.</p></div>
+              <button type="button" onClick={resetPointForm} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"><FaPlus /> Novo ponto</button>
+            </div>
+            <div className="mt-5 grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
+              <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                <p className="font-semibold text-slate-900 dark:text-white">{editingPointId ? "Editar ponto" : "Novo ponto"}</p>
+                <div className="mt-4 space-y-3">
+                  <input value={pointForm.nome} onChange={(e) => setPointForm((v) => ({ ...v, nome: e.target.value }))} placeholder="Nome do ponto *" className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
+                  <input value={pointForm.local} onChange={(e) => setPointForm((v) => ({ ...v, local: e.target.value }))} placeholder="Local (ex.: Entrada principal)" className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
+                  <input value={pointForm.device_id} onChange={(e) => setPointForm((v) => ({ ...v, device_id: e.target.value }))} placeholder="ID do dispositivo (opcional)" className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
+                  <label className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-200"><input type="checkbox" checked={pointForm.ativo} onChange={(e) => setPointForm((v) => ({ ...v, ativo: e.target.checked }))} className="h-4 w-4 accent-green-600" />Ponto ativo</label>
+                  <div className="flex gap-2"><button type="button" disabled={pointSaving} onClick={() => void savePoint()} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><FaSave /> {pointSaving ? "Salvando..." : "Salvar"}</button>{editingPointId && <button type="button" onClick={resetPointForm} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold dark:border-slate-600 dark:text-white">Cancelar</button>}</div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {points.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">Nenhum ponto cadastrado.</div> : points.map((point) => (
+                  <div key={point.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0"><div className="flex items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${point.ativo ? "bg-green-500" : "bg-slate-400"}`} /><p className="font-semibold text-slate-900 dark:text-white">{point.nome}</p></div><p className="mt-1 text-xs text-slate-500">{point.local || "Local não informado"}{point.device_id ? " · " + point.device_id : ""}</p></div>
+                    <div className="flex gap-2"><button type="button" onClick={() => editPoint(point)} className="flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 px-3 text-xs font-semibold dark:border-slate-600 dark:text-white"><FaEdit /> Editar</button><button type="button" disabled={pointLoading} onClick={() => void togglePoint(point)} className="flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 px-3 text-xs font-semibold dark:border-slate-600 dark:text-white disabled:opacity-50"><FaTrash /> {point.ativo ? "Desativar" : "Ativar"}</button></div>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
 
