@@ -24,6 +24,7 @@ export const FrequenciaPonto = () => {
   const [error, setError] = useState("");
   const [showCamera, setShowCamera] = useState(false);
   const [pendingAttendance, setPendingAttendance] = useState(null);
+  const [recentConfirmation, setRecentConfirmation] = useState(null);
   const load = async () => {
     if (!schoolId || !hasFeature("frequencia")) return;
     setLoading(true);
@@ -109,6 +110,7 @@ export const FrequenciaPonto = () => {
     }
 
     setAccess((current) => [...current, data]);
+    setRecentConfirmation({ studentName: student.nome, type, at: new Date().toISOString() });
     notify.success(type === "entrada" ? `${student.nome} entrou.` : `${student.nome} saiu.`);
     setSavingId("");
     return true;
@@ -140,6 +142,12 @@ export const FrequenciaPonto = () => {
   }).length;
   const registeredStudents = new Set(access.map((event) => event.aluno_id)).size;
 
+  useEffect(() => {
+    if (!recentConfirmation) return undefined;
+    const timer = window.setTimeout(() => setRecentConfirmation(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [recentConfirmation]);
+
   if (featureLoading || !hasFeature("frequencia")) return null;
 
   if (showCamera) {
@@ -160,6 +168,18 @@ export const FrequenciaPonto = () => {
   return (
     <main className="mx-auto w-full max-w-7xl overflow-x-hidden px-3 py-3 sm:px-6 sm:py-6">
       <PageTitle title="Ponto de frequência" subtitle="Selecione o aluno e use a câmera para validar o enquadramento antes de confirmar o registro." />
+
+      {recentConfirmation && (
+        <div className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-200">
+          <FaCheckCircle className="shrink-0 text-lg" />
+          <div className="min-w-0">
+            <p className="font-bold">Registro confirmado</p>
+            <p className="truncate text-sm">
+              {recentConfirmation.studentName} · {recentConfirmation.type === "entrada" ? "Entrada" : "Saída"} às {new Date(recentConfirmation.at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
         <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
