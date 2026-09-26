@@ -22,6 +22,7 @@ export const FrequenciaManagement = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [points, setPoints] = useState([]);
+  const [audits, setAudits] = useState([]);
   const [pointLoading, setPointLoading] = useState(false);
   const [pointSaving, setPointSaving] = useState(false);
   const [editingPointId, setEditingPointId] = useState("");
@@ -42,7 +43,7 @@ export const FrequenciaManagement = () => {
 
     setLoading(true);
 
-    const [configRes, resourceRes, pointsRes] = await Promise.all([
+    const [configRes, resourceRes, pointsRes, auditsRes] = await Promise.all([
       supabase
         .from("frequencia_configuracoes")
         .select("id, habilitado, reconhecimento_facial_ativo, saida_padrao, permitir_saida_antecipada, permitir_reentrada")
@@ -58,9 +59,15 @@ export const FrequenciaManagement = () => {
         .select("id, nome, local, device_id, ativo")
         .eq("escola_id", schoolId)
         .order("nome"),
+      supabase
+        .from("auditoria_frequencia")
+        .select("id, acao, usuario_id, detalhes, created_at")
+        .eq("escola_id", schoolId)
+        .order("created_at", { ascending: false })
+        .limit(20),
     ]);
 
-    if (configRes.error || resourceRes.error || pointsRes.error) {
+    if (configRes.error || resourceRes.error || pointsRes.error || auditsRes.error) {
       console.error(configRes.error || resourceRes.error || pointsRes.error);
       notify.error("Não foi possível carregar as configurações de frequência.");
       setLoading(false);
@@ -73,6 +80,7 @@ export const FrequenciaManagement = () => {
     });
     setResourceId(resourceRes.data?.id || null);
     setPoints(pointsRes.data || []);
+    setAudits(auditsRes.data || []);
     setLoading(false);
   };
 
@@ -350,6 +358,23 @@ export const FrequenciaManagement = () => {
           </section>
 
           <aside className="space-y-5">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <p className="text-sm text-slate-500">Auditoria</p>
+              <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">Últimas atividades</h2>
+              <div className="mt-4 space-y-2">
+                {audits.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500 dark:border-slate-700">Nenhuma atividade registrada.</p>
+                ) : audits.slice(0, 8).map((audit) => (
+                  <div key={audit.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="truncate text-xs font-bold text-slate-800 dark:text-slate-100">{String(audit.acao || "").replaceAll("_", " ")}</p>
+                      <time className="shrink-0 text-[10px] text-slate-400">{new Date(audit.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</time>
+                    </div>
+                    {audit.detalhes && <p className="mt-1 truncate text-[10px] text-slate-500">{audit.detalhes.aluno_id ? `Aluno: ${audit.detalhes.aluno_id}` : audit.detalhes.nome ? audit.detalhes.nome : ""}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="rounded-2xl border border-green-200 bg-green-50 p-5 dark:border-green-900/50 dark:bg-green-950/20">
               <p className="text-sm font-semibold text-green-800 dark:text-green-300">Regra atual</p>
               <p className="mt-2 text-3xl font-black text-green-900 dark:text-green-200">
