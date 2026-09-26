@@ -275,7 +275,7 @@ export const FrequenciaManagement = () => {
 
               <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
                 <span className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  <FaCamera /> Reconhecimento facial
+                  <FaCamera /> Validação por câmera
                 </span>
                 <label className="mt-4 flex items-start gap-3">
                   <input
@@ -286,7 +286,7 @@ export const FrequenciaManagement = () => {
                     className="mt-1 h-4 w-4 accent-green-600"
                   />
                   <span className="text-sm text-slate-600 dark:text-slate-300">
-                    Preparar o módulo para validação facial. O motor biométrico ainda será conectado na próxima etapa.
+                    Usar a câmera para validar presença e enquadramento do rosto. A câmera não identifica o aluno automaticamente.
                   </span>
                 </label>
               </div>
@@ -363,7 +363,7 @@ export const FrequenciaManagement = () => {
             <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
               <h3 className="font-bold text-slate-900 dark:text-white">Próxima etapa</h3>
               <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Conectar o ponto de verificação à câmera, cadastrar o template facial dos alunos e registrar os eventos de entrada/saída com prova de vida.
+                Conectar os pontos de verificação ao terminal de câmera e acompanhar os registros de entrada e saída. A identificação do aluno permanece manual.
               </p>
             </div>
           </aside>
