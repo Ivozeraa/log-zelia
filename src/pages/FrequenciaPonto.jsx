@@ -6,12 +6,11 @@ import { useAuth } from "../hooks/useAuth";
 import { useSchool } from "../hooks/useSchool";
 import { useSchoolFeatures } from "../hooks/useSchoolFeatures";
 import { notify } from "../utils/notify";
-import { useNavigate } from "react-router-dom";
+import { FrequenciaCamera } from "./FrequenciaCamera";
 
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Fortaleza" }).format(new Date());
 export const FrequenciaPonto = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const { schoolId } = useSchool();
   const { hasFeature, loading: featureLoading } = useSchoolFeatures();
   const [students, setStudents] = useState([]);
@@ -22,6 +21,8 @@ export const FrequenciaPonto = () => {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
+  const [showCamera, setShowCamera] = useState(false);
   const load = async () => {
     if (!schoolId || !hasFeature("frequencia")) return;
     setLoading(true);
@@ -124,6 +125,10 @@ export const FrequenciaPonto = () => {
 
   if (featureLoading || !hasFeature("frequencia")) return null;
 
+  if (showCamera) {
+    return <FrequenciaCamera onClose={() => setShowCamera(false)} />;
+  }
+
   return (
     <main className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
       <PageTitle title="Ponto de frequência" subtitle="Registre entradas e saídas enquanto o reconhecimento facial é conectado." />
@@ -205,7 +210,7 @@ export const FrequenciaPonto = () => {
                 </p>
               </div>
             </div>
-            <button type="button" onClick={() => navigate("/app/frequencia/camera")} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-green-700">
+            <button type="button" onClick={() => setShowCamera(true)} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-green-700">
               <FaCamera /> Abrir câmera
             </button>
             <p className="mt-3 text-center text-[11px] text-slate-500">
