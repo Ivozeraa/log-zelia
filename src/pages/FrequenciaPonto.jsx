@@ -161,6 +161,8 @@ export const FrequenciaPonto = () => {
         attendanceType={pendingAttendance?.type}
         onConfirm={pendingAttendance ? confirmCameraAttendance : undefined}
         confirming={Boolean(pendingAttendance && savingId === pendingAttendance.student.id)}
+        students={visibleStudents}
+        onSelectAttendance={(student) => setPendingAttendance({ student, type: student.active ? "saida" : "entrada" })}
       />
     );
   }
