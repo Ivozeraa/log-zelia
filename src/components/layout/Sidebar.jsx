@@ -58,6 +58,7 @@ export const Sidebar = ({ open, setOpen }) => {
               <So to="/app/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
               <So to="/app/gestao/senhas-alunos" icon={FaKey} text="Senhas dos alunos" onClick={handleClick} />
               <So to="/app/gestao/frequencia" icon={FaUserCheck} text="Configurar frequência" onClick={handleClick} />
+              <So to="/app/frequencia/ponto" icon={FaUserCheck} text="Ponto de frequência" onClick={handleClick} />
             </>
           )}
 
