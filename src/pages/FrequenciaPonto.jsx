@@ -24,7 +24,7 @@ export const FrequenciaPonto = () => {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
   const [cameraReady, setCameraReady] = useState(false);
-  const [cameraError, setCameraError] = useState("");
+  const [cameraError, setCameraError] = useState("");\n  const [cameraStarting, setCameraStarting] = useState(false);
   const [facingMode, setFacingMode] = useState("user");
   const [error, setError] = useState("");
   const [faceDetectorReady, setFaceDetectorReady] = useState(false);
@@ -335,8 +335,8 @@ export const FrequenciaPonto = () => {
                   : "Câmera desligada"}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => void (cameraReady ? stopCamera() : startCamera())} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-600 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800">
-                  {cameraReady ? <><FaStop /> Parar</> : <><FaCamera /> Iniciar</>}
+                <button type="button" onClick={() => void (cameraReady ? stopCamera() : startCamera())} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-600 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50" disabled={cameraStarting}>
+                  {cameraReady ? <><FaStop /> Parar</> : <><FaCamera /> {cameraStarting ? "Abrindo..." : "Iniciar"}</>}
                 </button>
                 <button type="button" onClick={() => void switchCamera()} disabled={!cameraReady} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-600 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-40">
                   <FaSyncAlt /> Alternar
