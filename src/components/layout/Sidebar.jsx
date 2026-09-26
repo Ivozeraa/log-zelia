@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { SidebarOptions as So } from '../ui/SidebarOptions'
-import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey, FaShieldAlt, FaHistory, FaTools, FaChevronDown } from 'react-icons/fa'
+import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey, FaShieldAlt, FaHistory, FaTools, FaChevronDown, FaUserCheck } from 'react-icons/fa'
 import { useAuth } from '../../hooks/useAuth'
 import { SectionTitle } from '../ui/SectionTitle'
 import { useSchoolFeatures } from '../../hooks/useSchoolFeatures'
@@ -23,6 +23,7 @@ export const Sidebar = ({ open, setOpen }) => {
   const { hasFeature, loading: featuresLoading } = useSchoolFeatures()
   const canSeeOccurrences = featuresLoading || hasFeature('ocorrencias')
   const canSeeHorarios = featuresLoading || hasFeature('horarios')
+  const canSeeFrequencia = featuresLoading || hasFeature('frequencia')
 
   return (
     <>
@@ -46,6 +47,7 @@ export const Sidebar = ({ open, setOpen }) => {
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 space-y-2">
           <So to="/app" end icon={FaHome} text="Início" onClick={handleClick} />
           {canSeeOccurrences && <So to="/app/advertencias" icon={FaExclamationCircle} text="Advertências" onClick={handleClick} />}
+          {canSeeFrequencia && <So to="/app/frequencia" icon={FaUserCheck} text="Frequência" onClick={handleClick} />}
 
           {canSeeSchedules && canSeeHorarios && (
             <So to="/app/horarios" icon={FaCalendarAlt} text="Horários" onClick={handleClick} />
@@ -55,6 +57,7 @@ export const Sidebar = ({ open, setOpen }) => {
             <>
               <So to="/app/gestao" icon={FaPaste} text="Gestão" onClick={handleClick} />
               <So to="/app/gestao/senhas-alunos" icon={FaKey} text="Senhas dos alunos" onClick={handleClick} />
+              <So to="/app/gestao/frequencia" icon={FaUserCheck} text="Configurar frequência" onClick={handleClick} />
             </>
           )}
 
