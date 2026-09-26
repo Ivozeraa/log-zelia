@@ -9,7 +9,7 @@ const formatTime = (value) =>
     ? new Date(value).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
     : "—";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Fortaleza" }).format(new Date());
 
 export const Frequencia = () => {
   const { hasFeature, loading: featureLoading } = useSchoolFeatures();
@@ -19,6 +19,7 @@ export const Frequencia = () => {
   const [selectedTurma, setSelectedTurma] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (featureLoading || !hasFeature("frequencia")) return;
@@ -52,6 +53,22 @@ export const Frequencia = () => {
     void load();
   }, [date, featureLoading, hasFeature]);
 
+  const reload = async () => {
+    if (featureLoading || !hasFeature("frequencia")) return;
+    setRefreshing(true);
+    setError("");
+    const { data, error: queryError } = await supabase.rpc("get_frequencia_professor", { p_data: date });
+    if (queryError) {
+      console.error(queryError);
+      setError("Não foi possível atualizar a frequência.");
+    } else {
+      const nextRows = data || [];
+      setRows(nextRows);
+      setTurmas([...new Map(nextRows.map((row) => [row.turma_id, { id: row.turma_id, nome: row.turma_nome }])).values()].sort((a, b) => a.nome.localeCompare(b.nome)));
+    }
+    setRefreshing(false);
+  };
+
   const visibleRows = useMemo(
     () => selectedTurma ? rows.filter((row) => row.turma_id === selectedTurma) : rows,
     [rows, selectedTurma],
@@ -74,7 +91,8 @@ export const Frequencia = () => {
     <main className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
       <PageTitle title="Frequência" subtitle="Acompanhe os registros de entrada e saída das suas turmas." />
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex-1 grid gap-3 sm:grid-cols-2">
         <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           Data
           <input
@@ -96,6 +114,10 @@ export const Frequencia = () => {
             {turmas.map((turma) => <option key={turma.id} value={turma.id}>{turma.nome}</option>)}
           </select>
         </label>
+        </div>
+        <button type="button" onClick={() => void reload()} disabled={refreshing} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
+          {refreshing ? "Atualizando..." : "Atualizar"}
+        </button>
       </div>
 
       <section className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
