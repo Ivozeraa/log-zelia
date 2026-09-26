@@ -4,6 +4,45 @@ import Human from "@vladmandic/human";
 import { useSchoolFeatures } from "../hooks/useSchoolFeatures";
 
 
+const getFaceBox = (face) => {
+  const box = face?.box;
+  if (Array.isArray(box)) {
+    return {
+      x: Number(box[0] ?? 0),
+      y: Number(box[1] ?? 0),
+      width: Number(box[2] ?? 0),
+      height: Number(box[3] ?? 0),
+    };
+  }
+
+  return {
+    x: Number(box?.x ?? box?.originX ?? 0),
+    y: Number(box?.y ?? box?.originY ?? 0),
+    width: Number(box?.width ?? 0),
+    height: Number(box?.height ?? 0),
+  };
+};
+
+const getNormalizedFaceBox = (face, videoWidth, videoHeight) => {
+  const raw = face?.boxRaw;
+  if (Array.isArray(raw)) {
+    return {
+      x: Math.max(0, Math.min(1, Number(raw[0] ?? 0))),
+      y: Math.max(0, Math.min(1, Number(raw[1] ?? 0))),
+      width: Math.max(0, Math.min(1, Number(raw[2] ?? 0))),
+      height: Math.max(0, Math.min(1, Number(raw[3] ?? 0))),
+    };
+  }
+
+  const box = getFaceBox(face);
+  return {
+    x: box.x / videoWidth,
+    y: box.y / videoHeight,
+    width: box.width / videoWidth,
+    height: box.height / videoHeight,
+  };
+};
+
 export const FrequenciaCamera = ({ onClose }) => {
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("logzelia:frequencia-camera", { detail: { active: true } }));
@@ -130,19 +169,17 @@ export const FrequenciaCamera = ({ onClose }) => {
               : "Olhe diretamente para a câmera.",
           });
         } else {
-          const originX = Number(box.x ?? box.originX ?? 0);
-          const originY = Number(box.y ?? box.originY ?? 0);
-          const boxWidth = Number(box.width ?? 0);
-          const boxHeight = Number(box.height ?? 0);
-          const centerX = (originX + boxWidth / 2) / width;
-          const centerY = (originY + boxHeight / 2) / height;
-          const area = (boxWidth * boxHeight) / (width * height);
-          const faceWidth = boxWidth / width;
-          const distance = Math.max(0, Math.min(1, 1 - ((faceWidth - 0.22) / 0.28)));
+          const normalizedBox = getNormalizedFaceBox(face, width, height);
+          const centerX = normalizedBox.x + normalizedBox.width / 2;
+          const centerY = normalizedBox.y + normalizedBox.height / 2;
+          const area = normalizedBox.width * normalizedBox.height;
+          const faceWidth = normalizedBox.width;
+          const faceHeight = normalizedBox.height;
+          const distance = Math.max(0, Math.min(1, (faceHeight - 0.20) / 0.55));
           setFaceDistance(distance);
 
-          const centered = centerX >= 0.30 && centerX <= 0.70 && centerY >= 0.27 && centerY <= 0.73;
-          const goodSize = area >= 0.055 && area <= 0.42 && faceWidth >= 0.18 && faceWidth <= 0.70;
+          const centered = centerX >= 0.25 && centerX <= 0.75 && centerY >= 0.20 && centerY <= 0.80;
+          const goodSize = faceHeight >= 0.20 && faceHeight <= 0.85 && faceWidth >= 0.10 && faceWidth <= 0.75;
           const goodConfidence = score >= 0.40;
           const readyNow = centered && goodSize && goodConfidence;
 
@@ -153,8 +190,8 @@ export const FrequenciaCamera = ({ onClose }) => {
           let message = "Rosto detectado.";
 
           if (!goodConfidence) message = "Melhore a iluminação e olhe para a câmera.";
-          else if (faceWidth < 0.18 || area < 0.055) message = "Aproxime-se um pouco da câmera.";
-          else if (faceWidth > 0.70 || area > 0.42) message = "Afaste-se um pouco da câmera.";
+          else if (faceHeight < 0.20 || area < 0.025) message = "Aproxime-se um pouco da câmera.";
+          else if (faceHeight > 0.85 || area > 0.60) message = "Afaste-se um pouco da câmera.";
           else if (centerX < 0.30) message = "Mova o rosto para a direita.";
           else if (centerX > 0.70) message = "Mova o rosto para a esquerda.";
           else if (centerY < 0.27) message = "Mova o rosto um pouco para baixo.";
@@ -298,11 +335,11 @@ export const FrequenciaCamera = ({ onClose }) => {
                     <div className="absolute -bottom-[3px] -right-[3px] h-10 w-10 rounded-br-[48%] border-b-4 border-r-4 border-white sm:h-14 sm:w-14" />
 
                     {faces.map((face, index) => {
-                      const box = face.box;
                       const confidence = face.boxScore ?? face.score ?? 0;
-                      if (!box || !videoRef.current?.videoWidth || !videoRef.current?.videoHeight) return null;
+                      if (!face.box || !videoRef.current?.videoWidth || !videoRef.current?.videoHeight) return null;
+                      const normalizedBox = getNormalizedFaceBox(face, videoRef.current.videoWidth, videoRef.current.videoHeight);
                       return (
-                        <div key={index} className={`pointer-events-none absolute rounded-2xl border-2 ${faceQuality.ready ? "border-emerald-300" : "border-amber-300"}`} style={{ left: `${((box.x ?? box.originX ?? 0) / videoRef.current.videoWidth) * 100}%`, top: `${((box.y ?? box.originY ?? 0) / videoRef.current.videoHeight) * 100}%`, width: `${((box.width ?? 0) / videoRef.current.videoWidth) * 100}%`, height: `${((box.height ?? 0) / videoRef.current.videoHeight) * 100}%` }}>
+                        <div key={index} className={`pointer-events-none absolute rounded-2xl border-2 ${faceQuality.ready ? "border-emerald-300" : "border-amber-300"}`} style={{ left: `${normalizedBox.x * 100}%`, top: `${normalizedBox.y * 100}%`, width: `${normalizedBox.width * 100}%`, height: `${normalizedBox.height * 100}%` }}>
                           <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/70 px-2 py-1 text-[10px] font-bold backdrop-blur">Rosto {Math.round(confidence * 100)}%</span>
                         </div>
                       );
