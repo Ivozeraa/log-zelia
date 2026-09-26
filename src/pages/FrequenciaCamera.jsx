@@ -195,22 +195,22 @@ export const FrequenciaCamera = ({ onClose }) => {
   if (featureLoading || !hasFeature("frequencia")) return null;
 
   return (
-    <main className="fixed inset-0 z-[1100] flex min-h-screen flex-col bg-black text-white">
-      <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent px-4 pb-12 pt-5 sm:px-6">
-        <button type="button" onClick={() => onClose?.()} className="flex min-h-11 items-center gap-2 rounded-full bg-black/45 px-4 text-sm font-semibold backdrop-blur-md transition hover:bg-black/65">
+    <main className="fixed inset-0 z-[1100] flex h-[100dvh] min-h-0 w-screen flex-col overflow-hidden bg-black text-white">
+      <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between bg-gradient-to-b from-black/85 via-black/45 to-transparent px-3 pb-14 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6 sm:pt-5">
+        <button type="button" onClick={() => onClose?.()} className="flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-black/50 px-3 text-xs font-semibold backdrop-blur-md transition hover:bg-black/65 sm:px-4 sm:text-sm">
           <FaArrowLeft /> Voltar
         </button>
-        <div className="text-center">
-          <p className="text-sm font-bold">Ponto de frequência</p>
-          <p className="text-[11px] text-white/70">{facingMode === "user" ? "Câmera frontal" : "Câmera traseira"}</p>
+        <div className="min-w-0 px-2 text-center">
+          <p className="truncate text-xs font-bold sm:text-sm">Ponto de frequência</p>
+          <p className="text-[10px] text-white/65 sm:text-[11px]">{facingMode === "user" ? "Câmera frontal" : "Câmera traseira"}</p>
         </div>
-        <button type="button" onClick={() => void switchCamera()} disabled={!cameraReady} aria-label="Alternar câmera" className="flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-base backdrop-blur-md transition hover:bg-black/65 disabled:opacity-40">
+        <button type="button" onClick={() => void switchCamera()} disabled={!cameraReady} aria-label="Alternar câmera" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/50 text-base backdrop-blur-md transition hover:bg-black/65 disabled:opacity-40">
           <FaSyncAlt />
         </button>
       </div>
 
-      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-        <video ref={videoRef} autoPlay muted playsInline webkit-playsinline="true" className={`h-full w-full object-cover ${cameraReady ? "opacity-100" : "opacity-0"}`} />
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden pb-[env(safe-area-inset-bottom)]">
+        <video ref={videoRef} autoPlay muted playsInline webkit-playsinline="true" className={`h-full w-full object-cover object-center ${cameraReady ? "opacity-100" : "opacity-0"}`} />
 
         {!cameraReady && (
           <div className="absolute inset-0 flex items-center justify-center px-8 text-center">
@@ -225,15 +225,15 @@ export const FrequenciaCamera = ({ onClose }) => {
         {cameraReady && (
           <>
             <div className="pointer-events-none absolute inset-0 bg-black/25" />
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-8 py-20 sm:px-12">
-              <div className={`relative h-[62vh] max-h-[620px] w-[min(78vw,360px)] max-w-[360px] rounded-[48%] border-[3px] shadow-[0_0_0_9999px_rgba(0,0,0,0.28)] transition-all duration-200 sm:w-[min(58vw,380px)] ${faceQuality.ready ? "border-green-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.22),0_0_28px_rgba(74,222,128,0.55)]" : "border-white/85"}`}>
-                <div className="absolute -top-14 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/55 px-4 py-2 text-xs font-semibold backdrop-blur-md">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-5 pb-40 pt-24 sm:px-12 sm:pb-48 sm:pt-24">
+              <div className={`relative h-[min(54dvh,500px)] max-h-[500px] w-[min(72vw,330px)] max-w-[330px] rounded-[48%] border-[3px] shadow-[0_0_0_9999px_rgba(0,0,0,0.28)] transition-all duration-200 sm:h-[62vh] sm:w-[min(58vw,380px)] ${faceQuality.ready ? "border-green-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.22),0_0_28px_rgba(74,222,128,0.55)]" : "border-white/85"}`}>
+                <div className="absolute -top-11 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/60 px-3 py-2 text-[10px] font-semibold backdrop-blur-md sm:-top-14 sm:px-4 sm:text-xs">
                   {faceQuality.ready ? "Rosto bem posicionado" : "Centralize seu rosto"}
                 </div>
-                <div className="absolute -left-[3px] -top-[3px] h-12 w-12 rounded-tl-[48%] border-l-4 border-t-4 border-white" />
-                <div className="absolute -right-[3px] -top-[3px] h-12 w-12 rounded-tr-[48%] border-r-4 border-t-4 border-white" />
-                <div className="absolute -bottom-[3px] -left-[3px] h-12 w-12 rounded-bl-[48%] border-b-4 border-l-4 border-white" />
-                <div className="absolute -bottom-[3px] -right-[3px] h-12 w-12 rounded-br-[48%] border-b-4 border-r-4 border-white" />
+                <div className="absolute -left-[3px] -top-[3px] h-9 w-9 sm:h-12 sm:w-12 rounded-tl-[48%] border-l-4 border-t-4 border-white" />
+                <div className="absolute -right-[3px] -top-[3px] h-9 w-9 sm:h-12 sm:w-12 rounded-tr-[48%] border-r-4 border-t-4 border-white" />
+                <div className="absolute -bottom-[3px] -left-[3px] h-9 w-9 sm:h-12 sm:w-12 rounded-bl-[48%] border-b-4 border-l-4 border-white" />
+                <div className="absolute -bottom-[3px] -right-[3px] h-9 w-9 sm:h-12 sm:w-12 rounded-br-[48%] border-b-4 border-r-4 border-white" />
 
                 {faces.map((face, index) => {
                   const box = face.boundingBox;
@@ -250,18 +250,18 @@ export const FrequenciaCamera = ({ onClose }) => {
           </>
         )}
 
-        <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-5 pb-7 pt-24 sm:px-8">
+        <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/70 to-transparent px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-24 sm:px-8 sm:pb-7">
           {cameraError && <div className="mx-auto mb-3 max-w-xl rounded-xl bg-red-950/80 p-3 text-center text-xs text-red-200">{cameraError}</div>}
           {faceDetectionError && <div className="mx-auto mb-3 max-w-xl rounded-xl bg-amber-950/80 p-3 text-center text-xs text-amber-200">{faceDetectionError}</div>}
           <div className={`mx-auto max-w-xl rounded-2xl border px-4 py-3 text-center backdrop-blur-md ${faceQuality.ready ? "border-green-400/60 bg-green-950/65 text-green-100" : "border-white/15 bg-black/55 text-white/85"}`}>
-            <div className="flex items-center justify-center gap-2 text-sm font-semibold">
+            <div className="flex items-center justify-center gap-2 text-xs font-semibold sm:text-sm">
               {faceQuality.ready && <FaCheckCircle className="text-green-300" />}
               <span>{cameraReady ? faceDetectorReady ? faces.length === 0 ? "Nenhum rosto detectado" : faceQuality.message : "Carregando detecção facial..." : cameraStarting ? "Abrindo câmera..." : "Câmera desligada"}</span>
             </div>
-            <p className="mt-1 text-[11px] text-white/55">Posicione o rosto dentro da moldura e mantenha a cabeça centralizada.</p>
+            <p className="mt-1 text-[10px] leading-4 text-white/55 sm:text-[11px]">Posicione o rosto dentro da moldura e mantenha a cabeça centralizada.</p>
           </div>
           <div className="mx-auto mt-3 flex max-w-xl justify-center">
-            <button type="button" onClick={() => void (cameraReady ? stopCamera() : startCamera())} disabled={cameraStarting} className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/20 bg-black/60 px-6 text-sm font-semibold backdrop-blur-md transition hover:bg-black/75 disabled:opacity-50">
+            <button type="button" onClick={() => void (cameraReady ? stopCamera() : startCamera())} disabled={cameraStarting} className="flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/20 bg-black/60 px-5 text-xs font-semibold sm:min-h-12 sm:px-6 sm:text-sm backdrop-blur-md transition hover:bg-black/75 disabled:opacity-50">
               {cameraReady ? <><FaStop /> Parar câmera</> : <><FaCamera /> {cameraStarting ? "Abrindo..." : "Iniciar câmera"}</>}
             </button>
           </div>
