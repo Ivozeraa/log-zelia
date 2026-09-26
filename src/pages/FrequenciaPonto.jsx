@@ -24,7 +24,8 @@ export const FrequenciaPonto = () => {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
   const [cameraReady, setCameraReady] = useState(false);
-  const [cameraError, setCameraError] = useState("");\n  const [cameraStarting, setCameraStarting] = useState(false);
+  const [cameraError, setCameraError] = useState("");
+  const [cameraStarting, setCameraStarting] = useState(false);\n  const [cameraStarting, setCameraStarting] = useState(false);
   const [facingMode, setFacingMode] = useState("user");
   const [error, setError] = useState("");
   const [faceDetectorReady, setFaceDetectorReady] = useState(false);
@@ -122,8 +123,11 @@ export const FrequenciaPonto = () => {
 
   const startCamera = async () => {
     setCameraError("");
+    setCameraStarting(true);
+
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError("Este navegador ou dispositivo não disponibiliza acesso à câmera.");
+      setCameraStarting(false);
       return;
     }
 
@@ -134,15 +138,30 @@ export const FrequenciaPonto = () => {
         audio: false,
         video: { facingMode },
       });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+
+      const video = videoRef.current;
+      if (!video) {
+        stream.getTracks().forEach((track) => track.stop());
+        throw new Error("VIDEO_ELEMENT_NOT_READY");
       }
+
+      streamRef.current = stream;
+      video.srcObject = stream;
+      video.muted = true;
+      video.setAttribute("playsinline", "true");
+
+      await new Promise((resolve) => {
+        if (video.readyState >= 1) resolve();
+        else video.onloadedmetadata = () => resolve();
+      });
+
+      await video.play();
       setCameraReady(true);
+      setCameraStarting(false);
       window.setTimeout(() => void startFaceDetection(), 150);
     } catch (cameraErr) {
       console.error(cameraErr);
+      setCameraStarting(false);
       setCameraError(
         cameraErr?.name === "NotAllowedError"
           ? "Permissão da câmera negada. Libere o acesso à câmera nas configurações do navegador."
@@ -151,7 +170,6 @@ export const FrequenciaPonto = () => {
       setCameraReady(false);
     }
   };
-
   const switchCamera = async () => {
     setFacingMode((current) => (current === "user" ? "environment" : "user"));
   };
