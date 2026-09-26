@@ -159,7 +159,7 @@ export const FrequenciaPonto = () => {
 
   return (
     <main className="mx-auto w-full max-w-7xl overflow-x-hidden px-3 py-3 sm:px-6 sm:py-6">
-      <PageTitle title="Ponto de frequência" subtitle="Registre entradas e saídas enquanto o reconhecimento facial é conectado." />
+      <PageTitle title="Ponto de frequência" subtitle="Selecione o aluno e use a câmera para validar o enquadramento antes de confirmar o registro." />
 
       <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
         <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
