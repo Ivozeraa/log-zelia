@@ -7,7 +7,7 @@ import { useSchool } from "../hooks/useSchool";
 import { useSchoolFeatures } from "../hooks/useSchoolFeatures";
 import { notify } from "../utils/notify";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Fortaleza" }).format(new Date());
 const MEDIAPIPE_MODULE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs";
 const MEDIAPIPE_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
 const FACE_MODEL = "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite";
@@ -23,6 +23,7 @@ export const FrequenciaPonto = () => {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const [cameraStarting, setCameraStarting] = useState(false);
@@ -214,6 +215,31 @@ export const FrequenciaPonto = () => {
     void load();
   }, [schoolId, featureLoading]);
 
+  const refreshAccess = async () => {
+    if (!schoolId) return;
+    setRefreshing(true);
+    try {
+      const [accessRes, pointsRes] = await Promise.all([
+        supabase.from("registros_acesso").select("id, aluno_id, tipo, metodo, registrado_em").eq("data", today()).eq("status", "registrado").eq("escola_id", schoolId).order("registrado_em", { ascending: true }),
+        supabase.from("pontos_verificacao").select("id, nome, local, ativo").eq("escola_id", schoolId).eq("ativo", true).order("nome"),
+      ]);
+      if (accessRes.error || pointsRes.error) throw accessRes.error || pointsRes.error;
+      setAccess(accessRes.data || []);
+      setPoints(pointsRes.data || []);
+      setPointId((current) => current || pointsRes.data?.[0]?.id || "");
+    } catch (refreshError) {
+      console.error(refreshError);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!schoolId || !hasFeature("frequencia")) return undefined;
+    const interval = window.setInterval(() => void refreshAccess(), 15000);
+    return () => window.clearInterval(interval);
+  }, [schoolId, featureLoading]);
+
   const visibleStudents = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("pt-BR");
     const filtered = normalized
@@ -249,6 +275,17 @@ export const FrequenciaPonto = () => {
     setSavingId("");
   };
 
+  const totalStudents = students.length;
+  const presentStudents = students.filter((student) => access.some((event) => event.aluno_id === student.id && event.tipo === "entrada") && (() => {
+    const events = access.filter((event) => event.aluno_id === student.id);
+    return events.at(-1)?.tipo === "entrada";
+  })()).length;
+  const exitedStudents = students.filter((student) => {
+    const events = access.filter((event) => event.aluno_id === student.id);
+    return events.at(-1)?.tipo === "saida";
+  }).length;
+  const registeredStudents = new Set(access.map((event) => event.aluno_id)).size;
+
   if (featureLoading || !hasFeature("frequencia")) return null;
 
   return (
@@ -258,6 +295,9 @@ export const FrequenciaPonto = () => {
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_340px]">
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
           <div className="flex flex-col gap-3 border-b border-slate-100 pb-5 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+            <button type="button" onClick={() => void refreshAccess()} disabled={refreshing} className="flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
+              <FaSyncAlt className={refreshing ? "animate-spin" : ""} /> Atualizar
+            </button>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Hoje</p>
               <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">Registro manual</h2>
@@ -265,6 +305,13 @@ export const FrequenciaPonto = () => {
             <div className="flex items-center gap-2 rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-700 dark:bg-green-950/20 dark:text-green-300">
               <FaCheckCircle /> Operacional
             </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><p className="text-xs text-slate-500">Alunos</p><p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{totalStudents}</p></div>
+            <div className="rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-900/50 dark:bg-green-950/20"><p className="text-xs text-green-700 dark:text-green-300">Presentes</p><p className="mt-1 text-2xl font-black text-green-800 dark:text-green-200">{presentStudents}</p></div>
+            <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><p className="text-xs text-slate-500">Saídas</p><p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{exitedStudents}</p></div>
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/50 dark:bg-blue-950/20"><p className="text-xs text-blue-700 dark:text-blue-300">Registrados</p><p className="mt-1 text-2xl font-black text-blue-800 dark:text-blue-200">{registeredStudents}</p></div>
           </div>
 
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
