@@ -122,7 +122,7 @@ export const FrequenciaPonto = () => {
   };
 
   const confirmCameraAttendance = async () => {
-    if (!pendingAttendance || savingId) return;
+    if (!pendingAttendance || savingId) return false;
     const { student, type } = pendingAttendance;
     const registered = await register(student, type);
     if (registered) {
