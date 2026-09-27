@@ -215,7 +215,7 @@ export const FrequenciaCamera = ({ onExit, points = [], pointId, onPointChange }
           </div>
 
           <div className="relative min-h-[56vh] flex-1 overflow-hidden rounded-2xl border-2 border-white/20 bg-black shadow-2xl sm:min-h-[60vh]">
-            <video ref={videoRef} autoPlay muted playsInline webkit-playsinline="true" className={`absolute inset-0 h-full w-full object-cover object-center ${cameraReady ? "opacity-100" : "opacity-0"}`} />
+            <video ref={videoRef} autoPlay muted playsInline webkit-playsinline="true" style={{ transform: "none" }} className={`absolute inset-0 h-full w-full object-cover object-center ${cameraReady ? "opacity-100" : "opacity-0"}`} />
 
             {!cameraReady && (
               <div className="absolute inset-0 flex items-center justify-center px-8 text-center">
