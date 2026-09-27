@@ -169,9 +169,7 @@ export function useFaceScanner() {
         const height = video.videoHeight;
         const face = detections.length === 1 ? detections[0] : null;
         const box = face?.box;
-        const score = Number(face?.score ?? 0);
-        const boxScore = Number(face?.boxScore ?? 0);
-        const meshScore = Number(face?.faceScore ?? 0);
+        const score = Number(face?.faceScore ?? face?.boxScore ?? face?.score ?? 0);
 
         if (!box || detections.length !== 1) {
           stableFramesRef.current = 0;
@@ -194,14 +192,9 @@ export function useFaceScanner() {
 
           const centered = centerX >= 0.22 && centerX <= 0.78 && centerY >= 0.18 && centerY <= 0.82;
           const goodSize = faceHeight >= 0.12 && faceHeight <= 1.00 && faceWidth >= 0.065 && faceWidth <= 1.00;
-          const goodConfidence = score >= 0.55 && boxScore >= 0.50 && meshScore >= 0.45;
-          const rotation = face?.rotation?.angle;
-          const yaw = Number(rotation?.yaw ?? 0);
-          const pitch = Number(rotation?.pitch ?? 0);
-          const roll = Number(rotation?.roll ?? 0);
-          const goodRotation = Math.abs(yaw) <= 24 && Math.abs(pitch) <= 20 && Math.abs(roll) <= 22;
-          const facingCenter = goodRotation;
-          const lookingCenter = true;
+          const goodConfidence = score >= 0.40;
+          const facingCenter = gestures.length === 0 || gestures.includes("facing center");
+          const lookingCenter = gestures.length === 0 || gestures.includes("looking center");
           const hasDescriptor = Array.isArray(face?.embedding) && face.embedding.length > 0;
           const readyNow = centered && goodSize && goodConfidence && facingCenter && lookingCenter && hasDescriptor;
 
@@ -337,25 +330,17 @@ export function useFaceScanner() {
     const samples = descriptorBufferRef.current;
     if (!Array.isArray(samples) || samples.length === 0) return null;
 
-    const dimension = samples[0]?.length || 0;
-    if (!dimension || samples.some((sample) => sample.length !== dimension)) return null;
+    const latest = samples[samples.length - 1];
+    if (!Array.isArray(latest) || latest.length === 0) return null;
 
-    const averaged = new Array(dimension).fill(0);
-    for (const sample of samples) {
-      for (let index = 0; index < dimension; index += 1) {
-        averaged[index] += Number(sample[index]) || 0;
-      }
-    }
-
-    for (let index = 0; index < dimension; index += 1) averaged[index] /= samples.length;
-
-    const valid = averaged.every((value) => Number.isFinite(value));
-    return valid ? averaged : null;
+    return latest.every((value) => Number.isFinite(value))
+      ? Array.from(latest)
+      : null;
   }, []);
 
   const getConfidence = useCallback(() => {
     const face = lastResultRef.current?.face?.[0];
-    const score = Number(face?.score ?? NaN);
+    const score = Number(face?.faceScore ?? face?.boxScore ?? face?.score ?? NaN);
     return Number.isFinite(score) ? Math.max(0, Math.min(1, score)) : null;
   }, []);
 
