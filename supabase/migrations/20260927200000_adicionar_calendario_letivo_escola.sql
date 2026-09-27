@@ -14,40 +14,33 @@ create table if not exists public.calendario_letivo (
   constraint calendario_letivo_escola_data_key unique (escola_id, data)
 );
 
-create index if not exists idx_calendario_letivo_escola_data
-  on public.calendario_letivo (escola_id, data);
-create index if not exists idx_calendario_letivo_created_by
-  on public.calendario_letivo (created_by);
-create index if not exists idx_calendario_letivo_updated_by
-  on public.calendario_letivo (updated_by);
+create index if not exists idx_calendario_letivo_escola_data on public.calendario_letivo (escola_id, data);
+create index if not exists idx_calendario_letivo_created_by on public.calendario_letivo (created_by);
+create index if not exists idx_calendario_letivo_updated_by on public.calendario_letivo (updated_by);
 
 alter table public.calendario_letivo enable row level security;
 
-create policy calendario_letivo_select
-on public.calendario_letivo for select to authenticated
-using ((select private.current_user_is_global_admin())
-  or escola_id = (select private.current_user_school_id()));
+drop policy if exists calendario_letivo_select on public.calendario_letivo;
+drop policy if exists calendario_letivo_insert on public.calendario_letivo;
+drop policy if exists calendario_letivo_update on public.calendario_letivo;
+drop policy if exists calendario_letivo_delete on public.calendario_letivo;
 
-create policy calendario_letivo_insert
-on public.calendario_letivo for insert to authenticated
+create policy calendario_letivo_select on public.calendario_letivo for select to authenticated
+using ((select private.current_user_is_global_admin()) or escola_id = (select private.current_user_school_id()));
+
+create policy calendario_letivo_insert on public.calendario_letivo for insert to authenticated
 with check ((select private.current_user_is_global_admin())
-  or (escola_id = (select private.current_user_school_id())
-      and (select private.current_user_role_id()) in (2,3)));
+  or (escola_id = (select private.current_user_school_id()) and (select private.current_user_role_id()) in (2,3)));
 
-create policy calendario_letivo_update
-on public.calendario_letivo for update to authenticated
+create policy calendario_letivo_update on public.calendario_letivo for update to authenticated
 using ((select private.current_user_is_global_admin())
-  or (escola_id = (select private.current_user_school_id())
-      and (select private.current_user_role_id()) in (2,3)))
+  or (escola_id = (select private.current_user_school_id()) and (select private.current_user_role_id()) in (2,3)))
 with check ((select private.current_user_is_global_admin())
-  or (escola_id = (select private.current_user_school_id())
-      and (select private.current_user_role_id()) in (2,3)));
+  or (escola_id = (select private.current_user_school_id()) and (select private.current_user_role_id()) in (2,3)));
 
-create policy calendario_letivo_delete
-on public.calendario_letivo for delete to authenticated
+create policy calendario_letivo_delete on public.calendario_letivo for delete to authenticated
 using ((select private.current_user_is_global_admin())
-  or (escola_id = (select private.current_user_school_id())
-      and (select private.current_user_role_id()) in (2,3)));
+  or (escola_id = (select private.current_user_school_id()) and (select private.current_user_role_id()) in (2,3)));
 
 drop function if exists public.get_frequencia_calendario_aluno(uuid,date,date);
 
