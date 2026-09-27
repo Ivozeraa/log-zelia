@@ -360,14 +360,16 @@ export const FrequenciaRegistros = () => {
   }, [calendarMonthStart, calendarRows]);
 
   const calendarStats = useMemo(() => {
-    const uteis = calendarRows.filter((item) => item.eh_dia_util && item.status !== "futuro");
+    const uteis = calendarRows.filter((item) => item.eh_dia_letivo && item.status !== "futuro");
     const presentes = uteis.filter((item) => item.status === "presente").length;
     const faltas = uteis.filter((item) => item.status === "falta").length;
+    const naoLetivos = calendarRows.filter((item) => item.status === "nao_letivo").length;
     return {
       uteis: uteis.length,
+      naoLetivos,
       presentes,
       faltas,
-      percentual: uteis.length ? Math.round((presentes / uteis.length) * 100) : 0,
+        percentual: uteis.length ? Math.round((presentes / uteis.length) * 100) : 0,
     };
   }, [calendarRows]);
 
@@ -560,7 +562,7 @@ export const FrequenciaRegistros = () => {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Calendário de frequência</p>
                   <h2 className="mt-1 text-xl font-black text-slate-900 dark:text-white">{selectedAlunoNome || "Aluno selecionado"}</h2>
-                  <p className="mt-1 text-sm text-slate-500">Dias úteis sem registro são indicados como falta. Feriados e recessos ainda não estão cadastrados no calendário escolar.</p>
+                  <p className="mt-1 text-sm text-slate-500">O calendário considera os dias letivos configurados pela escola. Feriados, recessos e exceções não entram no cálculo de faltas.</p>
                 </div>
                 <CustomSelect
                   label="Período"
@@ -590,6 +592,7 @@ export const FrequenciaRegistros = () => {
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950"><p className="text-xs text-slate-500">Dias úteis</p><p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{calendarStats.uteis}</p></div>
                 <div className="rounded-2xl border border-green-200 bg-green-50 p-3 dark:border-green-900/50 dark:bg-green-950/20"><p className="text-xs text-green-700 dark:text-green-300">Presenças</p><p className="mt-1 text-2xl font-black text-green-800 dark:text-green-200">{calendarStats.presentes}</p></div>
                 <div className="rounded-2xl border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/20"><p className="text-xs text-red-700 dark:text-red-300">Faltas</p><p className="mt-1 text-2xl font-black text-red-800 dark:text-red-200">{calendarStats.faltas}</p></div>
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-950/20"><p className="text-xs text-amber-700 dark:text-amber-300">Não letivos</p><p className="mt-1 text-2xl font-black text-amber-800 dark:text-amber-200">{calendarStats.naoLetivos}</p></div>
                 <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-3 dark:border-indigo-900/50 dark:bg-indigo-950/20"><p className="text-xs text-indigo-700 dark:text-indigo-300">Frequência</p><p className="mt-1 text-2xl font-black text-indigo-800 dark:text-indigo-200">{calendarStats.percentual}%</p></div>
               </div>
 
@@ -606,24 +609,27 @@ export const FrequenciaRegistros = () => {
                     ) : (
                       <div
                         key={cell.key}
-                        title={cell.status === "presente" ? `Presente · ${formatTime(cell.record?.entrada)}` : cell.status === "falta" ? "Falta" : cell.status === "fim_de_semana" ? "Fim de semana" : "Ainda não ocorrido"}
+                        title={cell.status === "presente" ? `Presente · ${formatTime(cell.record?.entrada)}` : cell.status === "falta" ? "Falta" : cell.status === "nao_letivo" ? (cell.record?.calendario_nome || "Dia não letivo") : cell.status === "fim_de_semana" ? "Fim de semana" : "Ainda não ocorrido"}
                         className={`min-h-14 rounded-xl border p-1.5 text-left transition sm:min-h-20 sm:p-2 ${
                           cell.status === "presente"
                             ? "border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-950/20"
                             : cell.status === "falta"
                               ? "border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20"
-                              : cell.status === "fim_de_semana"
-                                ? "border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-950"
-                                : "border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900"
+                              : cell.status === "nao_letivo"
+                                ? "border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20"
+                                : cell.status === "fim_de_semana"
+                                  ? "border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-950"
+                                  : "border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900"
                         }`}
                       >
                         <div className="flex items-center justify-between gap-1">
                           <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{cell.day}</span>
                           {cell.status === "presente" && <FaCalendarCheck className="text-[10px] text-green-600" />}
                           {cell.status === "falta" && <span className="text-[9px] font-black text-red-600">F</span>}
+                          {cell.status === "nao_letivo" && <span className="text-[9px] font-black text-amber-600">N</span>}
                         </div>
                         <p className="mt-1 hidden text-[10px] font-semibold sm:block">
-                          {cell.status === "presente" ? `Entrada ${formatTime(cell.record?.entrada)}` : cell.status === "falta" ? "Falta" : cell.status === "fim_de_semana" ? "Fim de semana" : "—"}
+                          {cell.status === "presente" ? `Entrada ${formatTime(cell.record?.entrada)}` : cell.status === "falta" ? "Falta" : cell.status === "nao_letivo" ? (cell.record?.calendario_nome || "Não letivo") : cell.status === "fim_de_semana" ? "Fim de semana" : "—"}
                         </p>
                       </div>
                     ))}
@@ -631,6 +637,7 @@ export const FrequenciaRegistros = () => {
                   <div className="mt-4 flex flex-wrap gap-3 text-[11px] text-slate-500">
                     <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-green-100" /> Presente</span>
                     <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-red-100" /> Falta</span>
+                    <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-amber-100" /> Não letivo</span>
                     <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-slate-100" /> Fim de semana</span>
                     <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded border border-slate-200 bg-white" /> Futuro</span>
                   </div>
