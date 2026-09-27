@@ -236,7 +236,7 @@ export const FrequenciaCamera = ({ onExit, points = [], pointId, onPointChange }
               <>
                 <div className="pointer-events-none absolute inset-0 bg-black/10" />
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-5 sm:p-10">
-                  <div className={`relative h-[min(64vh,620px)] w-[min(72vw,380px)] max-w-[390px] rounded-[48%] border-[3px] transition-all duration-200 ${
+                  <div className={`relative h-[min(72vh,680px)] w-[min(82vw,430px)] max-w-[440px] rounded-[48%] border-[3px] transition-all duration-200 ${
                     panelTone === "success" ? "border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(52,211,153,.55)]"
                     : panelTone === "warning" ? "border-amber-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(251,191,36,.5)]"
                     : panelTone === "danger" ? "border-red-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(248,113,113,.5)]"
