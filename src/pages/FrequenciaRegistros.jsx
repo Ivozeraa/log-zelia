@@ -407,13 +407,13 @@ export const FrequenciaRegistros = () => {
         </div>
 
         <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end">
-          <label className="min-w-0 flex-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+          <label className="min-w-0 flex-1 text-sm font-semibold leading-5 text-slate-600 dark:text-slate-300">
             De
-            <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-normal text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
+            <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 h-12 text-base font-normal text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
           </label>
-          <label className="min-w-0 flex-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+          <label className="min-w-0 flex-1 text-sm font-semibold leading-5 text-slate-600 dark:text-slate-300">
             Até
-            <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-normal text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
+            <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 h-12 text-base font-normal text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
           </label>
           <button type="button" onClick={() => moveMonth(-1)} className="min-h-11 rounded-xl border border-slate-300 px-3 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800" aria-label="Mês anterior"><FaChevronLeft /></button>
           <div className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-center dark:border-slate-700 dark:bg-slate-950">
