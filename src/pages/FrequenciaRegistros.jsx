@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  FaCalendarAlt,
   FaCamera,
   FaCheckCircle,
   FaChevronLeft,
@@ -27,12 +26,6 @@ const today = () =>
 const monthStart = (dateValue) => {
   const date = new Date(`${dateValue}T12:00:00`);
   date.setDate(1);
-  return date.toLocaleDateString("en-CA");
-};
-
-const monthEnd = (dateValue) => {
-  const date = new Date(`${dateValue}T12:00:00`);
-  date.setMonth(date.getMonth() + 1, 0);
   return date.toLocaleDateString("en-CA");
 };
 
