@@ -228,7 +228,7 @@ const CapturaFacialAluno = ({ aluno, onClose, onCaptured }) => {
 
             {cameraReady && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-5 sm:p-10">
-                <div className={`relative h-[min(58vh,560px)] w-[min(72vw,340px)] max-w-[360px] rounded-[48%] border-[3px] transition-all duration-200 ${faceQuality.ready ? "border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(52,211,153,.55)]" : "border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,.34)]"}`}>
+                <div className={`relative h-[min(68vh,640px)] w-[min(82vw,400px)] max-w-[420px] rounded-[48%] border-[3px] transition-all duration-200 ${faceQuality.ready ? "border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(52,211,153,.55)]" : "border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,.34)]"}`}>
                   <div className={`absolute left-1/2 top-4 z-20 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1.5 text-[10px] font-bold shadow-lg backdrop-blur-md sm:px-4 sm:py-2 sm:text-xs ${faceQuality.ready ? "bg-emerald-500 text-white" : "bg-black/65 text-white"}`}>
                     {faceQuality.ready ? "✓ Rosto pronto" : "CENTRALIZE O ROSTO"}
                   </div>
