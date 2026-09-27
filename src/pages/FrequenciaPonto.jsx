@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FaCamera, FaDoorOpen, FaSyncAlt } from "react-icons/fa";
+import { FaSyncAlt } from "react-icons/fa";
 import { FrequenciaCamera } from "./FrequenciaCamera";
 import { supabase } from "../utils/supabase";
 import { useSchool } from "../hooks/useSchool";
