@@ -43,7 +43,7 @@ const getNormalizedFaceBox = (face, videoWidth, videoHeight) => {
   };
 };
 
-export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfirm, confirming = false, students = [], onSelectAttendance }) => {
+export const FrequenciaCamera = ({ onExit, points = [], pointId, onPointChange, onIdentity }) => {
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("logzelia:frequencia-camera", { detail: { active: true } }));
     return () => window.dispatchEvent(new CustomEvent("logzelia:frequencia-camera", { detail: { active: false } }));
@@ -58,8 +58,6 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
   const [faceDetectionError, setFaceDetectionError] = useState("");
   const [faceQuality, setFaceQuality] = useState({ ready: false, message: "Olhe diretamente para a câmera." });
   const [faceDistance, setFaceDistance] = useState(0);
-  const [attendanceConfirmed, setAttendanceConfirmed] = useState(false);
-  const [studentSearch, setStudentSearch] = useState("");
   const stableFramesRef = useRef(0);
 
   const videoRef = useRef(null);
@@ -69,7 +67,6 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
   const lastDetectionRef = useRef(0);
   const cameraReadyRef = useRef(false);
   const detectionBusyRef = useRef(false);
-  const confirmationTriggeredRef = useRef(false);
 
   const stopFaceDetection = () => {
     if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
@@ -78,8 +75,6 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
     setFaceQuality({ ready: false, message: "Olhe diretamente para a câmera." });
     setFaceDistance(0);
     stableFramesRef.current = 0;
-    confirmationTriggeredRef.current = false;
-    setAttendanceConfirmed(false);
   };
 
   const stopCamera = () => {
@@ -210,18 +205,8 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
 
           setFaceQuality({ ready, message });
 
-          if (ready && studentName && onConfirm && !confirmationTriggeredRef.current) {
-            confirmationTriggeredRef.current = true;
-            const registered = await onConfirm();
-            if (registered) {
-              setAttendanceConfirmed(true);
-              window.setTimeout(() => {
-                confirmationTriggeredRef.current = false;
-                setAttendanceConfirmed(false);
-              }, 1800);
-            } else {
-              confirmationTriggeredRef.current = false;
-            }
+          if (ready) {
+            window.dispatchEvent(new CustomEvent("logzelia:frequencia-face-ready"));
           }
         }
 
@@ -297,6 +282,17 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
     void startCamera();
   }, [facingMode]);
 
+  useEffect(() => {
+    const handleIdentity = (event) => {
+      const alunoId = event?.detail?.alunoId;
+      if (!alunoId || !faceQuality.ready) return;
+      onIdentity?.({ alunoId });
+    };
+
+    window.addEventListener("logzelia:frequencia-identity", handleIdentity);
+    return () => window.removeEventListener("logzelia:frequencia-identity", handleIdentity);
+  }, [faceQuality.ready, onIdentity]);
+
   useEffect(() => () => {
     stopCamera();
     detectorRef.current?.tf?.disposeVariables?.();
@@ -309,14 +305,14 @@ export const FrequenciaCamera = ({ onClose, studentName, attendanceType, onConfi
     <main className="fixed inset-0 z-[99999] flex h-[100dvh] min-h-0 w-screen flex-col overflow-hidden bg-[#101419] text-white">
       <header className="z-30 shrink-0 border-b border-white/10 bg-[#151a20]/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md sm:px-6">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-          <button type="button" onClick={() => onClose?.()} className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 sm:px-4 sm:text-sm">
+          <button type="button" onClick={() => onExit?.()} className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 sm:px-4 sm:text-sm">
             <FaArrowLeft /> Voltar
           </button>
           <div className="min-w-0 text-center">
             <p className="truncate text-lg font-black tracking-tight sm:text-2xl">FREQUÊNCIA</p>
             <div className="mt-0.5 flex items-center justify-center gap-2 text-[10px] font-semibold text-white/55 sm:text-xs">
               <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.8)]" />
-              ONLINE <span>•</span> LEITOR DE PRESENÇA
+              ONLINE <span>•</span> TERMINAL DE PRESENÇA
             </div>
           </div>
           <button type="button" onClick={() => void switchCamera()} disabled={!cameraReady} aria-label="Alternar câmera" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-base transition hover:bg-white/10 disabled:opacity-40">
