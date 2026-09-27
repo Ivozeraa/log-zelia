@@ -152,7 +152,7 @@ export const CustomSelect = ({
   return (
     <div ref={rootRef} className={`relative flex flex-col gap-2 ${className}`}>
       {label && (
-        <label className="text-sm font-semibold text-slate-700 dark:text-slate-400">
+        <label className="text-sm font-semibold leading-5 text-slate-700 dark:text-slate-400">
           {label}
         </label>
       )}
@@ -165,7 +165,7 @@ export const CustomSelect = ({
           if (!open) setSearchTerm("");
           setOpen((previous) => !previous);
         }}
-        className={`flex h-12 w-full items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-slate-900 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white ${
+        className={`flex h-12 w-full items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-base leading-5 text-slate-900 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white ${
           disabled ? "cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-slate-800" : ""
         }`}
       >
