@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { FaCamera, FaClock, FaDoorOpen, FaEdit, FaPlus, FaShieldAlt, FaTrash, FaSave } from "react-icons/fa";
+import { FaCamera, FaCalendarAlt, FaChevronLeft, FaChevronRight, FaClock, FaDoorOpen, FaEdit, FaPlus, FaShieldAlt, FaTrash, FaSave } from "react-icons/fa";
 import { PageTitle } from "../components/ui/PageTitle";
 import { CustomSelect } from "../components/ui/CustomSelect";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { useSchool } from "../hooks/useSchool";
 import { notify } from "../utils/notify";
+
+const formatDateInput = (date) => date.toLocaleDateString("en-CA");
+
+const monthLabel = (value) => new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(`${value}T12:00:00`));
 
 const DEFAULT_CONFIG = {
   habilitado: false,
@@ -28,6 +32,21 @@ export const FrequenciaManagement = () => {
   const [pointSaving, setPointSaving] = useState(false);
   const [editingPointId, setEditingPointId] = useState("");
   const [pointForm, setPointForm] = useState({ nome: "", local: "", device_id: "", ativo: true });
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [calendarForm, setCalendarForm] = useState({
+    inicio: formatDateInput(new Date()),
+    fim: formatDateInput(new Date()),
+    tipo: "feriado",
+    nome: "",
+    descricao: "",
+    eh_letivo: false,
+  });
+  const [calendarSaving, setCalendarSaving] = useState(false);
+  const [calendarDeleting, setCalendarDeleting] = useState("");
 
   const selectedSchool = useMemo(
     () => schools.find((item) => String(item.id) === String(schoolId)) || school,
@@ -44,7 +63,10 @@ export const FrequenciaManagement = () => {
 
     setLoading(true);
 
-    const [configRes, resourceRes, pointsRes, auditsRes] = await Promise.all([
+    const calendarStart = new Date(calendarMonth.getFullYear() - 1, 0, 1);
+    const calendarEnd = new Date(calendarMonth.getFullYear() + 1, 11, 31);
+
+    const [configRes, resourceRes, pointsRes, auditsRes, calendarRes] = await Promise.all([
       supabase
         .from("frequencia_configuracoes")
         .select("id, habilitado, reconhecimento_facial_ativo, saida_padrao, permitir_saida_antecipada, permitir_reentrada")
@@ -66,9 +88,16 @@ export const FrequenciaManagement = () => {
         .eq("escola_id", schoolId)
         .order("created_at", { ascending: false })
         .limit(20),
+      supabase
+        .from("calendario_letivo")
+        .select("id, data, tipo, nome, descricao, eh_letivo")
+        .eq("escola_id", schoolId)
+        .gte("data", formatDateInput(calendarStart))
+        .lte("data", formatDateInput(calendarEnd))
+        .order("data"),
     ]);
 
-    if (configRes.error || resourceRes.error || pointsRes.error || auditsRes.error) {
+    if (configRes.error || resourceRes.error || pointsRes.error || auditsRes.error || calendarRes.error) {
       console.error(configRes.error || resourceRes.error || pointsRes.error);
       notify.error("Não foi possível carregar as configurações de frequência.");
       setLoading(false);
@@ -82,12 +111,13 @@ export const FrequenciaManagement = () => {
     setResourceId(resourceRes.data?.id || null);
     setPoints(pointsRes.data || []);
     setAudits(auditsRes.data || []);
+    setCalendarEvents(calendarRes.data || []);
     setLoading(false);
   };
 
   useEffect(() => {
     void load();
-  }, [schoolId]);
+  }, [schoolId, calendarMonth]);
 
   const updateResource = async (habilitado) => {
     if (!resourceId || !schoolId) return;
@@ -147,6 +177,116 @@ export const FrequenciaManagement = () => {
       notify.error(pointError.message || "Não foi possível alterar o ponto.");
     } finally {
       setPointLoading(false);
+    }
+  };
+
+  const calendarCells = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const eventsByDate = new Map(calendarEvents.map((event) => [event.data, event]));
+    const cells = Array.from({ length: firstWeekday }, (_, index) => ({ empty: true, key: `empty-${index}` }));
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const date = new Date(year, month, day, 12);
+      const value = formatDateInput(date);
+      cells.push({
+        key: value,
+        value,
+        day,
+        event: eventsByDate.get(value) || null,
+        weekend: date.getDay() === 0 || date.getDay() === 6,
+      });
+    }
+
+    return cells;
+  }, [calendarMonth, calendarEvents]);
+
+  const saveCalendarEvent = async () => {
+    if (!schoolId || !canManage || !calendarForm.nome.trim() || !calendarForm.inicio || !calendarForm.fim) {
+      notify.error("Informe o período e o nome do evento.");
+      return;
+    }
+
+    if (calendarForm.fim < calendarForm.inicio) {
+      notify.error("A data final não pode ser anterior à inicial.");
+      return;
+    }
+
+    setCalendarSaving(true);
+    try {
+      const start = new Date(`${calendarForm.inicio}T12:00:00`);
+      const end = new Date(`${calendarForm.fim}T12:00:00`);
+      const rows = [];
+
+      for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+        rows.push({
+          escola_id: schoolId,
+          data: formatDateInput(cursor),
+          tipo: calendarForm.tipo,
+          nome: calendarForm.nome.trim(),
+          descricao: calendarForm.descricao.trim() || null,
+          eh_letivo: Boolean(calendarForm.eh_letivo),
+          updated_by: user?.id || null,
+          created_by: user?.id || null,
+        });
+      }
+
+      const { data, error } = await supabase
+        .from("calendario_letivo")
+        .upsert(rows, { onConflict: "escola_id,data" })
+        .select("id, data, tipo, nome, descricao, eh_letivo");
+
+      if (error) throw error;
+
+      setCalendarEvents((current) => {
+        const merged = new Map(current.map((event) => [event.data, event]));
+        (data || []).forEach((event) => merged.set(event.data, event));
+        return Array.from(merged.values()).sort((a, b) => a.data.localeCompare(b.data));
+      });
+
+      await supabase.from("auditoria_frequencia").insert({
+        escola_id: schoolId,
+        acao: "alterar_calendario_letivo",
+        usuario_id: user?.id || null,
+        detalhes: {
+          inicio: calendarForm.inicio,
+          fim: calendarForm.fim,
+          tipo: calendarForm.tipo,
+          nome: calendarForm.nome.trim(),
+          eh_letivo: Boolean(calendarForm.eh_letivo),
+        },
+      });
+
+      notify.success(rows.length === 1 ? "Dia atualizado." : `${rows.length} dias atualizados.`);
+      setCalendarForm((current) => ({ ...current, nome: "", descricao: "", eh_letivo: false }));
+    } catch (error) {
+      console.error(error);
+      notify.error(error.message || "Não foi possível salvar o calendário.");
+    } finally {
+      setCalendarSaving(false);
+    }
+  };
+
+  const removeCalendarEvent = async (event) => {
+    if (!schoolId || !event?.id) return;
+    setCalendarDeleting(event.id);
+    try {
+      const { error } = await supabase
+        .from("calendario_letivo")
+        .delete()
+        .eq("id", event.id)
+        .eq("escola_id", schoolId);
+
+      if (error) throw error;
+      setCalendarEvents((current) => current.filter((item) => item.id !== event.id));
+      notify.success("Exceção removida. O dia voltou à regra padrão.");
+    } catch (error) {
+      console.error(error);
+      notify.error(error.message || "Não foi possível remover o dia.");
+    } finally {
+      setCalendarDeleting("");
     }
   };
 
@@ -322,6 +462,79 @@ export const FrequenciaManagement = () => {
               >
                 {saving ? "Salvando..." : "Salvar configurações"}
               </button>
+            </div>
+          </section>
+
+          <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+            <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-green-700 dark:text-green-400"><FaCalendarAlt /><span className="text-sm font-semibold">Calendário letivo</span></div>
+                <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">Dias letivos da escola</h2>
+                <p className="mt-1 max-w-2xl text-sm text-slate-500">Cadastre feriados, recessos, dias não letivos e eventos que excepcionalmente serão letivos. O calendário individual dos alunos usa estas regras.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setCalendarMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"><FaChevronLeft /></button>
+                <span className="min-w-36 text-center text-sm font-bold capitalize text-slate-800 dark:text-slate-100">{monthLabel(formatDateInput(calendarMonth))}</span>
+                <button type="button" onClick={() => setCalendarMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"><FaChevronRight /></button>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-5 xl:grid-cols-[.8fr_1.2fr]">
+              <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                <p className="font-semibold text-slate-900 dark:text-white">Adicionar período</p>
+                <div className="mt-4 space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Início<input type="date" value={calendarForm.inicio} onChange={(event) => setCalendarForm((current) => ({ ...current, inicio: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-normal dark:border-slate-600 dark:bg-slate-950 dark:text-white" /></label>
+                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Fim<input type="date" value={calendarForm.fim} onChange={(event) => setCalendarForm((current) => ({ ...current, fim: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-normal dark:border-slate-600 dark:bg-slate-950 dark:text-white" /></label>
+                  </div>
+                  <CustomSelect
+                    label="Tipo"
+                    value={calendarForm.tipo}
+                    onChange={(value) => setCalendarForm((current) => ({ ...current, tipo: value, eh_letivo: value === "evento_letivo" }))}
+                    options={[
+                      { value: "feriado", label: "Feriado" },
+                      { value: "recesso", label: "Recesso" },
+                      { value: "nao_letivo", label: "Dia não letivo" },
+                      { value: "evento_letivo", label: "Evento / dia letivo especial" },
+                    ]}
+                  />
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Nome<input value={calendarForm.nome} onChange={(event) => setCalendarForm((current) => ({ ...current, nome: event.target.value }))} placeholder="Ex.: Feriado municipal" className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-normal dark:border-slate-600 dark:bg-slate-950 dark:text-white" /></label>
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Descrição<input value={calendarForm.descricao} onChange={(event) => setCalendarForm((current) => ({ ...current, descricao: event.target.value }))} placeholder="Opcional" className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-normal dark:border-slate-600 dark:bg-slate-950 dark:text-white" /></label>
+                  <label className="flex items-start gap-3 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-950">
+                    <input type="checkbox" checked={Boolean(calendarForm.eh_letivo)} onChange={(event) => setCalendarForm((current) => ({ ...current, eh_letivo: event.target.checked }))} className="mt-1 h-4 w-4 accent-green-600" />
+                    <span><strong className="text-slate-800 dark:text-slate-100">Considerar como dia letivo</strong><span className="mt-0.5 block text-xs text-slate-500">Use para exceções, como uma aula ou evento em sábado.</span></span>
+                  </label>
+                  <button type="button" disabled={calendarSaving} onClick={() => void saveCalendarEvent()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"><FaSave /> {calendarSaving ? "Salvando..." : "Salvar período"}</button>
+                </div>
+              </div>
+
+              <div>
+                <div className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-bold uppercase tracking-wide text-slate-400 sm:gap-2 sm:text-xs">
+                  {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((day) => <div key={day} className="py-2">{day}</div>)}
+                </div>
+                <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+                  {calendarCells.map((cell) => cell.empty ? <div key={cell.key} /> : (
+                    <div key={cell.key} className={`min-h-16 rounded-xl border p-1.5 sm:min-h-20 sm:p-2 ${
+                      cell.event?.eh_letivo ? "border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-950/20"
+                      : cell.event ? "border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20"
+                      : cell.weekend ? "border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-950"
+                      : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+                    }`}>
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{cell.day}</span>
+                        {cell.event && <button type="button" disabled={calendarDeleting === cell.event.id} onClick={() => void removeCalendarEvent(cell.event)} className="text-[10px] text-slate-400 hover:text-red-600" title="Remover exceção"><FaTrash /></button>}
+                      </div>
+                      {cell.event && <p className="mt-1 line-clamp-2 text-[10px] font-semibold text-slate-700 dark:text-slate-200">{cell.event.nome}</p>}
+                      {!cell.event && <p className="mt-1 text-[10px] text-slate-400">{cell.weekend ? "Fim de semana" : "Letivo"}</p>}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 flex flex-wrap gap-3 text-[11px] text-slate-500">
+                  <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-green-100" /> Dia letivo especial</span>
+                  <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-amber-100" /> Não letivo</span>
+                  <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-slate-100" /> Regra padrão</span>
+                </div>
+              </div>
             </div>
           </section>
 
