@@ -420,14 +420,15 @@ export const FrequenciaRegistros = () => {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Período</p>
             <p className="truncate text-sm font-bold capitalize text-slate-800 dark:text-slate-100">{formatMonth(startDate)}</p>
           </div>
-          <button type="button" onClick={() => moveMonth(1)} className="min-h-11 rounded-xl border border-slate-300 px-3 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800" aria-label="Próximo mês"><FaChevronRight /></button>
+          <button type="button" onClick={() => moveMonth(1)} className="h-12 w-full rounded-xl border border-slate-300 px-3 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800" aria-label="Próximo mês"><FaChevronRight /></button>
         </div>
 
         <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,280px)_120px] lg:items-end">
-          <div className="relative">
-            <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Buscar aluno por nome ou matrícula..." className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none focus:border-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
-          </div>
+          <label className="relative block text-sm font-semibold leading-5 text-slate-600 dark:text-slate-300">
+            Buscar aluno
+            <FaSearch className="pointer-events-none absolute left-3 top-[calc(50%+10px)] -translate-y-1/2 text-slate-400" />
+            <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Buscar aluno por nome ou matrícula..." className="mt-1 h-12 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-base font-normal text-slate-900 outline-none focus:border-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
+          </label>
           <CustomSelect
             label="Turma"
             value={selectedTurma}
@@ -505,7 +506,7 @@ export const FrequenciaRegistros = () => {
           <p className="mt-2 text-xs text-green-700 dark:text-green-300">Entradas</p>
           <p className="text-2xl font-black text-green-800 dark:text-green-200">{Number(summary.entradas || 0)}</p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <div className="min-h-28 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
           <FaClock className="text-slate-400" />
           <p className="mt-2 text-xs text-slate-500">Saídas</p>
           <p className="text-2xl font-black text-slate-900 dark:text-white">{Number(summary.saidas || 0)}</p>
