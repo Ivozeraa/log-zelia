@@ -387,50 +387,14 @@ export const FrequenciaCamera = ({ onExit, points = [], pointId, onPointChange, 
               <div className="mt-2 text-center text-[10px] text-white/45 sm:text-xs">
                 A câmera permanece ativa enquanto esta tela estiver aberta.
               </div>
-              {!studentName && (
-                <div className="mx-auto mt-3 max-w-xl rounded-xl border border-white/10 bg-black/70 p-3 backdrop-blur-md">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Próximo aluno</p>
-                  <input
-                    value={studentSearch}
-                    onChange={(event) => setStudentSearch(event.target.value)}
-                    placeholder="Buscar aluno..."
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/35 focus:border-emerald-400"
-                  />
-                  <div className="mt-2 max-h-32 space-y-1 overflow-y-auto">
-                    {students
-                      .filter((student) => !studentSearch.trim() || student.nome.toLocaleLowerCase("pt-BR").includes(studentSearch.trim().toLocaleLowerCase("pt-BR")))
-                      .slice(0, 5)
-                      .map((student) => (
-                        <button
-                          key={student.id}
-                          type="button"
-                          onClick={() => {
-                            setStudentSearch("");
-                            onSelectAttendance?.(student);
-                          }}
-                          className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-white/90 transition hover:bg-white/10"
-                        >
-                          <span className="truncate">{student.nome}</span>
-                          <span className="ml-3 shrink-0 text-[10px] text-white/40">{student.active ? "Saída" : "Entrada"}</span>
-                        </button>
-                      ))}
-                  </div>
-                </div>
-              )}
+              <div className="mx-auto mt-3 max-w-xl rounded-xl border border-white/10 bg-black/70 p-3 text-center backdrop-blur-md">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Identificação</p>
+                <p className="mt-1 text-sm font-bold text-white">
+                  {faceQuality.ready ? "Aguardando identificação..." : "Aproxime-se e centralize o rosto"}
+                </p>
+                <p className="mt-1 text-[11px] text-white/45">Nenhuma seleção manual de aluno é necessária neste terminal.</p>
+              </div>
 
-              {studentName && (
-                <div className={`mx-auto mt-3 max-w-xl rounded-xl border px-4 py-3 text-center backdrop-blur-md ${attendanceConfirmed ? "border-emerald-400/70 bg-emerald-950/80" : "border-white/10 bg-white/5"}`}>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Aluno selecionado</p>
-                  <p className="mt-1 truncate text-sm font-bold text-white">{studentName}</p>
-                  <p className={`mt-0.5 text-[11px] font-semibold ${attendanceConfirmed ? "text-emerald-300" : "text-white/50"}`}>
-                    {attendanceConfirmed
-                      ? `✓ ${attendanceType === "entrada" ? "Entrada" : "Saída"} confirmada`
-                      : confirming
-                        ? "Registrando presença..."
-                        : attendanceType === "entrada" ? "Aguardando validação do rosto..." : "Aguardando validação do rosto..."}
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         </div>
