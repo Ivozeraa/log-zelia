@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FaCamera, FaClock, FaDoorOpen, FaEdit, FaPlus, FaShieldAlt, FaTrash, FaSave } from "react-icons/fa";
 import { PageTitle } from "../components/ui/PageTitle";
+import { CustomSelect } from "../components/ui/CustomSelect";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { useSchool } from "../hooks/useSchool";
@@ -201,20 +202,14 @@ export const FrequenciaManagement = () => {
 
       {isGlobalAdmin && (
         <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
-            Escola
-          </label>
-          <select
+          <CustomSelect
+            label="Escola"
             value={schoolId || ""}
-            onChange={(event) => void switchSchool(event.target.value)}
-            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-white"
-          >
-            {schools.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.nome}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => void switchSchool(value)}
+            options={schools.map((item) => ({ value: item.id, label: item.nome }))}
+            placeholder="Selecione a escola"
+            showSearch
+          />
         </div>
       )}
 
