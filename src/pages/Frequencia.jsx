@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FaCamera, FaCheckCircle, FaChevronLeft, FaChevronRight, FaClock, FaHistory, FaSignOutAlt, FaUsers } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { PageTitle } from "../components/ui/PageTitle";
+import { CustomSelect } from "../components/ui/CustomSelect";
 import { supabase } from "../utils/supabase";
 import { useSchoolFeatures } from "../hooks/useSchoolFeatures";
 
@@ -157,13 +158,17 @@ export const Frequencia = () => {
             Buscar aluno
             <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Nome ou matrícula..." className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-normal text-slate-900 outline-none focus:border-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
           </label>
-          <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-            Turma
-            <select value={selectedTurma} onChange={(event) => handleTurmaChange(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-normal text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-white">
-              <option value="">Todas as turmas</option>
-              {turmas.map((turma) => <option key={turma.id} value={turma.id}>{turma.nome}</option>)}
-            </select>
-          </label>
+          <CustomSelect
+            label="Turma"
+            value={selectedTurma}
+            onChange={handleTurmaChange}
+            options={[
+              { value: "", label: "Todas as turmas" },
+              ...turmas.map((turma) => ({ value: turma.id, label: turma.nome })),
+            ]}
+            placeholder="Todas as turmas"
+            showSearch
+          />
           <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
             Data
             <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-normal text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
@@ -234,9 +239,14 @@ export const Frequencia = () => {
         <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <span>{rangeStart}–{rangeEnd} de {totalCount}</span>
-            <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-600 dark:bg-slate-950 dark:text-white">
-              {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size} por página</option>)}
-            </select>
+            <CustomSelect
+              label=""
+              value={String(pageSize)}
+              onChange={(value) => setPageSize(Number(value))}
+              options={PAGE_SIZE_OPTIONS.map((size) => ({ value: String(size), label: `${size} por página` }))}
+              placeholder="Itens"
+              className="min-w-32"
+            />
           </div>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page === 1} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-700 disabled:opacity-40 dark:border-slate-600 dark:text-slate-200"><FaChevronLeft /> Anterior</button>
