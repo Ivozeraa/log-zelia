@@ -108,7 +108,7 @@ export function useFaceScanner() {
         backend: "webgl",
         modelBasePath: "https://vladmandic.github.io/human-models/models/",
         cacheSensitivity: 0.01,
-        filter: { enabled: true, equalization: false, autoBrightness: true, flip: false },
+        filter: { enabled: true, equalization: true, autoBrightness: true, flip: false },
         face: {
           enabled: true,
           detector: {
@@ -169,7 +169,9 @@ export function useFaceScanner() {
         const height = video.videoHeight;
         const face = detections.length === 1 ? detections[0] : null;
         const box = face?.box;
-        const score = Number(face?.faceScore ?? face?.boxScore ?? face?.score ?? 0);
+        const score = Number(face?.score ?? 0);
+        const boxScore = Number(face?.boxScore ?? 0);
+        const meshScore = Number(face?.faceScore ?? 0);
 
         if (!box || detections.length !== 1) {
           stableFramesRef.current = 0;
@@ -192,9 +194,14 @@ export function useFaceScanner() {
 
           const centered = centerX >= 0.22 && centerX <= 0.78 && centerY >= 0.18 && centerY <= 0.82;
           const goodSize = faceHeight >= 0.12 && faceHeight <= 1.00 && faceWidth >= 0.065 && faceWidth <= 1.00;
-          const goodConfidence = score >= 0.50;
-          const facingCenter = gestures.length === 0 || gestures.includes("facing center");
-          const lookingCenter = gestures.length === 0 || gestures.includes("looking center");
+          const goodConfidence = score >= 0.55 && boxScore >= 0.50 && meshScore >= 0.45;
+          const rotation = face?.rotation?.angle;
+          const yaw = Number(rotation?.yaw ?? 0);
+          const pitch = Number(rotation?.pitch ?? 0);
+          const roll = Number(rotation?.roll ?? 0);
+          const goodRotation = Math.abs(yaw) <= 24 && Math.abs(pitch) <= 20 && Math.abs(roll) <= 22;
+          const facingCenter = goodRotation;
+          const lookingCenter = true;
           const hasDescriptor = Array.isArray(face?.embedding) && face.embedding.length > 0;
           const readyNow = centered && goodSize && goodConfidence && facingCenter && lookingCenter && hasDescriptor;
 
@@ -236,8 +243,7 @@ export function useFaceScanner() {
           else if (centerX > 0.70) message = "Mova o rosto para a esquerda.";
           else if (centerY < 0.27) message = "Mova o rosto um pouco para baixo.";
           else if (centerY > 0.80) message = "Mova o rosto um pouco para cima.";
-          else if (!facingCenter) message = "Vire o rosto para a câmera.";
-          else if (!lookingCenter) message = IDLE_MESSAGE;
+          else if (!facingCenter) message = "Aponte o rosto um pouco mais para a câmera.";
           else if (!hasDescriptor) message = "Processando o rosto...";
           else if (ready) message = "ROSTO PRONTO";
 
@@ -349,8 +355,8 @@ export function useFaceScanner() {
 
   const getConfidence = useCallback(() => {
     const face = lastResultRef.current?.face?.[0];
-    const score = Number(face?.faceScore ?? face?.boxScore ?? face?.score ?? NaN);
-    return Number.isFinite(score) ? score : null;
+    const score = Number(face?.score ?? NaN);
+    return Number.isFinite(score) ? Math.max(0, Math.min(1, score)) : null;
   }, []);
 
   useEffect(() => {
