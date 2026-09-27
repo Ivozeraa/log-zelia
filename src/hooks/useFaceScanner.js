@@ -68,6 +68,9 @@ export function useFaceScanner() {
   const detectionBusyRef = useRef(false);
   const stableFramesRef = useRef(0);
   const lastResultRef = useRef(null);
+  const descriptorBufferRef = useRef([]);
+  const descriptorFaceIdRef = useRef(null);
+  const lastDescriptorSampleRef = useRef(0);
 
   const stopFaceDetection = () => {
     if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
@@ -77,6 +80,9 @@ export function useFaceScanner() {
     setFaceDistance(0);
     stableFramesRef.current = 0;
     lastResultRef.current = null;
+    descriptorBufferRef.current = [];
+    descriptorFaceIdRef.current = null;
+    lastDescriptorSampleRef.current = 0;
   };
 
   const stopCamera = () => {
@@ -101,15 +107,17 @@ export function useFaceScanner() {
       const human = new Human({
         backend: "webgl",
         modelBasePath: "https://vladmandic.github.io/human-models/models/",
-        filter: { enabled: true, equalization: false, flip: false },
+        cacheSensitivity: 0.01,
+        filter: { enabled: true, equalization: false, autoBrightness: true, flip: false },
         face: {
           enabled: true,
           detector: {
             rotation: true,
-            maxDetected: 5,
-            minConfidence: 0.35,
-            minSize: 80,
+            maxDetected: 3,
+            minConfidence: 0.50,
+            minSize: 96,
             return: false,
+            square: true,
           },
           mesh: { enabled: true },
           attention: { enabled: false },
@@ -161,7 +169,7 @@ export function useFaceScanner() {
         const height = video.videoHeight;
         const face = detections.length === 1 ? detections[0] : null;
         const box = face?.box;
-        const score = face?.boxScore ?? face?.score ?? 0;
+        const score = Number(face?.faceScore ?? face?.boxScore ?? face?.score ?? 0);
 
         if (!box || detections.length !== 1) {
           stableFramesRef.current = 0;
@@ -179,25 +187,50 @@ export function useFaceScanner() {
           const area = normalizedBox.width * normalizedBox.height;
           const faceWidth = normalizedBox.width;
           const faceHeight = normalizedBox.height;
-          const distance = Math.max(0, Math.min(1, (faceHeight - 0.14) / 0.70));
+          const distance = Math.max(0, Math.min(1, (faceHeight - 0.12) / 0.72));
           setFaceDistance(distance);
 
-          const centered = centerX >= 0.25 && centerX <= 0.75 && centerY >= 0.20 && centerY <= 0.80;
-          const goodSize = faceHeight >= 0.14 && faceHeight <= 1.00 && faceWidth >= 0.07 && faceWidth <= 1.00;
-          const goodConfidence = score >= 0.40;
+          const centered = centerX >= 0.22 && centerX <= 0.78 && centerY >= 0.18 && centerY <= 0.82;
+          const goodSize = faceHeight >= 0.12 && faceHeight <= 1.00 && faceWidth >= 0.065 && faceWidth <= 1.00;
+          const goodConfidence = score >= 0.50;
           const facingCenter = gestures.length === 0 || gestures.includes("facing center");
           const lookingCenter = gestures.length === 0 || gestures.includes("looking center");
           const hasDescriptor = Array.isArray(face?.embedding) && face.embedding.length > 0;
           const readyNow = centered && goodSize && goodConfidence && facingCenter && lookingCenter && hasDescriptor;
 
-          if (readyNow) stableFramesRef.current += 1;
-          else stableFramesRef.current = 0;
+          if (readyNow) {
+            stableFramesRef.current += 1;
 
-          const ready = stableFramesRef.current >= 2;
+            const faceId = face?.id ?? null;
+            if (faceId !== null && descriptorFaceIdRef.current !== faceId) {
+              descriptorBufferRef.current = [];
+              descriptorFaceIdRef.current = faceId;
+              lastDescriptorSampleRef.current = 0;
+            }
+
+            const now = performance.now();
+            if (now - lastDescriptorSampleRef.current >= 120) {
+              const embedding = face?.embedding;
+              if (Array.isArray(embedding) && embedding.length > 0) {
+                const cleaned = embedding.map(Number).filter(Number.isFinite);
+                if (cleaned.length === embedding.length) {
+                  descriptorBufferRef.current = [...descriptorBufferRef.current, cleaned].slice(-8);
+                  lastDescriptorSampleRef.current = now;
+                }
+              }
+            }
+          } else {
+            stableFramesRef.current = 0;
+            descriptorBufferRef.current = [];
+            descriptorFaceIdRef.current = null;
+            lastDescriptorSampleRef.current = 0;
+          }
+
+          const ready = stableFramesRef.current >= 4 && descriptorBufferRef.current.length >= 4;
           let message = "Rosto detectado.";
 
           if (!goodConfidence) message = "Melhore a iluminação e olhe para a câmera.";
-          else if (faceHeight < 0.14 || area < 0.015) message = "Aproxime-se um pouco da câmera.";
+          else if (faceHeight < 0.12 || area < 0.012) message = "Aproxime-se um pouco da câmera.";
           else if (faceHeight > 1.00 || area > 0.95) message = "Afaste-se um pouco da câmera.";
           else if (centerX < 0.30) message = "Mova o rosto para a direita.";
           else if (centerX > 0.70) message = "Mova o rosto para a esquerda.";
@@ -244,7 +277,12 @@ export function useFaceScanner() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: {
+          facingMode,
+          width: { ideal: 1920, max: 1920 },
+          height: { ideal: 1080, max: 1080 },
+          frameRate: { ideal: 30, max: 30 },
+        },
       });
       const video = videoRef.current;
       if (!video) {
@@ -253,6 +291,16 @@ export function useFaceScanner() {
       }
 
       streamRef.current = stream;
+
+      const track = stream.getVideoTracks()[0];
+      const capabilities = track?.getCapabilities?.();
+      if (capabilities?.focusMode?.includes?.("continuous")) {
+        try { await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }); } catch { /* opcional */ }
+      }
+      if (capabilities?.exposureMode?.includes?.("continuous")) {
+        try { await track.applyConstraints({ advanced: [{ exposureMode: "continuous" }] }); } catch { /* opcional */ }
+      }
+
       video.srcObject = stream;
       video.muted = true;
       video.setAttribute("playsinline", "true");
@@ -280,15 +328,29 @@ export function useFaceScanner() {
   const switchCamera = async () => setFacingMode((current) => (current === "user" ? "environment" : "user"));
 
   const getDescriptor = useCallback(() => {
-    const face = lastResultRef.current?.face?.[0];
-    const embedding = face?.embedding;
-    return Array.isArray(embedding) && embedding.length > 0 ? Array.from(embedding).map(Number) : null;
+    const samples = descriptorBufferRef.current;
+    if (!Array.isArray(samples) || samples.length === 0) return null;
+
+    const dimension = samples[0]?.length || 0;
+    if (!dimension || samples.some((sample) => sample.length !== dimension)) return null;
+
+    const averaged = new Array(dimension).fill(0);
+    for (const sample of samples) {
+      for (let index = 0; index < dimension; index += 1) {
+        averaged[index] += Number(sample[index]) || 0;
+      }
+    }
+
+    for (let index = 0; index < dimension; index += 1) averaged[index] /= samples.length;
+
+    const norm = Math.sqrt(averaged.reduce((sum, value) => sum + value * value, 0));
+    return norm > 0 ? averaged.map((value) => value / norm) : null;
   }, []);
 
   const getConfidence = useCallback(() => {
     const face = lastResultRef.current?.face?.[0];
-    const score = face?.boxScore ?? face?.score ?? null;
-    return typeof score === "number" ? score : null;
+    const score = Number(face?.faceScore ?? face?.boxScore ?? face?.score ?? NaN);
+    return Number.isFinite(score) ? score : null;
   }, []);
 
   useEffect(() => {
