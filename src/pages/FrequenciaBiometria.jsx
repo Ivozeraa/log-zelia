@@ -364,12 +364,24 @@ const CapturaFacialAluno = ({ aluno, onClose, onCaptured }) => {
                   <div className="absolute -bottom-[3px] -left-[3px] h-10 w-10 rounded-bl-[48%] border-b-4 border-l-4 border-white sm:h-14 sm:w-14" />
                   <div className="absolute -bottom-[3px] -right-[3px] h-10 w-10 rounded-br-[48%] border-b-4 border-r-4 border-white sm:h-14 sm:w-14" />
 
+
+                </div>
+                <div className="pointer-events-none absolute inset-0">
                   {faces.map((face, index) => {
                     const video = videoRef.current;
                     if (!face.box || !video?.videoWidth || !video?.videoHeight) return null;
                     const normalizedBox = getNormalizedFaceBox(face, video.videoWidth, video.videoHeight);
                     return (
-                      <div key={index} className={`pointer-events-none absolute rounded-2xl border-2 ${faceQuality.ready ? "border-emerald-300" : "border-amber-300"}`} style={{ left: `${normalizedBox.x * 100}%`, top: `${normalizedBox.y * 100}%`, width: `${normalizedBox.width * 100}%`, height: `${normalizedBox.height * 100}%` }} />
+                      <div
+                        key={index}
+                        className={`absolute rounded-2xl border-2 ${faceQuality.ready ? "border-emerald-300" : "border-amber-300"}`}
+                        style={{
+                          left: `${normalizedBox.x * 100}%`,
+                          top: `${normalizedBox.y * 100}%`,
+                          width: `${normalizedBox.width * 100}%`,
+                          height: `${normalizedBox.height * 100}%`,
+                        }}
+                      />
                     );
                   })}
                 </div>
