@@ -117,7 +117,7 @@ export function useFaceScanner() {
             minConfidence: 0.50,
             minSize: 96,
             return: false,
-            square: true,
+            square: false,
           },
           mesh: { enabled: true },
           attention: { enabled: false },
@@ -190,7 +190,7 @@ export function useFaceScanner() {
           const distance = Math.max(0, Math.min(1, (faceHeight - 0.12) / 0.72));
           setFaceDistance(distance);
 
-          const centered = centerX >= 0.22 && centerX <= 0.78 && centerY >= 0.18 && centerY <= 0.82;
+          const centered = centerX >= 0.15 && centerX <= 0.85 && centerY >= 0.12 && centerY <= 0.88;
           const goodSize = faceHeight >= 0.12 && faceHeight <= 1.00 && faceWidth >= 0.065 && faceWidth <= 1.00;
           const goodConfidence = score >= 0.40;
           const facingCenter = gestures.length === 0 || gestures.includes("facing center");
