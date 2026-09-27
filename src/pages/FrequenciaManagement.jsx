@@ -358,9 +358,9 @@ export const FrequenciaManagement = () => {
           Carregando configuração...
         </div>
       ) : (
-        <div className="mt-6 grid gap-5 lg:grid-cols-[1.35fr_.65fr]">
+        <div className="mt-6 flex flex-col gap-5">
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
-            <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 dark:border-slate-800">
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Escola selecionada</p>
                 <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
@@ -458,7 +458,7 @@ export const FrequenciaManagement = () => {
                 type="button"
                 onClick={() => void save()}
                 disabled={saving || !schoolId}
-                className="min-h-11 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 w-full rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white sm:w-auto transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving ? "Salvando..." : "Salvar configurações"}
               </button>
@@ -466,20 +466,20 @@ export const FrequenciaManagement = () => {
           </section>
 
           <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
-            <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 border-b border-slate-100 pb-5">
               <div>
                 <div className="flex items-center gap-2 text-green-700 dark:text-green-400"><FaCalendarAlt /><span className="text-sm font-semibold">Calendário letivo</span></div>
                 <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">Dias letivos da escola</h2>
                 <p className="mt-1 max-w-2xl text-sm text-slate-500">Cadastre feriados, recessos, dias não letivos e eventos que excepcionalmente serão letivos. O calendário individual dos alunos usa estas regras.</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex w-full items-center justify-between gap-2">
                 <button type="button" onClick={() => setCalendarMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"><FaChevronLeft /></button>
                 <span className="min-w-36 text-center text-sm font-bold capitalize text-slate-800 dark:text-slate-100">{monthLabel(formatDateInput(calendarMonth))}</span>
                 <button type="button" onClick={() => setCalendarMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"><FaChevronRight /></button>
               </div>
             </div>
 
-            <div className="mt-5 grid gap-5 xl:grid-cols-[.8fr_1.2fr]">
+            <div className="mt-5 flex flex-col gap-5">
               <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
                 <p className="font-semibold text-slate-900 dark:text-white">Adicionar período</p>
                 <div className="mt-4 space-y-3">
@@ -543,7 +543,7 @@ export const FrequenciaManagement = () => {
               <div><p className="text-sm text-slate-500">Infraestrutura</p><h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">Pontos de verificação</h2><p className="mt-1 text-sm text-slate-500">Locais ou dispositivos onde a frequência será registrada.</p></div>
               <button type="button" onClick={resetPointForm} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"><FaPlus /> Novo ponto</button>
             </div>
-            <div className="mt-5 grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
+            <div className="mt-5 flex flex-col gap-4">
               <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
                 <p className="font-semibold text-slate-900 dark:text-white">{editingPointId ? "Editar ponto" : "Novo ponto"}</p>
                 <div className="mt-4 space-y-3">
@@ -551,7 +551,7 @@ export const FrequenciaManagement = () => {
                   <input value={pointForm.local} onChange={(e) => setPointForm((v) => ({ ...v, local: e.target.value }))} placeholder="Local (ex.: Entrada principal)" className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
                   <input value={pointForm.device_id} onChange={(e) => setPointForm((v) => ({ ...v, device_id: e.target.value }))} placeholder="ID do dispositivo (opcional)" className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
                   <label className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-200"><input type="checkbox" checked={pointForm.ativo} onChange={(e) => setPointForm((v) => ({ ...v, ativo: e.target.checked }))} className="h-4 w-4 accent-green-600" />Ponto ativo</label>
-                  <div className="flex gap-2"><button type="button" disabled={pointSaving} onClick={() => void savePoint()} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><FaSave /> {pointSaving ? "Salvando..." : "Salvar"}</button>{editingPointId && <button type="button" onClick={resetPointForm} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold dark:border-slate-600 dark:text-white">Cancelar</button>}</div>
+                  <div className="flex flex-col gap-2 sm:flex-row"><button type="button" disabled={pointSaving} onClick={() => void savePoint()} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><FaSave /> {pointSaving ? "Salvando..." : "Salvar"}</button>{editingPointId && <button type="button" onClick={resetPointForm} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold dark:border-slate-600 dark:text-white">Cancelar</button>}</div>
                 </div>
               </div>
               <div className="space-y-2">
@@ -565,7 +565,7 @@ export const FrequenciaManagement = () => {
             </div>
           </section>
 
-          <aside className="space-y-5">
+          <section className="flex flex-col gap-5">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
               <p className="text-sm text-slate-500">Auditoria</p>
               <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">Últimas atividades</h2>
@@ -599,7 +599,7 @@ export const FrequenciaManagement = () => {
                 Cadastre o rosto de cada aluno em <strong>Cadastro facial</strong> antes de abrir o terminal — sem isso a identificação automática não funciona.
               </p>
             </div>
-          </aside>
+          </section>
         </div>
       )}
     </main>
