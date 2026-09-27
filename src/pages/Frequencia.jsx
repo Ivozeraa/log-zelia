@@ -154,9 +154,9 @@ export const Frequencia = () => {
 
       <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-5">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)_auto] lg:items-end">
-          <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+          <label className="text-sm font-semibold leading-5 text-slate-600 dark:text-slate-300">
             Buscar aluno
-            <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Nome ou matrícula..." className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-normal text-slate-900 outline-none focus:border-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
+            <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Nome ou matrícula..." className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 h-12 text-base font-normal text-slate-900 outline-none focus:border-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
           </label>
           <CustomSelect
             label="Turma"
@@ -169,9 +169,9 @@ export const Frequencia = () => {
             placeholder="Todas as turmas"
             showSearch
           />
-          <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+          <label className="text-sm font-semibold leading-5 text-slate-600 dark:text-slate-300">
             Data
-            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-normal text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
+            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 h-12 text-base font-normal text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-white" />
           </label>
         </div>
       </section>
