@@ -407,6 +407,7 @@ export const FrequenciaRegistros = () => {
         )}
       </section>
 
+      {view === "registros" && (
       <section className="mt-5 grid gap-3 grid-cols-2 lg:grid-cols-5">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
           <FaList className="text-slate-400" />
@@ -434,6 +435,8 @@ export const FrequenciaRegistros = () => {
           <p className="text-2xl font-black text-amber-800 dark:text-amber-200">{Number(summary.manuais || 0)}</p>
         </div>
       </section>
+
+      )}
 
       <div className="mt-5 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
         {[
