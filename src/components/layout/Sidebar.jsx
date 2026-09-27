@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { SidebarOptions as So } from '../ui/SidebarOptions'
-import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey, FaShieldAlt, FaHistory, FaTools, FaChevronDown, FaUserCheck, FaCamera, FaHistory } from 'react-icons/fa'
+import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey, FaShieldAlt, FaHistory, FaTools, FaChevronDown, FaUserCheck, FaCamera } from 'react-icons/fa'
 import { useAuth } from '../../hooks/useAuth'
 import { SectionTitle } from '../ui/SectionTitle'
 import { useSchoolFeatures } from '../../hooks/useSchoolFeatures'
