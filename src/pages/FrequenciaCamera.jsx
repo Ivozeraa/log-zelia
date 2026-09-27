@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FaArrowLeft, FaCamera, FaCheckCircle, FaExclamationTriangle, FaSyncAlt, FaUserCheck } from "react-icons/fa";
+import { FaArrowLeft, FaCamera, FaCheckCircle, FaExclamationTriangle, FaSyncAlt } from "react-icons/fa";
 import { supabase } from "../utils/supabase";
 import { useSchoolFeatures } from "../hooks/useSchoolFeatures";
 import { getNormalizedFaceBox, useFaceScanner } from "../hooks/useFaceScanner";
@@ -22,7 +22,7 @@ export const FrequenciaCamera = ({ onExit, points = [], pointId, onPointChange }
 
   const { hasFeature, loading: featureLoading } = useSchoolFeatures();
   const scanner = useFaceScanner();
-  const { videoRef, cameraReady, cameraStarting, cameraError, faces, faceDetectorReady, faceDetectionError, faceQuality, faceDistance, switchCamera, getDescriptor, getConfidence } = scanner;
+  const { videoRef, cameraReady, cameraStarting, cameraError, faces, faceDetectorReady, faceDetectionError, faceQuality, switchCamera, getDescriptor, getConfidence } = scanner;
 
   const [phase, setPhase] = useState("aguardando");
   const [confirmation, setConfirmation] = useState(null);
@@ -146,26 +146,25 @@ export const FrequenciaCamera = ({ onExit, points = [], pointId, onPointChange }
   }, []);
 
   const bigMessage = useMemo(() => {
-    if (cameraError) return "CÂMERA INDISPONÍVEL";
-    if (!cameraReady) return cameraStarting ? "INICIALIZANDO CÂMERA..." : "CÂMERA INDISPONÍVEL";
-    if (!faceDetectorReady) return "INICIALIZANDO CÂMERA...";
+    if (cameraError) return "Câmera indisponível";
+    if (!cameraReady) return cameraStarting ? "Preparando câmera..." : "Câmera indisponível";
+    if (!faceDetectorReady) return "Preparando câmera...";
 
     switch (phase) {
-      case "identificando": return "IDENTIFICANDO...";
-      case "identificado": return "ALUNO IDENTIFICADO";
-      case "registrando": return "REGISTRANDO FREQUÊNCIA...";
-      case "confirmado": return "FREQUÊNCIA REGISTRADA";
-      case "ja_registrado": return "ALUNO JÁ REGISTRADO";
-      case "nao_identificado": return "ERRO TEMPORÁRIO";
-      case "erro": return "ERRO TEMPORÁRIO";
+      case "identificando": return "Identificando...";
+      case "identificado": return "Aluno identificado";
+      case "registrando": return "Registrando frequência...";
+      case "confirmado": return "Frequência registrada";
+      case "ja_registrado": return "Aluno já registrado";
+      case "nao_identificado": return "Rosto não identificado. Tente novamente.";
+      case "erro": return "Erro temporário. Tente novamente.";
       default:
-        if (faces.length === 0) return "PROCURANDO ROSTO...";
-        if (faceQuality.ready) return "ROSTO PRONTO";
-        return faceQuality.message === "Rosto detectado." ? "ROSTO DETECTADO" : faceQuality.message.toUpperCase();
+        if (faces.length === 0) return "Procurando rosto...";
+        if (faceQuality.ready) return "Rosto pronto";
+        return "Centralize o rosto";
     }
   }, [cameraError, cameraReady, cameraStarting, faceDetectorReady, faces.length, faceQuality, phase]);
 
-  const isBusyPhase = ["identificando", "identificado", "registrando"].includes(phase);
   const panelTone = phase === "confirmado" ? "success" : phase === "ja_registrado" ? "warning" : phase === "erro" || phase === "nao_identificado" ? "danger" : "neutral";
 
   if (featureLoading || !hasFeature("frequencia")) return null;
@@ -215,7 +214,9 @@ export const FrequenciaCamera = ({ onExit, points = [], pointId, onPointChange }
           </div>
 
           <div className="relative min-h-[56vh] flex-1 overflow-hidden rounded-2xl border-2 border-white/20 bg-black shadow-2xl sm:min-h-[60vh]">
-            <video ref={videoRef} autoPlay muted playsInline webkit-playsinline="true" style={{ transform: "none" }} className={`absolute inset-0 h-full w-full object-cover object-center ${cameraReady ? "opacity-100" : "opacity-0"}`} />
+            <video ref={videoRef} autoPlay muted playsInline webkit-playsinline="true" style={{ transform: "none" }} className={`absolute inset-0 h-full w-full object-cover object-center ${
+              cameraReady ? "opacity-100" : "opacity-0"
+            }`} />
 
             {!cameraReady && (
               <div className="absolute inset-0 flex items-center justify-center px-8 text-center">
@@ -242,37 +243,22 @@ export const FrequenciaCamera = ({ onExit, points = [], pointId, onPointChange }
                     : panelTone === "danger" ? "border-red-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(248,113,113,.5)]"
                     : faceQuality.ready ? "border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,.30),0_0_35px_rgba(52,211,153,.55)]" : "border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,.34)]"
                   }`}>
-                    <div className={`absolute left-1/2 top-4 z-20 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1.5 text-[10px] font-bold shadow-lg backdrop-blur-md sm:px-4 sm:py-2 sm:text-xs ${
-                      panelTone === "success" ? "bg-emerald-500 text-white"
-                      : panelTone === "warning" ? "bg-amber-500 text-white"
-                      : panelTone === "danger" ? "bg-red-500 text-white"
-                      : faceQuality.ready ? "bg-emerald-500 text-white" : "bg-black/65 text-white"
-                    }`}>
-                      {isBusyPhase && <FaUserCheck className="mr-1 inline" />}
-                      {phase === "aguardando" ? (faceQuality.ready ? "✓ Rosto pronto" : "CENTRALIZE SEU ROSTO") : bigMessage}
-                    </div>
                     <div className="absolute -left-[3px] -top-[3px] h-10 w-10 rounded-tl-[48%] border-l-4 border-t-4 border-white sm:h-14 sm:w-14" />
                     <div className="absolute -right-[3px] -top-[3px] h-10 w-10 rounded-tr-[48%] border-r-4 border-t-4 border-white sm:h-14 sm:w-14" />
                     <div className="absolute -bottom-[3px] -left-[3px] h-10 w-10 rounded-bl-[48%] border-b-4 border-l-4 border-white sm:h-14 sm:w-14" />
                     <div className="absolute -bottom-[3px] -right-[3px] h-10 w-10 rounded-br-[48%] border-b-4 border-r-4 border-white sm:h-14 sm:w-14" />
 
                     {faces.map((face, index) => {
-                      const confidence = face.boxScore ?? face.score ?? 0;
-                      if (!face.box || !videoRef.current?.videoWidth || !videoRef.current?.videoHeight) return null;
-                      const normalizedBox = getNormalizedFaceBox(face, videoRef.current.videoWidth, videoRef.current.videoHeight);
+                      const video = videoRef.current;
+                      if (!face.box || !video?.videoWidth || !video?.videoHeight) return null;
+                      const normalizedBox = getNormalizedFaceBox(face, video.videoWidth, video.videoHeight);
                       return (
-                        <div key={index} className={`pointer-events-none absolute rounded-2xl border-2 ${faceQuality.ready ? "border-emerald-300" : "border-amber-300"}`} style={{ left: `${normalizedBox.x * 100}%`, top: `${normalizedBox.y * 100}%`, width: `${normalizedBox.width * 100}%`, height: `${normalizedBox.height * 100}%` }}>
-                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/70 px-2 py-1 text-[10px] font-bold backdrop-blur">Rosto {Math.round(confidence * 100)}%</span>
-                        </div>
+                        <div key={index} className={`pointer-events-none absolute rounded-2xl border-2 ${
+                          faceQuality.ready ? "border-emerald-300" : "border-amber-300"
+                        }`} style={{ left: `${normalizedBox.x * 100}%`, top: `${normalizedBox.y * 100}%`, width: `${normalizedBox.width * 100}%`, height: `${normalizedBox.height * 100}%` }} />
                       );
                     })}
                   </div>
-                </div>
-
-                <div className="absolute left-3 top-3 rounded-xl border border-white/10 bg-black/55 px-3 py-2 backdrop-blur-md sm:left-5 sm:top-5">
-                  <p className="text-[9px] font-semibold uppercase tracking-wider text-white/50">Distância</p>
-                  <p className="text-xl font-black leading-none text-amber-300 sm:text-2xl">{faceDistance > 0 ? faceDistance.toFixed(2) : "--"}</p>
-                  <p className="mt-1 text-[9px] text-white/45">faixa de enquadramento</p>
                 </div>
               </>
             )}
@@ -281,27 +267,15 @@ export const FrequenciaCamera = ({ onExit, points = [], pointId, onPointChange }
               {cameraError && <div className="mx-auto mb-2 max-w-xl rounded-xl bg-red-950/85 p-3 text-center text-xs text-red-200">{cameraError}</div>}
               {faceDetectionError && <div className="mx-auto mb-2 max-w-xl rounded-xl bg-amber-950/85 p-3 text-center text-xs text-amber-200">{faceDetectionError}</div>}
 
-              {phase === "confirmado" && confirmation ? (
+              {phase === "confirmado" && confirmation && (
                 <div className="mx-auto max-w-xl rounded-xl border border-emerald-400/70 bg-emerald-950/80 px-4 py-3 text-center backdrop-blur-md">
                   <div className="flex items-center justify-center gap-2 text-sm font-bold sm:text-base">
                     <FaCheckCircle className="text-emerald-300" />
-                    <span>FREQUÊNCIA REGISTRADA</span>
+                    <span>{confirmation.nome}</span>
                   </div>
-                  <p className="mt-1 truncate text-sm font-semibold text-white">{confirmation.nome}</p>
                   <p className="mt-0.5 text-[11px] text-emerald-200 sm:text-xs">
                     {confirmation.tipo === "entrada" ? "Entrada" : "Saída"} registrada às {confirmation.horario}
                   </p>
-                </div>
-              ) : (
-                <div className={`mx-auto max-w-xl rounded-xl border px-3 py-2.5 text-center backdrop-blur-md ${
-                  panelTone === "warning" ? "border-amber-400/70 bg-amber-950/70 text-amber-100"
-                  : panelTone === "danger" ? "border-red-400/70 bg-red-950/70 text-red-100"
-                  : "border-white/10 bg-black/65 text-white/90"
-                }`}>
-                  <div className="flex items-center justify-center gap-2 text-xs font-bold sm:text-sm">
-                    <span>{cameraReady ? (faceDetectorReady ? bigMessage : "Carregando detecção facial...") : cameraStarting ? "Abrindo câmera..." : "Câmera desligada"}</span>
-                  </div>
-                  {statusDetail && <p className="mt-1 text-[11px] font-semibold text-white/80">{statusDetail}</p>}
                 </div>
               )}
 
