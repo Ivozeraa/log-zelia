@@ -381,7 +381,7 @@ export const FrequenciaManagement = () => {
               </label>
             </div>
 
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="mt-6 flex flex-col gap-4">
               <label className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
                 <span className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
                   <FaClock /> Saída padrão
@@ -483,7 +483,7 @@ export const FrequenciaManagement = () => {
               <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
                 <p className="font-semibold text-slate-900 dark:text-white">Adicionar período</p>
                 <div className="mt-4 space-y-3">
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="flex flex-col gap-3">
                     <label className="text-sm font-semibold leading-5 text-slate-600 dark:text-slate-300">Início<input type="date" value={calendarForm.inicio} onChange={(event) => setCalendarForm((current) => ({ ...current, inicio: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 h-12 text-base font-normal dark:border-slate-600 dark:bg-slate-950 dark:text-white" /></label>
                     <label className="text-sm font-semibold leading-5 text-slate-600 dark:text-slate-300">Fim<input type="date" value={calendarForm.fim} onChange={(event) => setCalendarForm((current) => ({ ...current, fim: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 h-12 text-base font-normal dark:border-slate-600 dark:bg-slate-950 dark:text-white" /></label>
                   </div>
