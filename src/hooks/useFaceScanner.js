@@ -179,11 +179,11 @@ export function useFaceScanner() {
           const area = normalizedBox.width * normalizedBox.height;
           const faceWidth = normalizedBox.width;
           const faceHeight = normalizedBox.height;
-          const distance = Math.max(0, Math.min(1, (faceHeight - 0.20) / 0.55));
+          const distance = Math.max(0, Math.min(1, (faceHeight - 0.16) / 0.65));
           setFaceDistance(distance);
 
           const centered = centerX >= 0.25 && centerX <= 0.75 && centerY >= 0.20 && centerY <= 0.80;
-          const goodSize = faceHeight >= 0.20 && faceHeight <= 0.85 && faceWidth >= 0.10 && faceWidth <= 0.75;
+          const goodSize = faceHeight >= 0.16 && faceHeight <= 0.95 && faceWidth >= 0.08 && faceWidth <= 0.90;
           const goodConfidence = score >= 0.40;
           const facingCenter = gestures.length === 0 || gestures.includes("facing center");
           const lookingCenter = gestures.length === 0 || gestures.includes("looking center");
@@ -197,8 +197,8 @@ export function useFaceScanner() {
           let message = "Rosto detectado.";
 
           if (!goodConfidence) message = "Melhore a iluminação e olhe para a câmera.";
-          else if (faceHeight < 0.20 || area < 0.025) message = "Aproxime-se um pouco da câmera.";
-          else if (faceHeight > 0.85 || area > 0.60) message = "Afaste-se um pouco da câmera.";
+          else if (faceHeight < 0.16 || area < 0.018) message = "Aproxime-se um pouco da câmera.";
+          else if (faceHeight > 0.95 || area > 0.85) message = "Afaste-se um pouco da câmera.";
           else if (centerX < 0.30) message = "Mova o rosto para a direita.";
           else if (centerX > 0.70) message = "Mova o rosto para a esquerda.";
           else if (centerY < 0.27) message = "Mova o rosto um pouco para baixo.";
