@@ -87,7 +87,7 @@ export const Sidebar = ({ open, setOpen }) => {
               </div>
 
               <div
-                className={`overflow-hidden transition-all duration-200 ${frequenciaOpen ? 'max-h-52 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}
+                className={`overflow-hidden transition-all duration-200 ${frequenciaOpen ? 'max-h-72 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}
               >
                 <div className="ml-4 pl-3 border-l border-gray-200 dark:border-slate-700 space-y-1">
                   <So to="/app/frequencia" end icon={FaUserCheck} text="Visão geral" onClick={handleClick} />
