@@ -349,8 +349,8 @@ export function useFaceScanner() {
 
     for (let index = 0; index < dimension; index += 1) averaged[index] /= samples.length;
 
-    const norm = Math.sqrt(averaged.reduce((sum, value) => sum + value * value, 0));
-    return norm > 0 ? averaged.map((value) => value / norm) : null;
+    const valid = averaged.every((value) => Number.isFinite(value));
+    return valid ? averaged : null;
   }, []);
 
   const getConfidence = useCallback(() => {
