@@ -94,6 +94,7 @@ export const Sidebar = ({ open, setOpen }) => {
                   <So to="/app/frequencia/ponto" icon={FaUserCheck} text="Ponto de frequência" onClick={handleClick} />
                   <So to="/app/frequencia/registros" icon={FaHistory} text="Registros" onClick={handleClick} />
                   {canSeeManagement && <So to="/app/frequencia/biometria" icon={FaCamera} text="Cadastro facial" onClick={handleClick} />}
+                  {canSeeManagement && <So to="/app/frequencia/camera" icon={FaCamera} text="Terminal por câmera" onClick={handleClick} />}
                   <So to="/app/gestao/frequencia" icon={FaCog} text="Configurar frequência" onClick={handleClick} />
                 </div>
               </div>
