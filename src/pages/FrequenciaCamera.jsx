@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaCamera, FaCheckCircle, FaExclamationTriangle, FaSyncAlt } from "react-icons/fa";
 import { supabase } from "../utils/supabase";
 import { useSchoolFeatures } from "../hooks/useSchoolFeatures";
@@ -15,6 +16,8 @@ const IDENTIFICATION_COOLDOWN_MS = 8000;
  * automaticamente e registra entrada/saída sem seleção manual.
  */
 export const FrequenciaCamera = ({ onExit, points = [], pointId, onPointChange }) => {
+  const navigate = useNavigate();
+  const handleExit = onExit || (() => navigate("/app/frequencia"));
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("logzelia:frequencia-camera", { detail: { active: true } }));
     return () => window.dispatchEvent(new CustomEvent("logzelia:frequencia-camera", { detail: { active: false } }));
@@ -173,7 +176,7 @@ export const FrequenciaCamera = ({ onExit, points = [], pointId, onPointChange }
     <main className="fixed inset-0 z-[99999] flex h-[100dvh] min-h-0 w-screen flex-col overflow-hidden bg-[#101419] text-white">
       <header className="z-30 shrink-0 border-b border-white/10 bg-[#151a20]/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md sm:px-6">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-          <button type="button" onClick={() => onExit?.()} className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 sm:px-4 sm:text-sm">
+          <button type="button" onClick={handleExit} className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 sm:px-4 sm:text-sm">
             <FaArrowLeft /> Voltar
           </button>
           <div className="min-w-0 text-center">
