@@ -228,6 +228,7 @@ export const Occurrences = () => {
   const [search, setSearch] = useState("");
   const [selectedTurma, setSelectedTurma] = useState("");
   const [selectedPeriodo, setSelectedPeriodo] = useState("");
+  const [selectedProfessor, setSelectedProfessor] = useState("");
   const [apenasComOcorrencia, setApenasComOcorrencia] = useState(false);
 
   const [turmas, setTurmas] = useState([]);
@@ -263,11 +264,36 @@ export const Occurrences = () => {
   const [selectedAluno, setSelectedAluno] = useState(null);
   const [selectedAlunoOccurrences, setSelectedAlunoOccurrences] = useState([]);
 
+  const professorOptions = useMemo(() => {
+    const professores = new Map();
+
+    occurrences.forEach((occ) => {
+      const id = occ.professor_id || occ.professor_nome;
+      const nome = occ.professor_nome || "Professor não informado";
+      if (id && !professores.has(String(id))) {
+        professores.set(String(id), { value: String(id), label: nome });
+      }
+    });
+
+    return [
+      { value: "", label: "Todos os professores" },
+      ...Array.from(professores.values()).sort((a, b) =>
+        a.label.localeCompare(b.label, "pt-BR"),
+      ),
+    ];
+  }, [occurrences]);
+
   const filteredOccurrences = useMemo(() => {
-    return occurrences.filter((occ) =>
-      dataDentroDoPeriodo(occ.data_ocorrido, selectedPeriodo),
-    );
-  }, [occurrences, selectedPeriodo]);
+    return occurrences.filter((occ) => {
+      const matchesPeriodo = dataDentroDoPeriodo(occ.data_ocorrido, selectedPeriodo);
+      const professorId = String(occ.professor_id || occ.professor_nome || "");
+      const matchesProfessor = selectedProfessor
+        ? professorId === String(selectedProfessor)
+        : true;
+
+      return matchesPeriodo && matchesProfessor;
+    });
+  }, [occurrences, selectedPeriodo, selectedProfessor]);
 
   const alunoSummary = useMemo(() => {
     return filteredOccurrences.reduce((acc, occurrence) => {
@@ -332,7 +358,13 @@ export const Occurrences = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedTurma, selectedPeriodo, apenasComOcorrencia]);
+  }, [
+    search,
+    selectedTurma,
+    selectedPeriodo,
+    selectedProfessor,
+    apenasComOcorrencia,
+  ]);
 
   useEffect(() => {
     if (!location.state?.alunoId || alunos.length === 0 || occurrences.length === 0) return;
@@ -632,7 +664,7 @@ export const Occurrences = () => {
       {!studentDetailsOpen && (
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div className="grid w-full gap-3 sm:grid-cols-3 sm:w-auto">
+            <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:w-auto">
               <FormInput
                 label="Buscar Aluno"
                 value={search}
@@ -645,6 +677,13 @@ export const Occurrences = () => {
                 onChange={setSelectedTurma}
                 options={turmaOptions}
                 placeholder="Todas as turmas"
+              />
+              <CustomSelect
+                label="Professor"
+                value={selectedProfessor}
+                onChange={setSelectedProfessor}
+                options={professorOptions}
+                placeholder="Todos os professores"
               />
               <CustomSelect
                 label="Período"
