@@ -46,18 +46,7 @@ export const Management = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteConfirmSenha, setDeleteConfirmSenha] = useState("");
-  const [exportModalOpen, setExportModalOpen] = useState(false);
-
   const [selectedUser, setSelectedUser] = useState(null);
-  const [turmas, setTurmas] = useState([]);
-  const [exportFilters, setExportFilters] = useState({
-    escola_id: "",
-    turma_id: "",
-    periodo: "todos",
-    categoria: "",
-    tipo: "",
-  });
-  const [exporting, setExporting] = useState(false);
 
   const [addForm, setAddForm] = useState({
     nome: "",
@@ -107,6 +96,10 @@ export const Management = () => {
         .from("escolas")
         .select("*")
         .order("nome", { ascending: true });
+
+      if (user.role_id !== 1 && user.escola_id) {
+        schoolsQuery.eq("id", user.escola_id);
+      }
 
       const [usersResult, schoolsResult] = await Promise.all([
         usersQuery,
@@ -160,11 +153,37 @@ export const Management = () => {
     return schools.find((s) => s.id === schoolId)?.nome || "—";
   };
 
+  const canManageUser = (targetUser) => {
+    if (!targetUser || targetUser.id === user?.id) return false;
+    if (user?.role_id === 1) return true;
+
+    return (
+      targetUser.escola_id === user?.escola_id &&
+      Number(targetUser.role_id) > Number(user?.role_id)
+    );
+  };
+
+  const roleOptions = ROLES.filter(
+    (role) => user?.role_id === 1 || role.id > Number(user?.role_id),
+  ).map((role) => ({ value: role.id, label: role.label }));
+
+  const schoolOptions = schools
+    .map((school) => ({ value: school.id, label: school.nome }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
   async function handleAddUser() {
     const { nome, email, password, role_id, escola_id, pdt } = addForm;
 
     if (!nome || !email || !password || !role_id) {
       notify.error("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    if (
+      user.role_id !== 1 &&
+      (Number(role_id) <= Number(user.role_id) || !user.escola_id)
+    ) {
+      notify.error("Você não pode criar um usuário com esse nível de acesso.");
       return;
     }
 
@@ -193,7 +212,7 @@ export const Management = () => {
             email,
             password,
             role_id: Number(role_id),
-            escola_id: escola_id || null,
+            escola_id: user.role_id === 1 ? escola_id || null : user.escola_id,
             pdt,
           }),
         },
@@ -215,7 +234,7 @@ export const Management = () => {
           nome,
           email,
           role_id: Number(role_id),
-          escola_id: escola_id || null,
+          escola_id: user.role_id === 1 ? escola_id || null : user.escola_id,
           pdt,
           created_at: new Date().toISOString(),
         },
@@ -242,6 +261,21 @@ export const Management = () => {
   async function handleEditUser() {
     if (!editForm) return;
 
+    const originalUser = users.find((u) => u.id === editForm.id);
+    if (!canManageUser(originalUser)) {
+      notify.error("Você não pode editar este usuário.");
+      return;
+    }
+
+    if (
+      user.role_id !== 1 &&
+      (Number(editForm.role_id) <= Number(user.role_id) ||
+        editForm.escola_id !== user.escola_id)
+    ) {
+      notify.error("Você não pode conceder esse nível de acesso.");
+      return;
+    }
+
     try {
       setEditing(true);
 
@@ -251,7 +285,7 @@ export const Management = () => {
           nome: editForm.nome,
           email: editForm.email,
           role_id: Number(editForm.role_id),
-          escola_id: editForm.escola_id || null,
+          escola_id: user.role_id === 1 ? editForm.escola_id || null : user.escola_id,
           pdt: editForm.pdt,
         })
         .eq("id", editForm.id);
@@ -288,8 +322,28 @@ export const Management = () => {
   async function handleDeleteUser() {
     if (!selectedUser) return;
 
+    if (!canManageUser(selectedUser)) {
+      notify.error("Você não pode excluir este usuário.");
+      return;
+    }
+
+    if (!deleteConfirmSenha) {
+      notify.error("Digite sua senha para confirmar.");
+      return;
+    }
+
     try {
       setDeleting(true);
+
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: deleteConfirmSenha,
+      });
+
+      if (authError) {
+        notify.error("Senha incorreta.");
+        return;
+      }
 
       const { error } = await supabase
         .from("usuarios")
@@ -307,6 +361,7 @@ export const Management = () => {
 
       setDeleteModalOpen(false);
       setSelectedUser(null);
+      setDeleteConfirmSenha("");
     } catch (err) {
       console.error(err);
       notify.error("Erro inesperado.");
@@ -342,42 +397,6 @@ export const Management = () => {
     } catch (err) {
       console.error(err);
       notify.error("Erro ao exportar PDF.");
-    }
-  }
-
-  async function loadTurmas(escolaId) {
-    if (!escolaId) {
-      setTurmas([]);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from("turmas")
-        .select("id, nome")
-        .eq("escola_id", escolaId)
-        .order("nome", { ascending: true });
-
-      if (error) {
-        throw error;
-      }
-
-      setTurmas(data || []);
-    } catch (err) {
-      console.error(err);
-      notify.error("Erro ao carregar turmas.");
-    }
-  }
-
-  async function handleExportOccurrences() {
-    try {
-      setExporting(true);
-      await handleExportPDF();
-    } catch (err) {
-      console.error(err);
-      notify.error("Erro ao exportar ocorrências.");
-    } finally {
-      setExporting(false);
     }
   }
 
@@ -439,31 +458,36 @@ export const Management = () => {
 
       render: (u) => (
         <div className="flex items-center gap-2">
-          <Button
-            size="xs"
-            variant="outline"
-            className="border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800" onClick={() => {
-              setEditForm({
-                ...u,
-                role_id: String(u.role_id),
-              });
+          {canManageUser(u) && (
+            <>
+              <Button
+                size="xs"
+                variant="outline"
+                className="border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                onClick={() => {
+                  setEditForm({
+                    ...u,
+                    role_id: String(u.role_id),
+                  });
+                  setEditModalOpen(true);
+                }}
+              >
+                Editar
+              </Button>
 
-              setEditModalOpen(true);
-            }}
-          >
-            Editar
-          </Button>
-
-          <Button
-            size="xs"
-            variant="destructive"
-            onClick={() => {
-              setSelectedUser(u);
-              setDeleteModalOpen(true);
-            }}
-          >
-            Excluir
-          </Button>
+              <Button
+                size="xs"
+                variant="destructive"
+                onClick={() => {
+                  setSelectedUser(u);
+                  setDeleteConfirmSenha("");
+                  setDeleteModalOpen(true);
+                }}
+              >
+                Excluir
+              </Button>
+            </>
+          )}
         </div>
       ),
     },
@@ -504,20 +528,24 @@ export const Management = () => {
             Exportar PDF
           </Button>
 
-          <Button onClick={() => setAddModalOpen(true)}>+ Novo usuário</Button>
+          <Button
+            onClick={() => {
+              setAddForm((form) => ({
+                ...form,
+                escola_id: user.role_id === 1 ? "" : user.escola_id || "",
+              }));
+              setAddModalOpen(true);
+            }}
+          >
+            + Novo usuário
+          </Button>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-4">
-        <Card title="Total de usuários" content={users.length} />
-
-        <Card
-          title="Professores PDT"
-          content={users.filter((u) => u.pdt).length}
-        />
-
-        <Card title="Escolas" content={schools.length} />
-
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Card title="Usuários" content={users.length} />
+        <Card title="Professores" content={users.filter((u) => Number(u.role_id) === 4).length} />
+        <Card title="Professores PDT" content={users.filter((u) => u.pdt).length} />
         <Card title="Exibidos" content={filteredUsers.length} />
       </div>
 
@@ -620,7 +648,7 @@ export const Management = () => {
               placeholder="Selecione..."
               options={[
                 { value: "", label: "Selecione..." },
-                ...ROLES.map((r) => ({ value: r.id, label: r.label })),
+                ...roleOptions,
               ]}
               className="flex flex-col gap-1"
             />
@@ -722,9 +750,11 @@ export const Management = () => {
                 }
                 placeholder="Nenhuma / Global"
                 options={[
-                  { value: "", label: "Nenhuma / Global" },
-                  ...schools.map((s) => ({ value: s.id, label: s.nome })).sort((a, b) => a.label.localeCompare(b.label)),
+                  ...(user.role_id === 1
+                    ? [{ value: "", label: "Nenhuma / Global" }, ...schoolOptions]
+                    : schoolOptions),
                 ]}
+                disabled={user.role_id !== 1}
                 className="flex flex-col gap-1"
               />
             </div>
@@ -767,148 +797,13 @@ export const Management = () => {
         )}
       </Modal>
 
-      {/* Export Occurrences Modal */}
-      <Modal
-        isOpen={exportModalOpen}
-        onClose={() => {
-          setExportModalOpen(false);
-          setExportFilters({
-            escola_id: "",
-            turma_id: "",
-            periodo: "todos",
-            categoria: "",
-            tipo: "",
-          });
-          setTurmas([]);
-        }}
-        title="Exportar Relatório de Ocorrências"
-      >
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-slate-600">
-            Configure os filtros para gerar o relatório de ocorrências em PDF.
-          </p>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <CustomSelect
-              label="Escola"
-              value={exportFilters.escola_id}
-              onChange={(value) => {
-                setExportFilters((f) => ({
-                  ...f,
-                  escola_id: value,
-                  turma_id: "",
-                }));
-                loadTurmas(value);
-              }}
-              placeholder="Todas as escolas"
-              options={[
-                { value: "", label: "Todas as escolas" },
-                ...schools.map((s) => ({ value: s.id, label: s.nome })).sort((a, b) => a.label.localeCompare(b.label)),
-              ]}
-              className="flex flex-col gap-1"
-            />
-
-            <CustomSelect
-              label="Turma"
-              value={exportFilters.turma_id}
-              onChange={(value) =>
-                setExportFilters((f) => ({ ...f, turma_id: value }))
-              }
-              placeholder="Todas as turmas"
-              options={[
-                { value: "", label: "Todas as turmas" },
-                ...turmas.map((t) => ({ value: t.id, label: t.nome })).sort((a, b) => a.label.localeCompare(b.label)),
-              ]}
-              disabled={!exportFilters.escola_id}
-              className="flex flex-col gap-1"
-              emptyLabel="Nenhuma turma disponível"
-            />
-
-            <CustomSelect
-              label="Período"
-              value={exportFilters.periodo}
-              onChange={(value) =>
-                setExportFilters((f) => ({ ...f, periodo: value }))
-              }
-              placeholder="Todo o período"
-              options={[
-                { value: "todos", label: "Todo o período" },
-                { value: "dia", label: "Hoje" },
-                { value: "semana", label: "Esta semana" },
-                { value: "mes", label: "Este mês" },
-              ]}
-              className="flex flex-col gap-1"
-            />
-
-            <CustomSelect
-              label="Categoria"
-              value={exportFilters.categoria}
-              onChange={(value) =>
-                setExportFilters((f) => ({ ...f, categoria: value }))
-              }
-              placeholder="Todas as categorias"
-              options={[
-                { value: "", label: "Todas as categorias" },
-                { value: "ocorrencia", label: "Ocorrência" },
-                { value: "suspensao", label: "Suspensão" },
-              ]}
-              className="flex flex-col gap-1"
-            />
-
-            <CustomSelect
-              label="Tipo"
-              value={exportFilters.tipo}
-              onChange={(value) =>
-                setExportFilters((f) => ({ ...f, tipo: value }))
-              }
-              placeholder="Todos os tipos"
-              options={[
-                { value: "", label: "Todos os tipos" },
-                { value: "indisciplina", label: "Indisciplina" },
-                { value: "infrequencia", label: "Infrequência" },
-                { value: "atraso", label: "Atraso" },
-                { value: "desrespeito", label: "Desrespeito" },
-                { value: "outro", label: "Outro" },
-              ]}
-              className="flex flex-col gap-1"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 mt-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setExportModalOpen(false);
-                setExportFilters({
-                  escola_id: "",
-                  turma_id: "",
-                  periodo: "todos",
-                  categoria: "",
-                  tipo: "",
-                });
-                setTurmas([]);
-              }}
-              className="px-4 py-2"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleExportOccurrences}
-              disabled={exporting}
-              className="px-4 py-2"
-            >
-              {exporting ? "Exportando..." : "Exportar PDF"}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
       {/* Delete User Modal */}
       <Modal
         isOpen={deleteModalOpen}
         onClose={() => {
           setDeleteModalOpen(false);
           setSelectedUser(null);
+          setDeleteConfirmSenha("");
         }}
         title="Excluir usuário"
       >
@@ -935,8 +830,8 @@ export const Management = () => {
               variant="outline"
               onClick={() => {
                 setDeleteModalOpen(false);
-
                 setSelectedUser(null);
+                setDeleteConfirmSenha("");
               }}
             >
               Cancelar
