@@ -984,7 +984,7 @@ export const Occurrences = () => {
                     onClick={() => {
                       setSelectedAluno(aluno);
                       setSelectedAlunoOccurrences(
-                        occurrences.filter((item) => item.aluno_id === aluno.id),
+                        filteredOccurrences.filter((item) => item.aluno_id === aluno.id),
                       );
                       setStudentDetailsOpen(true);
                     }}
