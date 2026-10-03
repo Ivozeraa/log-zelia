@@ -1,14 +1,16 @@
-import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { SidebarOptions as So } from '../ui/SidebarOptions'
-import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey, FaShieldAlt, FaHistory, FaTools, FaChevronDown } from 'react-icons/fa'
+import { FaHome, FaExclamationCircle, FaPaste, FaCog, FaWrench, FaCalendarAlt, FaBullhorn, FaKey, FaShieldAlt, FaHistory, FaTools, FaChevronDown, FaUserCheck, FaCamera } from 'react-icons/fa'
 import { useAuth } from '../../hooks/useAuth'
 import { SectionTitle } from '../ui/SectionTitle'
 import { useSchoolFeatures } from '../../hooks/useSchoolFeatures'
 
 export const Sidebar = ({ open, setOpen }) => {
   const { user } = useAuth()
+  const location = useLocation()
   const [adminOpen, setAdminOpen] = useState(false)
+  const [frequenciaOpen, setFrequenciaOpen] = useState(false)
 
   const handleClick = () => {
     if (window.innerWidth < 768) {
@@ -23,6 +25,14 @@ export const Sidebar = ({ open, setOpen }) => {
   const { hasFeature, loading: featuresLoading } = useSchoolFeatures()
   const canSeeOccurrences = featuresLoading || hasFeature('ocorrencias')
   const canSeeHorarios = featuresLoading || hasFeature('horarios')
+  const canSeeFrequencia = featuresLoading || hasFeature('frequencia')
+  const isFrequenciaRoute = location.pathname.startsWith('/app/frequencia')
+
+  useEffect(() => {
+    if (isFrequenciaRoute) {
+      setFrequenciaOpen(true)
+    }
+  }, [isFrequenciaRoute])
 
   return (
     <>
@@ -46,6 +56,49 @@ export const Sidebar = ({ open, setOpen }) => {
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 space-y-2">
           <So to="/app" end icon={FaHome} text="Início" onClick={handleClick} />
           {canSeeOccurrences && <So to="/app/advertencias" icon={FaExclamationCircle} text="Advertências" onClick={handleClick} />}
+          {canSeeFrequencia && (
+            <div>
+              <div className={`flex items-center rounded-xl transition-colors ${isFrequenciaRoute ? 'bg-green-700 dark:bg-green-800 text-white' : 'text-gray-700 dark:text-slate-400'}`}>
+                <NavLink
+                  to="/app/frequencia"
+                  onClick={handleClick}
+                  end
+                  className="flex-1 min-w-0"
+                >
+                  <div className="flex items-center gap-2 p-2 cursor-pointer">
+                    <FaUserCheck />
+                    <p className="truncate">Frequência</p>
+                  </div>
+                </NavLink>
+
+                {canSeeManagement && (
+                  <button
+                    type="button"
+                    onClick={() => setFrequenciaOpen((current) => !current)}
+                    className="shrink-0 p-3 mr-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+                    aria-label={frequenciaOpen ? 'Recolher menu de frequência' : 'Expandir menu de frequência'}
+                    aria-expanded={frequenciaOpen}
+                  >
+                    <FaChevronDown
+                      className={`text-xs transition-transform duration-200 ${frequenciaOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                )}
+              </div>
+
+              <div
+                className={`overflow-hidden transition-all duration-200 ${frequenciaOpen ? 'max-h-72 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}
+              >
+                <div className="ml-4 pl-3 border-l border-gray-200 dark:border-slate-700 space-y-1">
+                  <So to="/app/frequencia" end icon={FaUserCheck} text="Visão geral" onClick={handleClick} />
+                  <So to="/app/frequencia/ponto" icon={FaUserCheck} text="Ponto de frequência" onClick={handleClick} />
+                  <So to="/app/frequencia/registros" icon={FaHistory} text="Registros" onClick={handleClick} />
+                  {canSeeManagement && <So to="/app/frequencia/biometria" icon={FaCamera} text="Cadastro facial" onClick={handleClick} />}
+                  <So to="/app/gestao/frequencia" icon={FaCog} text="Configurar frequência" onClick={handleClick} />
+                </div>
+              </div>
+            </div>
+          )}
 
           {canSeeSchedules && canSeeHorarios && (
             <So to="/app/horarios" icon={FaCalendarAlt} text="Horários" onClick={handleClick} />
