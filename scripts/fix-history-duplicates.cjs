@@ -110,6 +110,18 @@ const nextCount = text.replace(oldCount, newCount);
 const nextOrder = nextCount.replace(oldOrder, newOrder);
 
 if (nextOrder === text) {
+  // O histórico pode já estar atualizado por uma alteração manual/PR.
+  // Nesse caso, não falha o build por não encontrar o texto antigo do patch.
+  const historicoJaAtualizado =
+    text.includes('const historico = ascendente;') &&
+    text.includes('const numeroSuspensaoPorId = new Map()') &&
+    text.includes('Ocorrência que gerou a suspensão:');
+
+  if (historicoJaAtualizado) {
+    console.log('[LogZélia] Histórico disciplinar já está atualizado; nenhuma alteração necessária.');
+    process.exit(0);
+  }
+
   if (text.includes('const idsDeOrigens = new Set(') && text.includes('return ocorrenciasDoAluno.filter(')) {
     process.exit(0);
   }
