@@ -401,7 +401,7 @@ export const Home = () => {
           </div>
         </div>
 
-        <div className="mt-1 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-600 dark:bg-slate-950">
+        <div className="mt-1 w-full min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-600 dark:bg-slate-950 sm:p-5">
           <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-lg font-bold text-slate-800 dark:text-white">Fluxo de Ocorrências</h2>
@@ -409,9 +409,9 @@ export const Home = () => {
             </div>
             <div className="w-fit rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">Últimos 7 dias</div>
           </div>
-          <div ref={chartContainerRef} className="h-[250px] w-full min-h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px]">
+          <div ref={chartContainerRef} className="h-[350px] w-full min-w-0 min-h-[350px] sm:h-[360px] sm:min-h-[360px] md:h-[380px] md:min-h-[380px] lg:h-[400px] lg:min-h-[400px]">
             {chartWidth > 0 ? (
-              <LineChart width={chartWidth} height={350} data={graficoData} margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+              <LineChart width={chartWidth} height={350} data={graficoData} margin={{ top: 12, right: 12, left: 0, bottom: 12 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="name" tick={{ fill: "#64748b", fontSize: 12 }} tickLine={false} axisLine={false} interval={0} />
                 <YAxis allowDecimals={false} tick={{ fill: "#64748b", fontSize: 12 }} tickLine={false} axisLine={false} width={30} />
