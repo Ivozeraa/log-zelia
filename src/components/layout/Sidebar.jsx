@@ -63,11 +63,11 @@ export const Sidebar = ({ open, setOpen }) => {
                   to="/app/frequencia"
                   onClick={handleClick}
                   end
-                  className="flex-1 min-w-0"
+                  className="flex-1 min-w-0 text-base leading-6 font-normal"
                 >
-                  <div className="flex items-center gap-2 p-2 cursor-pointer">
+                  <div className="flex items-center gap-2 p-2 text-base leading-6 font-normal cursor-pointer">
                     <FaUserCheck />
-                    <p className="truncate">Frequência</p>
+                    <p className="truncate text-base leading-6 font-normal">Frequência</p>
                   </div>
                 </NavLink>
 
@@ -116,11 +116,11 @@ export const Sidebar = ({ open, setOpen }) => {
               <button
                 type="button"
                 onClick={() => setAdminOpen((current) => !current)}
-                className="w-full flex items-center gap-2 p-2 rounded-xl text-gray-700 hover:text-green-800 hover:bg-gray-50 dark:text-slate-400 dark:hover:text-green-700 dark:hover:bg-slate-900 transition-colors"
+                className="w-full flex items-center gap-2 p-2 text-base leading-6 font-normal rounded-xl text-gray-700 hover:text-green-800 hover:bg-gray-50 dark:text-slate-400 dark:hover:text-green-700 dark:hover:bg-slate-900 transition-colors"
                 aria-expanded={adminOpen}
               >
                 <FaShieldAlt />
-                <span className="flex-1 text-left">Administração</span>
+                <span className="flex-1 text-left text-base leading-6 font-normal">Administração</span>
                 <FaChevronDown
                   className={`text-xs transition-transform duration-200 ${adminOpen ? 'rotate-180' : ''}`}
                 />
