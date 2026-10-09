@@ -205,6 +205,7 @@ export const StudentManagement = () => {
           categoria: occ.categoria || "—",
           tipo: occ.tipo || "—",
           descricao: occ.descricao || "—",
+          professor_nome: occ.professor_nome || "Não informado",
         }))
         : [{
           aluno_id: aluno.id,
@@ -217,6 +218,7 @@ export const StudentManagement = () => {
           categoria: "—",
           tipo: "—",
           descricao: "Sem ocorrências",
+          professor_nome: "—",
         }];
     });
   };
@@ -232,6 +234,7 @@ export const StudentManagement = () => {
       "categoria",
       "tipo",
       "descricao",
+      "professor_nome",
     ];
 
     const csv = [header.join("\t")]
@@ -246,6 +249,7 @@ export const StudentManagement = () => {
           row.categoria,
           row.tipo,
           row.descricao,
+          row.professor_nome || "Não informado",
         ].join("\t")),
       )
       .join("\n");
@@ -339,23 +343,41 @@ export const StudentManagement = () => {
       });
 
       const historyRows = history.length
-        ? history.map((item, index) => [
-            String(index + 1),
-            item.data_ocorrido && item.data_ocorrido !== "—" ? new Date(item.data_ocorrido).toLocaleDateString("pt-BR") : "—",
-            [item.tipo, item.categoria].filter((value) => value && value !== "—").join(" • ") || "Ocorrência",
-            item.descricao || "Sem descrição registrada",
-          ])
-        : [["—", "—", "Sem ocorrências registradas", "Não há ocorrências disponíveis para este aluno no período consultado."]];
+        ? history.map((item) => {
+            const category = String(item.categoria || "").toLowerCase();
+            const recordType = category.includes("suspens") ? "Suspensão" : "Ocorrência";
+            return [
+              item.data_ocorrido && item.data_ocorrido !== "—" ? new Date(item.data_ocorrido).toLocaleDateString("pt-BR") : "—",
+              recordType,
+              item.tipo && item.tipo !== "—" ? item.tipo : "Não especificado",
+              item.professor_nome || "Não informado",
+              item.descricao || "Sem descrição registrada",
+            ];
+          })
+        : [["—", "Sem registros", "—", "—", "Não há ocorrências disponíveis para este aluno no período consultado."]];
 
       autoTable(doc, {
         startY: y,
         margin: { left: margin, right: margin, top: 92, bottom: 58 },
-        head: [["Nº", "Data", "Classificação", "Descrição / registro"]],
+        head: [["Data", "Registro", "Tipo", "Professor responsável", "Descrição do ocorrido"]],
         body: historyRows,
-        styles: { font: "helvetica", fontSize: 8.5, cellPadding: 6, lineColor: [203, 213, 225], lineWidth: 0.5, textColor: [30, 41, 59], overflow: "linebreak", valign: "top" },
-        headStyles: { fillColor: [35, 146, 74], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8.5 },
+        styles: { font: "helvetica", fontSize: 9.5, cellPadding: 7, lineColor: [203, 213, 225], lineWidth: 0.5, textColor: [30, 41, 59], overflow: "linebreak", valign: "top" },
+        headStyles: { fillColor: [35, 146, 74], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9.5, cellPadding: 7 },
         alternateRowStyles: { fillColor: [248, 250, 252] },
-        columnStyles: { 0: { cellWidth: 28, halign: "center" }, 1: { cellWidth: 58 }, 2: { cellWidth: 112, fontStyle: "bold" }, 3: { cellWidth: "auto" } },
+        columnStyles: {
+          0: { cellWidth: 58, halign: "center" },
+          1: { cellWidth: 66, fontStyle: "bold" },
+          2: { cellWidth: 76 },
+          3: { cellWidth: 94 },
+          4: { cellWidth: "auto", halign: "justify" },
+        },
+        didParseCell: (data) => {
+          if (data.section === "body" && data.column.index === 1) {
+            data.cell.styles.textColor = String(data.cell.raw).toLowerCase().includes("suspensão")
+              ? [185, 28, 28]
+              : [22, 101, 52];
+          }
+        },
         didDrawPage: (data) => {
           if (data.pageNumber > 1) drawHeader(schoolName, true);
         },
@@ -657,7 +679,7 @@ export const StudentManagement = () => {
       const alunoIds = rows.map((aluno) => aluno.id);
       const { data: occurrences, error } = await supabase
         .from("ocorrencias")
-        .select("id, aluno_id, categoria, tipo, descricao, data_ocorrido")
+        .select("id, aluno_id, categoria, tipo, descricao, data_ocorrido, professor_nome")
         .in("aluno_id", alunoIds);
 
       if (error) {
