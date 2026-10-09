@@ -846,213 +846,102 @@ export const StudentManagement = () => {
           onClose={() => { setDeleteAlunoModalOpen(false); setAlunoToDelete(null); setDeleteAlunoConfirmText(""); }}
           title="Excluir aluno"
         >
-          <div className="space-y-6">
-        {/* 1. Pesquisa e filtros */}
+          <div className="space-y-4">
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              Tem certeza que deseja excluir o aluno <strong>{alunoToDelete?.nome}</strong>? Esta ação não pode ser desfeita.
+            </p>
+
+            <div>
+              <p className="text-sm text-slate-500">Digite <strong>EXCLUIR</strong> para confirmar.</p>
+              <FormInput
+                value={deleteAlunoConfirmText}
+                onChange={(e) => setDeleteAlunoConfirmText(e.target.value)}
+                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setDeleteAlunoModalOpen(false); setAlunoToDelete(null); setDeleteAlunoConfirmText(""); }}>
+                Cancelar
+              </Button>
+
+              <Button variant="destructive" onClick={handleDeleteAluno} disabled={deleteAlunoConfirmText.trim().toUpperCase() !== "EXCLUIR"}>
+                Excluir
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        <Modal
+          isOpen={deleteModalOpen}
+          onClose={() => { setDeleteModalOpen(false); setConfirmDeleteText(""); }}
+          title="Excluir alunos da turma"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              Tem certeza que deseja excluir <strong>todos os alunos da turma {turmas.find((t) => t.id === selectedTurma)?.nome}</strong>? Esta ação não pode ser desfeita.
+            </p>
+
+            <div>
+              <p className="text-sm text-slate-500">Digite <strong>EXCLUIR</strong> para confirmar.</p>
+              <FormInput
+                value={confirmDeleteText}
+                onChange={(e) => setConfirmDeleteText(e.target.value)}
+                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setDeleteModalOpen(false); setConfirmDeleteText(""); }}>
+                Cancelar
+              </Button>
+
+              <Button variant="destructive" onClick={handleDeleteCompleted} disabled={confirmDeleteText.trim().toUpperCase() !== "EXCLUIR" || bulkLoading}>
+                {bulkLoading ? "Excluindo..." : "Excluir"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      </div>
+
+      <div className="space-y-6">
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">1. Encontrar alunos</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Use os filtros para localizar rapidamente os alunos que deseja consultar.</p>
-          </div>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">1. Encontrar alunos</h2>
+          <p className="mt-1 mb-4 text-sm text-slate-500 dark:text-slate-400">Use os filtros para localizar rapidamente os alunos que deseja consultar.</p>
           <div className="grid gap-4 md:grid-cols-2">
-            <CustomSelect
-              label="Escola"
-              value={selectedEscola}
-              onChange={(value) => {
-                setSelectedEscola(value);
-                setSelectedTurma("");
-                setSelectedAlunoIds([]);
-              }}
-              options={escolaOptions}
-              placeholder="Todas as escolas"
-            />
-            <CustomSelect
-              label="Turma"
-              value={selectedTurma}
-              onChange={(value) => {
-                setSelectedTurma(value);
-                setSelectedAlunoIds([]);
-              }}
-              options={[
-                { value: "", label: "Todas as turmas" },
-                ...turmas
-                  .filter((turma) => !selectedEscola || String(turma.escola_id) === String(selectedEscola))
-                  .map((turma) => ({ value: String(turma.id), label: turma.nome }))
-                  .sort((a, b) => a.label.localeCompare(b.label)),
-              ]}
-              placeholder="Todas as turmas"
-            />
+            <CustomSelect label="Escola" value={selectedEscola} onChange={(value) => { setSelectedEscola(value); setSelectedTurma(""); setSelectedAlunoIds([]); }} options={escolaOptions} placeholder="Todas as escolas" />
+            <CustomSelect label="Turma" value={selectedTurma} onChange={(value) => { setSelectedTurma(value); setSelectedAlunoIds([]); }} options={[{ value: "", label: "Todas as turmas" }, ...turmas.filter((turma) => !selectedEscola || String(turma.escola_id) === String(selectedEscola)).map((turma) => ({ value: String(turma.id), label: turma.nome })).sort((a, b) => a.label.localeCompare(b.label))]} placeholder="Todas as turmas" />
           </div>
-          <div className="mt-4">
-            <FormInput
-              label="Buscar por nome ou matrícula"
-              placeholder="Digite o nome ou a matrícula do aluno"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
+          <div className="mt-4"><FormInput label="Buscar por nome ou matrícula" placeholder="Digite o nome ou a matrícula do aluno" value={search} onChange={(event) => setSearch(event.target.value)} /></div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-800/70">
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              {loading ? "Carregando alunos..." : <><strong className="text-slate-900 dark:text-white">{filteredAlunos.length}</strong> aluno(s) encontrado(s)</>}
-            </p>
-            {(search || selectedEscola || selectedTurma) && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSearch("");
-                  setSelectedEscola("");
-                  setSelectedTurma("");
-                  setSelectedAlunoIds([]);
-                }}
-              >
-                Limpar filtros
-              </Button>
-            )}
+            <p className="text-sm text-slate-600 dark:text-slate-300">{loading ? "Carregando alunos..." : <><strong className="text-slate-900 dark:text-white">{filteredAlunos.length}</strong> aluno(s) encontrado(s)</>}</p>
+            {(search || selectedEscola || selectedTurma) && <Button variant="outline" size="sm" onClick={() => { setSearch(""); setSelectedEscola(""); setSelectedTurma(""); setSelectedAlunoIds([]); }}>Limpar filtros</Button>}
           </div>
         </section>
-
-        {/* 2. Mudança de turma */}
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">2. Transferir alunos entre turmas</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Esta ação transfere todos os alunos da turma de origem para a turma de destino.</p>
-          </div>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">2. Transferir alunos entre turmas</h2>
+          <p className="mt-1 mb-4 text-sm text-slate-500 dark:text-slate-400">Esta ação transfere todos os alunos da turma de origem para a turma de destino.</p>
           <div className="grid gap-4 md:grid-cols-2">
-            <CustomSelect
-              label="Turma de origem"
-              value={sourceTurma}
-              onChange={setSourceTurma}
-              options={[
-                { value: "", label: "Selecione a turma de origem" },
-                ...turmas
-                  .filter((turma) => !selectedEscola || String(turma.escola_id) === String(selectedEscola))
-                  .map((turma) => ({ value: String(turma.id), label: turma.nome }))
-                  .sort((a, b) => a.label.localeCompare(b.label)),
-              ]}
-              placeholder="Selecione a turma de origem"
-            />
-            <CustomSelect
-              label="Turma de destino"
-              value={targetTurma}
-              onChange={setTargetTurma}
-              options={[
-                { value: "", label: "Selecione a turma de destino" },
-                ...turmas
-                  .filter((turma) => !selectedEscola || String(turma.escola_id) === String(selectedEscola))
-                  .filter((turma) => String(turma.id) !== String(sourceTurma))
-                  .map((turma) => ({ value: String(turma.id), label: turma.nome }))
-                  .sort((a, b) => a.label.localeCompare(b.label)),
-              ]}
-              placeholder="Selecione a turma de destino"
-            />
+            <CustomSelect label="Turma de origem" value={sourceTurma} onChange={setSourceTurma} options={[{ value: "", label: "Selecione a turma de origem" }, ...turmas.filter((turma) => !selectedEscola || String(turma.escola_id) === String(selectedEscola)).map((turma) => ({ value: String(turma.id), label: turma.nome })).sort((a, b) => a.label.localeCompare(b.label))]} placeholder="Selecione a turma de origem" />
+            <CustomSelect label="Turma de destino" value={targetTurma} onChange={setTargetTurma} options={[{ value: "", label: "Selecione a turma de destino" }, ...turmas.filter((turma) => !selectedEscola || String(turma.escola_id) === String(selectedEscola)).filter((turma) => String(turma.id) !== String(sourceTurma)).map((turma) => ({ value: String(turma.id), label: turma.nome })).sort((a, b) => a.label.localeCompare(b.label))]} placeholder="Selecione a turma de destino" />
           </div>
-          {sourceTurma && (
-            <p className="mt-3 rounded-xl bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:bg-blue-950/40 dark:text-blue-200">
-              Serão transferidos <strong>{alunos.filter((aluno) => String(aluno.turma_id) === String(sourceTurma)).length}</strong> aluno(s) de <strong>{getTurmaName(sourceTurma)}</strong>.
-            </p>
-          )}
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <Button
-              onClick={handleBulkMove}
-              disabled={bulkLoading || !sourceTurma || !targetTurma || sourceTurma === targetTurma}
-            >
-              {bulkLoading ? "Transferindo alunos..." : "Transferir todos os alunos"}
-            </Button>
-            {(sourceTurma || targetTurma) && (
-              <Button variant="outline" onClick={() => { setSourceTurma(""); setTargetTurma(""); }} disabled={bulkLoading}>
-                Cancelar seleção
-              </Button>
-            )}
-          </div>
+          {sourceTurma && <p className="mt-3 rounded-xl bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:bg-blue-950/40 dark:text-blue-200">Serão transferidos <strong>{alunos.filter((aluno) => String(aluno.turma_id) === String(sourceTurma)).length}</strong> aluno(s) de <strong>{getTurmaName(sourceTurma)}</strong>.</p>}
+          <div className="mt-4 flex flex-wrap gap-3"><Button onClick={handleBulkMove} disabled={bulkLoading || !sourceTurma || !targetTurma || sourceTurma === targetTurma}>{bulkLoading ? "Transferindo alunos..." : "Transferir todos os alunos"}</Button>{(sourceTurma || targetTurma) && <Button variant="outline" onClick={() => { setSourceTurma(""); setTargetTurma(""); }} disabled={bulkLoading}>Cancelar seleção</Button>}</div>
         </section>
-
-        {/* 3. Relatórios e exclusão */}
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">3. Relatórios e remoção</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Selecione alunos na tabela para gerar um relatório individualizado. Sem seleção, o relatório considera os resultados dos filtros.</p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <CustomSelect
-              label="Formato do relatório"
-              value={reportFormat}
-              onChange={setReportFormat}
-              options={reportFormatOptions}
-              placeholder="Selecione o formato"
-            />
-            <div className="flex flex-col justify-end gap-2 sm:flex-row">
-              <Button
-                onClick={handleDownloadFinalReport}
-                disabled={reportLoading || (selectedCount === 0 && filteredAlunos.length === 0)}
-                className="w-full sm:w-auto"
-              >
-                {reportLoading ? "Gerando relatório..." : "Gerar relatório"}
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => { setConfirmDeleteText(""); setDeleteModalOpen(true); }}
-                disabled={!selectedTurma || alunos.filter((aluno) => String(aluno.turma_id) === String(selectedTurma)).length === 0}
-                className="w-full sm:w-auto"
-              >
-                Excluir turma selecionada
-              </Button>
-            </div>
-          </div>
-          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-            A exclusão remove todos os alunos da turma selecionada e exige confirmação. Para excluir apenas uma pessoa, use a ação “Excluir” na tabela.
-          </p>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">3. Relatórios e remoção</h2>
+          <p className="mt-1 mb-4 text-sm text-slate-500 dark:text-slate-400">Selecione alunos na tabela para gerar um relatório individualizado. Sem seleção, o relatório considera os resultados dos filtros.</p>
+          <div className="grid gap-4 sm:grid-cols-2"><CustomSelect label="Formato do relatório" value={reportFormat} onChange={setReportFormat} options={reportFormatOptions} placeholder="Selecione o formato" /><div className="flex flex-col justify-end gap-2 sm:flex-row"><Button onClick={handleDownloadFinalReport} disabled={reportLoading || (selectedCount === 0 && filteredAlunos.length === 0)} className="w-full sm:w-auto">{reportLoading ? "Gerando relatório..." : "Gerar relatório"}</Button><Button variant="destructive" onClick={() => { setConfirmDeleteText(""); setDeleteModalOpen(true); }} disabled={!selectedTurma || alunos.filter((aluno) => String(aluno.turma_id) === String(selectedTurma)).length === 0} className="w-full sm:w-auto">Excluir turma selecionada</Button></div></div>
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">A exclusão remove todos os alunos da turma selecionada e exige confirmação. Para excluir apenas uma pessoa, use “Excluir” na tabela.</p>
         </section>
-
-        {/* 4. Importação */}
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">4. Importar alunos por planilha</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Importe vários alunos de uma vez usando um arquivo CSV. Baixe o modelo e preencha os dados antes de enviar.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={handleDownloadTemplate} disabled={!selectedTurma}>
-              Baixar modelo CSV
-            </Button>
-            {!selectedTurma && <span className="text-xs text-slate-500 dark:text-slate-400">Selecione uma turma nos filtros para preencher o modelo automaticamente.</span>}
-          </div>
-          <div className="mt-4">
-            <FormInput
-              label="Arquivo CSV"
-              type="file"
-              accept=".csv"
-              onChange={handleUploadCsv}
-              disabled={uploading}
-              className="block w-full text-sm text-slate-600 dark:text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-green-700 file:px-4 file:py-2 file:font-semibold file:text-white"
-            />
-          </div>
-          {uploading && <p className="mt-2 text-sm text-blue-700 dark:text-blue-300">Validando e importando arquivo...</p>}
-          {fileName && (
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Arquivo selecionado: {fileName}</p>
-          )}
-          {fileErrors.length > 0 && (
-            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-              <p className="font-semibold">Corrija os seguintes erros no CSV:</p>
-              <ul className="mt-1 list-disc pl-5">
-                {fileErrors.map((error, index) => <li key={index}>{error}</li>)}
-              </ul>
-            </div>
-          )}
-          {turmas.length > 0 && (
-            <details className="mt-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-              <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Ver IDs das turmas (opção avançada)
-              </summary>
-              <div className="grid gap-2 border-t border-slate-200 p-3 dark:border-slate-700">
-                {turmas.map((turma) => (
-                  <div key={turma.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-                    <span className="break-all font-mono text-xs text-slate-700 dark:text-slate-300">{turma.id} — {turma.nome}</span>
-                    <Button size="sm" variant="outline" onClick={() => copyToClipboard(String(turma.id))}>Copiar ID</Button>
-                  </div>
-                ))}
-              </div>
-            </details>
-          )}
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">4. Importar alunos por planilha</h2>
+          <p className="mt-1 mb-4 text-sm text-slate-500 dark:text-slate-400">Importe vários alunos de uma vez usando um arquivo CSV. Baixe o modelo e preencha os dados antes de enviar.</p>
+          <div className="flex flex-wrap items-center gap-3"><Button onClick={handleDownloadTemplate} disabled={!selectedTurma}>Baixar modelo CSV</Button>{!selectedTurma && <span className="text-xs text-slate-500 dark:text-slate-400">Selecione uma turma nos filtros para preencher o modelo automaticamente.</span>}</div>
+          <div className="mt-4"><FormInput label="Arquivo CSV" type="file" accept=".csv" onChange={handleUploadCsv} disabled={uploading} className="block w-full text-sm text-slate-600 dark:text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-green-700 file:px-4 file:py-2 file:font-semibold file:text-white" /></div>
+          {uploading && <p className="mt-2 text-sm text-blue-700 dark:text-blue-300">Validando e importando arquivo...</p>}{fileName && <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Arquivo selecionado: {fileName}</p>}
+          {fileErrors.length > 0 && <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"><p className="font-semibold">Corrija os seguintes erros no CSV:</p><ul className="mt-1 list-disc pl-5">{fileErrors.map((error, index) => <li key={index}>{error}</li>)}</ul></div>}
+          {turmas.length > 0 && <details className="mt-4 rounded-2xl border border-slate-200 dark:border-slate-700"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Ver IDs das turmas (opção avançada)</summary><div className="grid gap-2 border-t border-slate-200 p-3 dark:border-slate-700">{turmas.map((turma) => <div key={turma.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800"><span className="break-all font-mono text-xs text-slate-700 dark:text-slate-300">{turma.id} — {turma.nome}</span><Button size="sm" variant="outline" onClick={() => copyToClipboard(String(turma.id))}>Copiar ID</Button></div>)}</div></details>}
         </section>
       </div>
 
@@ -1069,8 +958,8 @@ export const StudentManagement = () => {
 
           <div className="text-sm text-slate-600 dark:text-slate-300">
             {selectedCount > 0
-              ? `${selectedCount} aluno(s) selecionado(s) para o relatório`
-              : "Marque os alunos na tabela para incluí-los no relatório"}
+              ? `${selectedCount} aluno(s) selecionado(s)`
+              : "Selecione alunos para ações rápidas"}
           </div>
         </div>
 
