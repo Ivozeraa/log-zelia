@@ -274,6 +274,13 @@ export function installSuspensionReportBridge() {
       if (card.dataset.suspensionReportReady === "true") return;
       const text = card.innerText || "";
       if (!/(Suspensão|suspensão)\s*#\d+/.test(text)) return;
+
+      // O seletor genérico também encontra o contêiner externo do histórico.
+      // Só injeta ações no cartão da suspensão mais interno, evitando botões duplicados.
+      const nestedSuspensionCard = Array.from(card.querySelectorAll("div.rounded-2xl.border.p-4"))
+        .some((nested) => /(Suspensão|suspensão)\s*#\d+/.test(nested.innerText || ""));
+      if (nestedSuspensionCard) return;
+
       card.dataset.suspensionReportReady = "true";
 
       const actions = document.createElement("div");

@@ -104,18 +104,10 @@ const ordenarESinalizarSuspensoes = (lista) => {
     chaveCronologica(a).localeCompare(chaveCronologica(b)),
   );
 
-  // Uma suspensão criada automaticamente aponta para a ocorrência que a originou.
-  // No histórico, exibimos somente a suspensão para evitar o registro duplicado,
-  // mas usamos a ocorrência de origem para explicar o motivo da medida.
-  const idsDeOrigens = new Set(
-    ascendente
-      .filter((item) => item.categoria === "suspensao" && item.ocorrencia_origem_id)
-      .map((item) => String(item.ocorrencia_origem_id)),
-  );
-
-  const historico = ascendente.filter(
-    (item) => !idsDeOrigens.has(String(item.id)),
-  );
+  // A ocorrência que atingiu o limite permanece no histórico comum.
+  // A suspensão é um registro separado, ligado à ocorrência de origem,
+  // e funciona como aviso da medida disciplinar aplicada.
+  const historico = ascendente;
 
   // Numera as suspensões pela ordem em que foram efetivamente aplicadas,
   // e não pela data da ocorrência que as originou.
@@ -157,7 +149,7 @@ const ordenarESinalizarSuspensoes = (lista) => {
     return {
       ...occ,
       descricao: origem
-        ? `O aluno atingiu ${ocorrenciasAteOrigem || 0} ocorrências. Motivo do professor: ${motivo}.`
+        ? `O aluno atingiu ${ocorrenciasAteOrigem || 0} ocorrências. Ocorrência que gerou a suspensão: ${motivo}.`
         : occ.descricao || "Suspensão registrada.",
       professor_nome: professor,
       suspensaoGerada: {
@@ -820,7 +812,7 @@ export const Occurrences = () => {
                           Ocorrências registradas ({ocorrencias.length})
                         </h3>
                         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                          As ocorrências que geraram suspensão ficam vinculadas ao registro da suspensão, evitando duplicidade.
+                          As ocorrências que geraram suspensão permanecem aqui; o histórico de suspensões mostra um aviso separado vinculado a cada ocorrência de origem.
                         </p>
                       </div>
                       {ocorrencias.length === 0 ? (
