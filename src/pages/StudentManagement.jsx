@@ -8,6 +8,7 @@ import { FormInput } from "../components/ui/FormInput";
 import { CustomSelect } from "../components/ui/CustomSelect";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
+import { Pagination } from "../components/ui/Pagination";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { addPdfFooter } from "../utils/pdfFooterPatch";
@@ -133,6 +134,8 @@ export const StudentManagement = () => {
   const [selectedTurma, setSelectedTurma] = useState("");
   const [search, setSearch] = useState("");
   const [selectedAlunoIds, setSelectedAlunoIds] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   const [sourceTurma, setSourceTurma] = useState("");
   const [targetTurma, setTargetTurma] = useState("");
   const [reportFormat, setReportFormat] = useState("pdf");
@@ -505,6 +508,20 @@ export const StudentManagement = () => {
       return matchesSearch && matchesEscola && matchesTurma;
     });
   }, [alunos, search, selectedEscola, selectedTurma]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAlunos.length / pageSize));
+  const paginatedAlunos = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredAlunos.slice(start, start + pageSize);
+  }, [filteredAlunos, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedEscola, selectedTurma]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
 
   const selectedCount = selectedAlunoIds.length;
 
@@ -1030,7 +1047,7 @@ export const StudentManagement = () => {
                   </td>
                 </tr>
               ) : (
-                filteredAlunos.map((aluno) => (
+                paginatedAlunos.map((aluno) => (
                   <tr
                     key={aluno.id}
                     className="border-b border-slate-200 transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50"
@@ -1105,6 +1122,19 @@ export const StudentManagement = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {filteredAlunos.length === 0
+              ? "Nenhum aluno para exibir"
+              : `Mostrando ${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, filteredAlunos.length)} de ${filteredAlunos.length} alunos`}
+          </p>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
   );
