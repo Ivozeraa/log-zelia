@@ -902,7 +902,6 @@ export const StudentManagement = () => {
             </div>
           </div>
         </Modal>
-      </div>
 
       <div className="space-y-6">
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
