@@ -809,136 +809,93 @@ export const Occurrences = () => {
             title="Histórico de Ocorrências"
             content={
               <div className="flex flex-col gap-4">
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  {selectedAlunoOccurrencesSorted.length}{" "}
-                  {selectedAlunoOccurrencesSorted.length === 1 ? "ocorrência" : "ocorrências"}{" "}
-                  registradas
-                </p>
-
-                {selectedAlunoOccurrencesSorted.length === 0 ? (
-                  <div className="py-10 text-center text-slate-500 dark:text-slate-400">
-                    Nenhuma ocorrência encontrada para este aluno.
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    {selectedAlunoOccurrencesSorted.map((occ, idx) => {
-                      const ehSuspensao = occ.categoria === "suspensao";
-                      const cardExtraClass = ehSuspensao
-                        ? "border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20"
-                        : "";
-
-                      return (
-                        <div
-                          key={occ.id}
-                          className={`rounded-2xl border p-4 flex flex-col gap-3 ${cardExtraClass || "border-slate-200 dark:border-slate-700"}`}
-                        >
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="flex items-center gap-3">
-                              <span
-                                className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
-                                  ehSuspensao
-                                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
-                                    : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                                }`}
-                              >
-                                #{idx + 1}
-                              </span>
-                              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                                {formatData(occ.data_ocorrido)}
-                              </span>
+                {(() => {
+                  const ocorrencias = selectedAlunoOccurrencesSorted.filter(
+                    (item) => item.categoria !== "suspensao",
+                  );
+                  return (
+                    <>
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                          Ocorrências registradas ({ocorrencias.length})
+                        </h3>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          As ocorrências que geraram suspensão ficam vinculadas ao registro da suspensão, evitando duplicidade.
+                        </p>
+                      </div>
+                      {ocorrencias.length === 0 ? (
+                        <p className="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+                          Nenhuma ocorrência comum registrada.
+                        </p>
+                      ) : (
+                        <div className="flex flex-col gap-3">
+                          {ocorrencias.map((occ, idx) => (
+                            <div key={occ.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                                    Ocorrência #{ocorrencias.length - idx}
+                                  </span>
+                                  <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                                    {formatData(occ.data_ocorrido)}
+                                  </span>
+                                  {occ.tipo && <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700 dark:bg-purple-950 dark:text-purple-300">{occ.tipo}</span>}
+                                </div>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">{occ.professor_nome || "Professor não informado"}</span>
+                              </div>
+                              {occ.descricao && <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">{occ.descricao}</p>}
+                              <div className="mt-3 flex justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-700">
+                                <Button size="xs" variant="outline" onClick={() => openEditOccurrence(occ)}>Editar</Button>
+                                <Button size="xs" variant="destructive" onClick={() => { setSelectedOccurrence(occ); setDeleteModalOpen(true); }}>Excluir</Button>
+                              </div>
                             </div>
-
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span
-                                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-                                  ehSuspensao
-                                    ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                    : "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                                }`}
-                              >
-                                {occ.categoria || "—"}
-                              </span>
-                              <span className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700 dark:bg-purple-950 dark:text-purple-300">
-                                {occ.tipo || "—"}
-                              </span>
-                              {occ.suspensaoGerada && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 dark:bg-red-950 dark:text-red-300">
-                                  🔴{" "}
-                                  {occ.suspensaoGerada.origem === "direta"
-                                    ? `Suspensão #${occ.suspensaoGerada.numero}`
-                                    : `Gerou suspensão #${occ.suspensaoGerada.numero}`}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {ehSuspensao && (occ.data_inicio || occ.data_fim) && (
-                            <div className="flex items-center gap-2 rounded-xl bg-amber-100 dark:bg-amber-900/40 px-4 py-2 text-xs font-medium text-amber-800 dark:text-amber-300">
-                              <span>📅</span>
-                              <span>
-                                Período:{" "}
-                                <strong>{formatData(occ.data_inicio)}</strong>
-                                {" "}até{" "}
-                                <strong>{formatData(occ.data_fim)}</strong>
-                              </span>
-                            </div>
-                          )}
-
-                          {occ.descricao && (
-                            <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 py-3">
-                              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                Descrição
-                              </p>
-                              <p className="text-sm text-slate-700 dark:text-slate-300">
-                                {occ.descricao}
-                              </p>
-                            </div>
-                          )}
-
-                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                            <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-0.5">
-                                Professor
-                              </p>
-                              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                {occ.professor_nome || "—"}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-0.5">
-                                Aplicação
-                              </p>
-                              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                {formatDataComHora(occ.data_aplicacao)}
-                              </p>
-                            </div>
-                            {!ehSuspensao && (
-                              <div className="col-span-2 sm:col-span-1" />
-                            )}
-                          </div>
-
-                          <div className="flex justify-end gap-2 pt-1 border-t border-slate-100 dark:border-slate-700">
-                            <Button
-                              size="xs"
-                              variant="outline"
-                              onClick={() => openEditOccurrence(occ)}
-                            >
-                              Editar
-                            </Button>
-                            <Button
-                              size="xs"
-                              variant="destructive"
-                              onClick={() => {
-                                setSelectedOccurrence(occ);
-                                setDeleteModalOpen(true);
-                              }}
-                            >
-                              Excluir
-                            </Button>
-                          </div>
+                          ))}
                         </div>
-                      );
-                    })}
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            }
+          />
+
+          <Card
+            title="Histórico de Suspensões"
+            content={
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  {selectedAlunoOccurrencesSorted.filter((item) => item.categoria === "suspensao").length} suspensão(ões) registrada(s).
+                </p>
+                {selectedAlunoOccurrencesSorted.filter((item) => item.categoria === "suspensao").length === 0 ? (
+                  <p className="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+                    Nenhuma suspensão registrada para este aluno.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {selectedAlunoOccurrencesSorted.filter((item) => item.categoria === "suspensao").map((occ) => (
+                      <div key={occ.id} className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                              Suspensão #{occ.suspensaoGerada?.numero || 1}
+                            </span>
+                            <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{formatData(occ.data_ocorrido)}</span>
+                          </div>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">{occ.professor_nome || "Professor não informado"}</span>
+                        </div>
+                        {(occ.data_inicio || occ.data_fim) && (
+                          <p className="mt-3 rounded-xl bg-amber-100 px-3 py-2 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                            Período: {formatData(occ.data_inicio)} até {formatData(occ.data_fim)}
+                          </p>
+                        )}
+                        {occ.descricao && <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">{occ.descricao}</p>}
+                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Aplicada em: {formatDataComHora(occ.data_aplicacao)}</p>
+                        <div className="mt-3 flex justify-end gap-2 border-t border-amber-200 pt-3 dark:border-amber-800">
+                          <Button size="xs" variant="outline" onClick={() => openEditOccurrence(occ)}>Editar</Button>
+                          <Button size="xs" variant="destructive" onClick={() => { setSelectedOccurrence(occ); setDeleteModalOpen(true); }}>Excluir</Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
