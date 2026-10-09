@@ -195,6 +195,7 @@ export const StudentManagement = () => {
       const alunoOccurrences = occurrenceMap[aluno.id] || [];
       return alunoOccurrences.length > 0
         ? alunoOccurrences.map((occ) => ({
+          aluno_id: aluno.id,
           aluno_nome: aluno.nome,
           matricula: aluno.matricula,
           turma: getTurmaName(aluno.turma_id),
@@ -254,154 +255,124 @@ export const StudentManagement = () => {
   const generatePdfReport = async (rows) => {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 36;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 40;
     const today = new Date().toLocaleDateString("pt-BR");
-    const schoolName = rows[0]?.escola || "Instituição de ensino";
-    const reportTitle = "RELATÓRIO DE ALUNOS E OCORRÊNCIAS";
+    const reportTitle = "FICHA INDIVIDUAL DE OCORRÊNCIAS";
+    const students = new Map();
 
-    doc.setFillColor(35, 146, 74);
-    doc.rect(0, 0, pageWidth, 8, "F");
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.8);
-    doc.line(margin, 92, pageWidth - margin, 92);
-
-    try {
-      doc.addImage(logoImg, "PNG", margin, 18, 56, 56);
-    } catch (error) {
-      console.warn("Logo da escola não pôde ser adicionada ao relatório:", error);
-    }
-
-    doc.setTextColor(15, 23, 42);
-    doc.setFont("helvetica", "bold");
-    drawFittedPdfText(doc, schoolName, {
-      x: margin + 70,
-      y: 35,
-      maxWidth: 225,
-      fontSize: 14,
-      minFontSize: 9,
+    rows.forEach((row) => {
+      if (!students.has(row.aluno_id)) {
+        students.set(row.aluno_id, { ...row, ocorrencias: [] });
+      }
+      if (row.data_ocorrido !== "—" || row.descricao !== "Sem ocorrências") {
+        students.get(row.aluno_id).ocorrencias.push(row);
+      }
     });
 
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(71, 85, 105);
-    doc.text("LogView • Gestão escolar", margin + 70, 53);
-    doc.text(`Emitido em ${today}`, margin + 70, 69);
+    const studentList = Array.from(students.values());
+    const drawHeader = (schoolName, continuation = false) => {
+      doc.setFillColor(35, 146, 74);
+      doc.rect(0, 0, pageWidth, 8, "F");
+      try {
+        doc.addImage(logoImg, "PNG", margin, 18, 48, 48);
+      } catch (error) {
+        console.warn("Logo da escola não pôde ser adicionada ao relatório:", error);
+      }
+      doc.setTextColor(15, 23, 42);
+      doc.setFont("helvetica", "bold");
+      drawFittedPdfText(doc, schoolName || "Instituição de ensino", {
+        x: margin + 60, y: 32, maxWidth: 250, fontSize: 12, minFontSize: 8,
+      });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text("LogView • Gestão escolar", margin + 60, 48);
+      doc.text(`Emitido em ${today}`, margin + 60, 62);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(22, 101, 52);
+      doc.text(continuation ? "HISTÓRICO DE OCORRÊNCIAS (continuação)" : reportTitle, pageWidth - margin, 34, { align: "right" });
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.8);
+      doc.line(margin, 78, pageWidth - margin, 78);
+    };
 
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(22, 101, 52);
-    drawFittedPdfText(doc, reportTitle, {
-      x: pageWidth - margin,
-      y: 35,
-      maxWidth: 220,
-      fontSize: 13,
-      minFontSize: 10,
-      align: "right",
-    });
+    studentList.forEach((student, studentIndex) => {
+      if (studentIndex > 0) doc.addPage();
+      const schoolName = student.escola || "Instituição de ensino";
+      drawHeader(schoolName);
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`${rows.length} registro(s) no relatório`, pageWidth - margin, 53, { align: "right" });
+      let y = 100;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(15, 23, 42);
+      doc.text("IDENTIFICAÇÃO DO ALUNO", margin, y);
+      y += 12;
 
-    const tableData = rows.map((row) => [
-      row.aluno_nome,
-      row.matricula,
-      row.turma,
-      row.status,
-      row.data_ocorrido,
-      `${row.tipo || "—"}${row.categoria && row.categoria !== "—" ? ` • ${row.categoria}` : ""}`,
-      row.descricao,
-    ]);
+      autoTable(doc, {
+        startY: y,
+        margin: { left: margin, right: margin, top: 92, bottom: 58 },
+        theme: "grid",
+        head: [],
+        body: [
+          ["Aluno(a)", student.aluno_nome || "—", "Matrícula", student.matricula || "—"],
+          ["Série/Turma", student.turma || "—", "Escola", student.escola || "—"],
+          ["Situação atual", String(student.status || "normal").toUpperCase(), "Data do relatório", today],
+        ],
+        styles: { font: "helvetica", fontSize: 9, cellPadding: 7, lineColor: [148, 163, 184], lineWidth: 0.6, textColor: [30, 41, 59], overflow: "linebreak" },
+        columnStyles: { 0: { cellWidth: 78, fontStyle: "bold", fillColor: [241, 245, 249] }, 1: { cellWidth: 175 }, 2: { cellWidth: 78, fontStyle: "bold", fillColor: [241, 245, 249] }, 3: { cellWidth: "auto" } },
+      });
 
-    autoTable(doc, {
-      head: [[
-        "Aluno",
-        "Matrícula",
-        "Turma",
-        "Status",
-        "Data",
-        "Ocorrência",
-        "Descrição",
-      ]],
-      body: tableData,
-      startY: 108,
-      margin: { top: 108, left: margin, right: margin, bottom: 62 },
-      styles: {
-        font: "helvetica",
-        fontSize: 8.5,
-        cellPadding: 5,
-        lineColor: [226, 232, 240],
-        lineWidth: 0.4,
-        textColor: [30, 41, 59],
-        overflow: "linebreak",
-        valign: "middle",
-      },
-      headStyles: {
-        fillColor: [35, 146, 74],
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-        fontSize: 8.5,
-        halign: "left",
-        cellPadding: 6,
-      },
-      alternateRowStyles: {
-        fillColor: [248, 250, 252],
-      },
-      bodyStyles: {
-        minCellHeight: 23,
-      },
-      columnStyles: {
-        0: { cellWidth: 118, fontStyle: "bold" },
-        1: { cellWidth: 66 },
-        2: { cellWidth: 58 },
-        3: { cellWidth: 54, halign: "center", fontStyle: "bold" },
-        4: { cellWidth: 58, halign: "center" },
-        5: { cellWidth: 86 },
-        6: { cellWidth: "auto" },
-      },
-      didParseCell: (data) => {
-        if (data.section === "body" && data.column.index === 3) {
-          const status = String(data.cell.raw || "").toLowerCase();
-          if (status === "suspenso") {
-            data.cell.styles.textColor = [185, 28, 28];
-          } else if (status === "expulso") {
-            data.cell.styles.textColor = [124, 58, 237];
-          } else {
-            data.cell.styles.textColor = [21, 128, 61];
-          }
-        }
-      },
-      willDrawPage: (data) => {
-        if (data.pageNumber > 1) {
-          doc.setFillColor(35, 146, 74);
-          doc.rect(0, 0, pageWidth, 8, "F");
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(9);
-          doc.setTextColor(71, 85, 105);
-          drawFittedPdfText(doc, schoolName, {
-            x: margin,
-            y: 28,
-            maxWidth: 235,
-            fontSize: 9,
-            minFontSize: 7,
-          });
-          drawFittedPdfText(doc, reportTitle, {
-            x: pageWidth - margin,
-            y: 28,
-            maxWidth: 220,
-            fontSize: 9,
-            minFontSize: 7,
-            align: "right",
-          });
-          doc.setDrawColor(226, 232, 240);
-          doc.line(margin, 38, pageWidth - margin, 38);
-        }
-      },
+      y = doc.lastAutoTable.finalY + 22;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(15, 23, 42);
+      doc.text("HISTÓRICO DISCIPLINAR", margin, y);
+      y += 8;
+
+      const history = [...student.ocorrencias].sort((a, b) => {
+        const dateA = new Date(a.data_ocorrido).getTime() || 0;
+        const dateB = new Date(b.data_ocorrido).getTime() || 0;
+        return dateA - dateB;
+      });
+
+      const historyRows = history.length
+        ? history.map((item, index) => [
+            String(index + 1),
+            item.data_ocorrido && item.data_ocorrido !== "—" ? new Date(item.data_ocorrido).toLocaleDateString("pt-BR") : "—",
+            [item.tipo, item.categoria].filter((value) => value && value !== "—").join(" • ") || "Ocorrência",
+            item.descricao || "Sem descrição registrada",
+          ])
+        : [["—", "—", "Sem ocorrências registradas", "Não há ocorrências disponíveis para este aluno no período consultado."]];
+
+      autoTable(doc, {
+        startY: y,
+        margin: { left: margin, right: margin, top: 92, bottom: 58 },
+        head: [["Nº", "Data", "Classificação", "Descrição / registro"]],
+        body: historyRows,
+        styles: { font: "helvetica", fontSize: 8.5, cellPadding: 6, lineColor: [203, 213, 225], lineWidth: 0.5, textColor: [30, 41, 59], overflow: "linebreak", valign: "top" },
+        headStyles: { fillColor: [35, 146, 74], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8.5 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: { 0: { cellWidth: 28, halign: "center" }, 1: { cellWidth: 58 }, 2: { cellWidth: 112, fontStyle: "bold" }, 3: { cellWidth: "auto" } },
+        didDrawPage: (data) => {
+          if (data.pageNumber > 1) drawHeader(schoolName, true);
+        },
+      });
+
+      const finalY = doc.lastAutoTable.finalY + 24;
+      if (finalY < pageHeight - 80) {
+        doc.setDrawColor(148, 163, 184);
+        doc.line(margin, finalY, pageWidth - margin, finalY);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text("Documento gerado pelo LogZélia a partir dos registros disponíveis no sistema.", margin, finalY + 14);
+      }
     });
 
     await addPdfFooter(doc);
-
-    doc.save(`relatorio-alunos-${new Date().toISOString().split("T")[0]}.pdf`);
+    doc.save(`fichas-individuais-alunos-${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
   const openEditAluno = (aluno) => {
