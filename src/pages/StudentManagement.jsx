@@ -195,6 +195,7 @@ export const StudentManagement = () => {
       const alunoOccurrences = occurrenceMap[aluno.id] || [];
       return alunoOccurrences.length > 0
         ? alunoOccurrences.map((occ) => ({
+          aluno_id: aluno.id,
           aluno_nome: aluno.nome,
           matricula: aluno.matricula,
           turma: getTurmaName(aluno.turma_id),
@@ -204,8 +205,11 @@ export const StudentManagement = () => {
           categoria: occ.categoria || "—",
           tipo: occ.tipo || "—",
           descricao: occ.descricao || "—",
+          professor_nome: occ.professor_nome || "Não informado",
+          ocorrencia_origem_id: occ.ocorrencia_origem_id || null,
         }))
         : [{
+          aluno_id: aluno.id,
           aluno_nome: aluno.nome,
           matricula: aluno.matricula,
           turma: getTurmaName(aluno.turma_id),
@@ -215,6 +219,7 @@ export const StudentManagement = () => {
           categoria: "—",
           tipo: "—",
           descricao: "Sem ocorrências",
+          professor_nome: "—",
         }];
     });
   };
@@ -230,6 +235,7 @@ export const StudentManagement = () => {
       "categoria",
       "tipo",
       "descricao",
+      "professor_nome",
     ];
 
     const csv = [header.join("\t")]
@@ -244,6 +250,7 @@ export const StudentManagement = () => {
           row.categoria,
           row.tipo,
           row.descricao,
+          row.professor_nome || "Não informado",
         ].join("\t")),
       )
       .join("\n");
@@ -254,154 +261,154 @@ export const StudentManagement = () => {
   const generatePdfReport = async (rows) => {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 36;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 40;
     const today = new Date().toLocaleDateString("pt-BR");
-    const schoolName = rows[0]?.escola || "Instituição de ensino";
-    const reportTitle = "RELATÓRIO DE ALUNOS E OCORRÊNCIAS";
+    const reportTitle = "FICHA INDIVIDUAL DE OCORRÊNCIAS";
+    const students = new Map();
 
-    doc.setFillColor(35, 146, 74);
-    doc.rect(0, 0, pageWidth, 8, "F");
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.8);
-    doc.line(margin, 92, pageWidth - margin, 92);
-
-    try {
-      doc.addImage(logoImg, "PNG", margin, 18, 56, 56);
-    } catch (error) {
-      console.warn("Logo da escola não pôde ser adicionada ao relatório:", error);
-    }
-
-    doc.setTextColor(15, 23, 42);
-    doc.setFont("helvetica", "bold");
-    drawFittedPdfText(doc, schoolName, {
-      x: margin + 70,
-      y: 35,
-      maxWidth: 225,
-      fontSize: 14,
-      minFontSize: 9,
+    rows.forEach((row) => {
+      if (!students.has(row.aluno_id)) {
+        students.set(row.aluno_id, { ...row, ocorrencias: [] });
+      }
+      if (row.data_ocorrido !== "—" || row.descricao !== "Sem ocorrências") {
+        students.get(row.aluno_id).ocorrencias.push(row);
+      }
     });
 
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(71, 85, 105);
-    doc.text("LogView • Gestão escolar", margin + 70, 53);
-    doc.text(`Emitido em ${today}`, margin + 70, 69);
+    const studentList = Array.from(students.values());
+    const drawHeader = (schoolName, continuation = false) => {
+      doc.setFillColor(35, 146, 74);
+      doc.rect(0, 0, pageWidth, 8, "F");
+      try {
+        doc.addImage(logoImg, "PNG", margin, 18, 48, 48);
+      } catch (error) {
+        console.warn("Logo da escola não pôde ser adicionada ao relatório:", error);
+      }
+      doc.setTextColor(15, 23, 42);
+      doc.setFont("helvetica", "bold");
+      drawFittedPdfText(doc, schoolName || "Instituição de ensino", {
+        x: margin + 60, y: 32, maxWidth: 250, fontSize: 12, minFontSize: 8,
+      });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text("LogView • Gestão escolar", margin + 60, 48);
+      doc.text(`Emitido em ${today}`, margin + 60, 62);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(22, 101, 52);
+      doc.text(continuation ? "HISTÓRICO DE OCORRÊNCIAS (continuação)" : reportTitle, pageWidth - margin, 34, { align: "right" });
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.8);
+      doc.line(margin, 78, pageWidth - margin, 78);
+    };
 
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(22, 101, 52);
-    drawFittedPdfText(doc, reportTitle, {
-      x: pageWidth - margin,
-      y: 35,
-      maxWidth: 220,
-      fontSize: 13,
-      minFontSize: 10,
-      align: "right",
-    });
+    studentList.forEach((student, studentIndex) => {
+      if (studentIndex > 0) doc.addPage();
+      const schoolName = student.escola || "Instituição de ensino";
+      drawHeader(schoolName);
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`${rows.length} registro(s) no relatório`, pageWidth - margin, 53, { align: "right" });
+      let y = 100;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(15, 23, 42);
+      doc.text("IDENTIFICAÇÃO DO ALUNO", margin, y);
+      y += 12;
 
-    const tableData = rows.map((row) => [
-      row.aluno_nome,
-      row.matricula,
-      row.turma,
-      row.status,
-      row.data_ocorrido,
-      `${row.tipo || "—"}${row.categoria && row.categoria !== "—" ? ` • ${row.categoria}` : ""}`,
-      row.descricao,
-    ]);
+      autoTable(doc, {
+        startY: y,
+        margin: { left: margin, right: margin, top: 92, bottom: 58 },
+        theme: "grid",
+        head: [],
+        body: [
+          ["Aluno(a)", student.aluno_nome || "—", "Matrícula", student.matricula || "—"],
+          ["Série/Turma", student.turma || "—", "Escola", student.escola || "—"],
+          ["Situação atual", String(student.status || "normal").toUpperCase(), "Data do relatório", today],
+        ],
+        styles: { font: "helvetica", fontSize: 9, cellPadding: 7, lineColor: [148, 163, 184], lineWidth: 0.6, textColor: [30, 41, 59], overflow: "linebreak" },
+        columnStyles: { 0: { cellWidth: 78, fontStyle: "bold", fillColor: [241, 245, 249] }, 1: { cellWidth: 175 }, 2: { cellWidth: 78, fontStyle: "bold", fillColor: [241, 245, 249] }, 3: { cellWidth: "auto" } },
+      });
 
-    autoTable(doc, {
-      head: [[
-        "Aluno",
-        "Matrícula",
-        "Turma",
-        "Status",
-        "Data",
-        "Ocorrência",
-        "Descrição",
-      ]],
-      body: tableData,
-      startY: 108,
-      margin: { top: 108, left: margin, right: margin, bottom: 62 },
-      styles: {
-        font: "helvetica",
-        fontSize: 8.5,
-        cellPadding: 5,
-        lineColor: [226, 232, 240],
-        lineWidth: 0.4,
-        textColor: [30, 41, 59],
-        overflow: "linebreak",
-        valign: "middle",
-      },
-      headStyles: {
-        fillColor: [35, 146, 74],
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-        fontSize: 8.5,
-        halign: "left",
-        cellPadding: 6,
-      },
-      alternateRowStyles: {
-        fillColor: [248, 250, 252],
-      },
-      bodyStyles: {
-        minCellHeight: 23,
-      },
-      columnStyles: {
-        0: { cellWidth: 118, fontStyle: "bold" },
-        1: { cellWidth: 66 },
-        2: { cellWidth: 58 },
-        3: { cellWidth: 54, halign: "center", fontStyle: "bold" },
-        4: { cellWidth: 58, halign: "center" },
-        5: { cellWidth: 86 },
-        6: { cellWidth: "auto" },
-      },
-      didParseCell: (data) => {
-        if (data.section === "body" && data.column.index === 3) {
-          const status = String(data.cell.raw || "").toLowerCase();
-          if (status === "suspenso") {
-            data.cell.styles.textColor = [185, 28, 28];
-          } else if (status === "expulso") {
-            data.cell.styles.textColor = [124, 58, 237];
-          } else {
-            data.cell.styles.textColor = [21, 128, 61];
+      y = doc.lastAutoTable.finalY + 22;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(15, 23, 42);
+      doc.text("HISTÓRICO DISCIPLINAR", margin, y);
+      y += 8;
+
+      const history = [...student.ocorrencias].sort((a, b) => {
+        const dateA = new Date(a.data_ocorrido).getTime() || 0;
+        const dateB = new Date(b.data_ocorrido).getTime() || 0;
+        return dateA - dateB;
+      });
+
+      const formatDate = (value) => {
+        if (!value || value === "—") return "data não disponível";
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString("pt-BR");
+      };
+      const historyRows = history.length
+        ? history.map((item) => {
+            const category = String(item.categoria || "").toLowerCase();
+            const isSuspension = category.includes("suspens");
+            const recordType = isSuspension ? "Suspensão" : "Ocorrência";
+            const type = item.tipo && item.tipo !== "—"
+              ? String(item.tipo).charAt(0).toLocaleUpperCase("pt-BR") + String(item.tipo).slice(1)
+              : "Não especificado";
+            const description = isSuspension && item.ocorrencia_origem_id
+              ? `Suspensão decorrente da ocorrência registrada em ${formatDate(item.data_ocorrido)}.`
+              : item.descricao || "Sem descrição registrada";
+            return [
+              formatDate(item.data_ocorrido),
+              recordType,
+              type,
+              item.professor_nome || "Não informado",
+              description,
+            ];
+          })
+        : [["—", "Sem registros", "—", "—", "Não há ocorrências disponíveis para este aluno no período consultado."]];
+
+      autoTable(doc, {
+        startY: y,
+        margin: { left: margin, right: margin, top: 92, bottom: 58 },
+        head: [["Data", "Registro", "Tipo", "Professor responsável", "Descrição do ocorrido"]],
+        body: historyRows,
+        styles: { font: "helvetica", fontSize: 9.5, cellPadding: 7, lineColor: [203, 213, 225], lineWidth: 0.5, textColor: [30, 41, 59], overflow: "linebreak", valign: "middle", halign: "center" },
+        headStyles: { fillColor: [35, 146, 74], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9.5, cellPadding: 7 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: {
+          0: { cellWidth: 68, halign: "center", noWrap: true },
+          1: { cellWidth: 68, fontStyle: "bold", halign: "center" },
+          2: { cellWidth: 76, halign: "center" },
+          3: { cellWidth: 100, halign: "center" },
+          4: { cellWidth: "auto", halign: "justify", valign: "top", cellPadding: { top: 7, right: 8, bottom: 7, left: 8 } },
+        },
+        didParseCell: (data) => {
+          if (data.section === "body" && data.column.index === 1) {
+            data.cell.styles.textColor = String(data.cell.raw).toLowerCase().includes("suspensão")
+              ? [185, 28, 28]
+              : [22, 101, 52];
           }
-        }
-      },
-      willDrawPage: (data) => {
-        if (data.pageNumber > 1) {
-          doc.setFillColor(35, 146, 74);
-          doc.rect(0, 0, pageWidth, 8, "F");
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(9);
-          doc.setTextColor(71, 85, 105);
-          drawFittedPdfText(doc, schoolName, {
-            x: margin,
-            y: 28,
-            maxWidth: 235,
-            fontSize: 9,
-            minFontSize: 7,
-          });
-          drawFittedPdfText(doc, reportTitle, {
-            x: pageWidth - margin,
-            y: 28,
-            maxWidth: 220,
-            fontSize: 9,
-            minFontSize: 7,
-            align: "right",
-          });
-          doc.setDrawColor(226, 232, 240);
-          doc.line(margin, 38, pageWidth - margin, 38);
-        }
-      },
+        },
+        didDrawPage: (data) => {
+          if (data.pageNumber > 1) drawHeader(schoolName, true);
+        },
+      });
+
+      const finalY = doc.lastAutoTable.finalY + 24;
+      if (finalY < pageHeight - 80) {
+        doc.setDrawColor(148, 163, 184);
+        doc.line(margin, finalY, pageWidth - margin, finalY);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text("Documento gerado pelo LogZélia a partir dos registros disponíveis no sistema.", margin, finalY + 14);
+      }
     });
 
     await addPdfFooter(doc);
-
-    doc.save(`relatorio-alunos-${new Date().toISOString().split("T")[0]}.pdf`);
+    doc.save(`fichas-individuais-alunos-${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
   const openEditAluno = (aluno) => {
@@ -560,11 +567,13 @@ export const StudentManagement = () => {
   };
 
   const handleToggleAll = () => {
-    if (selectedAlunoIds.length === filteredAlunos.length) {
-      setSelectedAlunoIds([]);
+    const visibleIds = filteredAlunos.map((aluno) => aluno.id);
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedAlunoIds.includes(id));
+    if (allVisibleSelected) {
+      setSelectedAlunoIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
       return;
     }
-    setSelectedAlunoIds(filteredAlunos.map((aluno) => aluno.id));
+    setSelectedAlunoIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
   };
 
   const handleDownloadTemplate = () => {
@@ -683,7 +692,7 @@ export const StudentManagement = () => {
       const alunoIds = rows.map((aluno) => aluno.id);
       const { data: occurrences, error } = await supabase
         .from("ocorrencias")
-        .select("id, aluno_id, categoria, tipo, descricao, data_ocorrido")
+        .select("id, aluno_id, categoria, tipo, descricao, data_ocorrido, professor_nome, ocorrencia_origem_id")
         .in("aluno_id", alunoIds);
 
       if (error) {
@@ -900,172 +909,47 @@ export const StudentManagement = () => {
             </div>
           </div>
         </Modal>
+
+      <div className="space-y-6">
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">1. Encontrar alunos</h2>
+          <p className="mt-1 mb-4 text-sm text-slate-500 dark:text-slate-400">Use os filtros para localizar rapidamente os alunos que deseja consultar.</p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <CustomSelect label="Escola" value={selectedEscola} onChange={(value) => { setSelectedEscola(value); setSelectedTurma(""); setSelectedAlunoIds([]); }} options={escolaOptions} placeholder="Todas as escolas" />
+            <CustomSelect label="Turma" value={selectedTurma} onChange={(value) => { setSelectedTurma(value); setSelectedAlunoIds([]); }} options={[{ value: "", label: "Todas as turmas" }, ...turmas.filter((turma) => !selectedEscola || String(turma.escola_id) === String(selectedEscola)).map((turma) => ({ value: String(turma.id), label: turma.nome })).sort((a, b) => a.label.localeCompare(b.label))]} placeholder="Todas as turmas" />
+          </div>
+          <div className="mt-4"><FormInput label="Buscar por nome ou matrícula" placeholder="Digite o nome ou a matrícula do aluno" value={search} onChange={(event) => setSearch(event.target.value)} /></div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-800/70">
+            <p className="text-sm text-slate-600 dark:text-slate-300">{loading ? "Carregando alunos..." : <><strong className="text-slate-900 dark:text-white">{filteredAlunos.length}</strong> aluno(s) encontrado(s)</>}</p>
+            {(search || selectedEscola || selectedTurma) && <Button variant="outline" size="sm" onClick={() => { setSearch(""); setSelectedEscola(""); setSelectedTurma(""); setSelectedAlunoIds([]); }}>Limpar filtros</Button>}
+          </div>
+        </section>
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">2. Transferir alunos entre turmas</h2>
+          <p className="mt-1 mb-4 text-sm text-slate-500 dark:text-slate-400">Esta ação transfere todos os alunos da turma de origem para a turma de destino.</p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <CustomSelect label="Turma de origem" value={sourceTurma} onChange={setSourceTurma} options={[{ value: "", label: "Selecione a turma de origem" }, ...turmas.filter((turma) => !selectedEscola || String(turma.escola_id) === String(selectedEscola)).map((turma) => ({ value: String(turma.id), label: turma.nome })).sort((a, b) => a.label.localeCompare(b.label))]} placeholder="Selecione a turma de origem" />
+            <CustomSelect label="Turma de destino" value={targetTurma} onChange={setTargetTurma} options={[{ value: "", label: "Selecione a turma de destino" }, ...turmas.filter((turma) => !selectedEscola || String(turma.escola_id) === String(selectedEscola)).filter((turma) => String(turma.id) !== String(sourceTurma)).map((turma) => ({ value: String(turma.id), label: turma.nome })).sort((a, b) => a.label.localeCompare(b.label))]} placeholder="Selecione a turma de destino" />
+          </div>
+          {sourceTurma && <p className="mt-3 rounded-xl bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:bg-blue-950/40 dark:text-blue-200">Serão transferidos <strong>{alunos.filter((aluno) => String(aluno.turma_id) === String(sourceTurma)).length}</strong> aluno(s) de <strong>{getTurmaName(sourceTurma)}</strong>.</p>}
+          <div className="mt-4 flex flex-wrap gap-3"><Button onClick={handleBulkMove} disabled={bulkLoading || !sourceTurma || !targetTurma || sourceTurma === targetTurma}>{bulkLoading ? "Transferindo alunos..." : "Transferir todos os alunos"}</Button>{(sourceTurma || targetTurma) && <Button variant="outline" onClick={() => { setSourceTurma(""); setTargetTurma(""); }} disabled={bulkLoading}>Cancelar seleção</Button>}</div>
+        </section>
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">3. Relatórios e remoção</h2>
+          <p className="mt-1 mb-4 text-sm text-slate-500 dark:text-slate-400">Selecione alunos na tabela para gerar um relatório individualizado. Sem seleção, o relatório considera os resultados dos filtros.</p>
+          <div className="grid gap-4 sm:grid-cols-2"><CustomSelect label="Formato do relatório" value={reportFormat} onChange={setReportFormat} options={reportFormatOptions} placeholder="Selecione o formato" /><div className="flex flex-col justify-end gap-2 sm:flex-row"><Button onClick={handleDownloadFinalReport} disabled={reportLoading || (selectedCount === 0 && filteredAlunos.length === 0)} className="w-full sm:w-auto">{reportLoading ? "Gerando relatório..." : "Gerar relatório"}</Button><Button variant="destructive" onClick={() => { setConfirmDeleteText(""); setDeleteModalOpen(true); }} disabled={!selectedTurma || alunos.filter((aluno) => String(aluno.turma_id) === String(selectedTurma)).length === 0} className="w-full sm:w-auto">Excluir turma selecionada</Button></div></div>
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">A exclusão remove todos os alunos da turma selecionada e exige confirmação. Para excluir apenas uma pessoa, use “Excluir” na tabela.</p>
+        </section>
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">4. Importar alunos por planilha</h2>
+          <p className="mt-1 mb-4 text-sm text-slate-500 dark:text-slate-400">Importe vários alunos de uma vez usando um arquivo CSV. Baixe o modelo e preencha os dados antes de enviar.</p>
+          <div className="flex flex-wrap items-center gap-3"><Button onClick={handleDownloadTemplate} disabled={!selectedTurma}>Baixar modelo CSV</Button>{!selectedTurma && <span className="text-xs text-slate-500 dark:text-slate-400">Selecione uma turma nos filtros para preencher o modelo automaticamente.</span>}</div>
+          <div className="mt-4"><FormInput label="Arquivo CSV" type="file" accept=".csv" onChange={handleUploadCsv} disabled={uploading} className="block w-full text-sm text-slate-600 dark:text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-green-700 file:px-4 file:py-2 file:font-semibold file:text-white" /></div>
+          {uploading && <p className="mt-2 text-sm text-blue-700 dark:text-blue-300">Validando e importando arquivo...</p>}{fileName && <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Arquivo selecionado: {fileName}</p>}
+          {fileErrors.length > 0 && <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"><p className="font-semibold">Corrija os seguintes erros no CSV:</p><ul className="mt-1 list-disc pl-5">{fileErrors.map((error, index) => <li key={index}>{error}</li>)}</ul></div>}
+          {turmas.length > 0 && <details className="mt-4 rounded-2xl border border-slate-200 dark:border-slate-700"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Ver IDs das turmas (opção avançada)</summary><div className="grid gap-2 border-t border-slate-200 p-3 dark:border-slate-700">{turmas.map((turma) => <div key={turma.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800"><span className="break-all font-mono text-xs text-slate-700 dark:text-slate-300">{turma.id} — {turma.nome}</span><Button size="sm" variant="outline" onClick={() => copyToClipboard(String(turma.id))}>Copiar ID</Button></div>)}</div></details>}
+        </section>
       </div>
-
-      <div className="space-y-4">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <CustomSelect
-              label="Filtrar escola"
-              value={selectedEscola}
-              onChange={setSelectedEscola}
-              options={escolaOptions}
-              placeholder="Todas as escolas"
-            />
-
-            <CustomSelect
-              label="Filtrar turma"
-              value={selectedTurma}
-              onChange={setSelectedTurma}
-              options={turmaOptions}
-              placeholder="Todas as turmas"
-              className="mb-2 col"
-            />
-          </div>
-
-          <FormInput
-            label="Buscar aluno"
-            placeholder="Nome ou matrícula"
-            value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
-          />
-
-          <div className="mt-2 grid gap-3 sm:grid-cols-2">
-            <CustomSelect
-              label="Turma de origem"
-              value={sourceTurma}
-              onChange={setSourceTurma}
-              options={origemTurmaOptions}
-              placeholder="Selecione a turma de origem"
-            />
-
-            <CustomSelect
-              label="Turma de destino"
-              value={targetTurma}
-              onChange={setTargetTurma}
-              options={destinoTurmaOptions}
-              placeholder="Selecione a turma de destino"
-            />
-          </div>
-
-          <Button
-            onClick={handleBulkMove}
-            disabled={bulkLoading}
-            className="mt-4"
-          >
-            {bulkLoading
-              ? "Movendo alunos..."
-              : "Mover todos da turma"}
-          </Button>
-
-          <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-              Relatório ou exclusão
-            </p>
-
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Selecione alunos ou use o filtro
-              para gerar relatório e excluir
-              alunos da turma selecionada.
-            </p>
-
-            <div className="grid items-end gap-3 sm:grid-cols-2">
-              <CustomSelect
-                label="Formato do relatório"
-                value={reportFormat}
-                onChange={setReportFormat}
-                options={reportFormatOptions}
-                placeholder="Selecione o formato"
-              />
-
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  onClick={
-                    handleDownloadFinalReport
-                  }
-                  variant="outline"
-                  disabled={reportLoading}
-                >
-                  {reportLoading
-                    ? "Gerando relatório..."
-                    : "Gerar relatório"}
-                </Button>
-
-                <Button
-                  variant="destructive"
-                  onClick={() =>
-                    setDeleteModalOpen(true)
-                  }
-                >
-                  Excluir alunos da turma
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-              Importar CSV
-            </p>
-
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Use o template para carregar
-              alunos com nome, matrícula,
-              turma_id e escola_id.
-            </p>
-
-            <FormInput
-              type="file"
-              accept=".csv"
-              onChange={handleUploadCsv}
-              className="mt-3 block w-full text-sm text-slate-600 dark:text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-green-700 file:px-4 file:py-2 file:font-semibold file:text-white"
-            />
-
-            {fileName && (
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Arquivo: {fileName}
-              </p>
-            )}
-
-            {fileErrors.length > 0 && (
-              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-                <p className="font-semibold">
-                  Erros no CSV:
-                </p>
-
-                <ul className="list-disc pl-5">
-                  {fileErrors.map(
-                    (error, index) => (
-                      <li key={index}>
-                        {error}
-                      </li>
-                    )
-                  )}
-                </ul>
-              </div>
-            )}
-
-            {turmas.length > 0 && (
-              <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900">
-                <p className="font-semibold">IDs das turmas</p>
-                <p className="text-sm text-slate-500">Lista de IDs das turmas no formato <span className="font-mono">id — nome</span></p>
-
-                <div className="mt-2 grid gap-2">
-                  {turmas.map((t) => (
-                    <div key={t.id} className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50 px-3 py-2">
-                      <div className="text-sm font-mono text-slate-700">{t.id} — {t.nome}</div>
-                      <Button size="sm" onClick={() => copyToClipboard(String(t.id))}>
-                        Copiar
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -1092,12 +976,7 @@ export const StudentManagement = () => {
                 <th className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
                   <FormInput
                     type="checkbox"
-                    checked={
-                      filteredAlunos.length >
-                      0 &&
-                      selectedAlunoIds.length ===
-                      filteredAlunos.length
-                    }
+                    checked={filteredAlunos.length > 0 && filteredAlunos.every((aluno) => selectedAlunoIds.includes(aluno.id))}
                     onChange={handleToggleAll}
                   />
                 </th>
