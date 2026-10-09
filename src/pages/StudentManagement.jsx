@@ -343,11 +343,8 @@ export const StudentManagement = () => {
         return dateA - dateB;
       });
 
-      const occurrenceDateById = new Map(
-        history.map((item) => [String(item.id), item.data_ocorrido]),
-      );
       const formatDate = (value) => {
-        if (!value || value === "—") return "—";
+        if (!value || value === "—") return "data não disponível";
         const date = new Date(value);
         return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString("pt-BR");
       };
@@ -359,11 +356,8 @@ export const StudentManagement = () => {
             const type = item.tipo && item.tipo !== "—"
               ? String(item.tipo).charAt(0).toLocaleUpperCase("pt-BR") + String(item.tipo).slice(1)
               : "Não especificado";
-            const originDate = item.ocorrencia_origem_id
-              ? occurrenceDateById.get(String(item.ocorrencia_origem_id))
-              : null;
             const description = isSuspension && item.ocorrencia_origem_id
-              ? `Suspensão decorrente da ocorrência de ${formatDate(originDate)}.`
+              ? `Suspensão decorrente da ocorrência registrada em ${formatDate(item.data_ocorrido)}.`
               : item.descricao || "Sem descrição registrada";
             return [
               formatDate(item.data_ocorrido),
@@ -388,7 +382,7 @@ export const StudentManagement = () => {
           1: { cellWidth: 68, fontStyle: "bold", halign: "center" },
           2: { cellWidth: 76, halign: "center" },
           3: { cellWidth: 100, halign: "center" },
-          4: { cellWidth: "auto", halign: "center" },
+          4: { cellWidth: "auto", halign: "justify", valign: "top", cellPadding: { top: 7, right: 8, bottom: 7, left: 8 } },
         },
         didParseCell: (data) => {
           if (data.section === "body" && data.column.index === 1) {
