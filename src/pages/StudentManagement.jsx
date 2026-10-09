@@ -759,8 +759,8 @@ export const StudentManagement = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8 w-full dark:bg-slate-950">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex min-w-0 w-full flex-col gap-8 dark:bg-slate-950">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <PageTitle
           title="Gestão de Alunos"
           subtitle="Filtre, mova turmas e importe os alunos por planilha CSV."
@@ -784,6 +784,8 @@ export const StudentManagement = () => {
               : "Selecione a turma para baixar"}
           </Button>
         </div>
+      </div>
+
         <Modal
           isOpen={editModalOpen}
           onClose={() => {
@@ -910,7 +912,7 @@ export const StudentManagement = () => {
           </div>
         </Modal>
 
-      <div className="space-y-6">
+      <div className="grid min-w-0 grid-cols-1 gap-6">
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">1. Encontrar alunos</h2>
           <p className="mt-1 mb-4 text-sm text-slate-500 dark:text-slate-400">Use os filtros para localizar rapidamente os alunos que deseja consultar.</p>
@@ -1105,6 +1107,5 @@ export const StudentManagement = () => {
           </table>
         </div>
       </div>
-    </div>
   );
 };
