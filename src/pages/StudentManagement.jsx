@@ -206,6 +206,7 @@ export const StudentManagement = () => {
           tipo: occ.tipo || "—",
           descricao: occ.descricao || "—",
           professor_nome: occ.professor_nome || "Não informado",
+          ocorrencia_origem_id: occ.ocorrencia_origem_id || null,
         }))
         : [{
           aluno_id: aluno.id,
@@ -342,16 +343,34 @@ export const StudentManagement = () => {
         return dateA - dateB;
       });
 
+      const occurrenceDateById = new Map(
+        history.map((item) => [String(item.id), item.data_ocorrido]),
+      );
+      const formatDate = (value) => {
+        if (!value || value === "—") return "—";
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString("pt-BR");
+      };
       const historyRows = history.length
         ? history.map((item) => {
             const category = String(item.categoria || "").toLowerCase();
-            const recordType = category.includes("suspens") ? "Suspensão" : "Ocorrência";
+            const isSuspension = category.includes("suspens");
+            const recordType = isSuspension ? "Suspensão" : "Ocorrência";
+            const type = item.tipo && item.tipo !== "—"
+              ? String(item.tipo).charAt(0).toLocaleUpperCase("pt-BR") + String(item.tipo).slice(1)
+              : "Não especificado";
+            const originDate = item.ocorrencia_origem_id
+              ? occurrenceDateById.get(String(item.ocorrencia_origem_id))
+              : null;
+            const description = isSuspension && item.ocorrencia_origem_id
+              ? `Suspensão decorrente da ocorrência de ${formatDate(originDate)}.`
+              : item.descricao || "Sem descrição registrada";
             return [
-              item.data_ocorrido && item.data_ocorrido !== "—" ? new Date(item.data_ocorrido).toLocaleDateString("pt-BR") : "—",
+              formatDate(item.data_ocorrido),
               recordType,
-              item.tipo && item.tipo !== "—" ? item.tipo : "Não especificado",
+              type,
               item.professor_nome || "Não informado",
-              item.descricao || "Sem descrição registrada",
+              description,
             ];
           })
         : [["—", "Sem registros", "—", "—", "Não há ocorrências disponíveis para este aluno no período consultado."]];
@@ -361,15 +380,15 @@ export const StudentManagement = () => {
         margin: { left: margin, right: margin, top: 92, bottom: 58 },
         head: [["Data", "Registro", "Tipo", "Professor responsável", "Descrição do ocorrido"]],
         body: historyRows,
-        styles: { font: "helvetica", fontSize: 9.5, cellPadding: 7, lineColor: [203, 213, 225], lineWidth: 0.5, textColor: [30, 41, 59], overflow: "linebreak", valign: "top" },
+        styles: { font: "helvetica", fontSize: 9.5, cellPadding: 7, lineColor: [203, 213, 225], lineWidth: 0.5, textColor: [30, 41, 59], overflow: "linebreak", valign: "middle", halign: "center" },
         headStyles: { fillColor: [35, 146, 74], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9.5, cellPadding: 7 },
         alternateRowStyles: { fillColor: [248, 250, 252] },
         columnStyles: {
-          0: { cellWidth: 58, halign: "center" },
-          1: { cellWidth: 66, fontStyle: "bold" },
-          2: { cellWidth: 76 },
-          3: { cellWidth: 94 },
-          4: { cellWidth: "auto", halign: "justify" },
+          0: { cellWidth: 68, halign: "center", noWrap: true },
+          1: { cellWidth: 68, fontStyle: "bold", halign: "center" },
+          2: { cellWidth: 76, halign: "center" },
+          3: { cellWidth: 100, halign: "center" },
+          4: { cellWidth: "auto", halign: "center" },
         },
         didParseCell: (data) => {
           if (data.section === "body" && data.column.index === 1) {
@@ -679,7 +698,7 @@ export const StudentManagement = () => {
       const alunoIds = rows.map((aluno) => aluno.id);
       const { data: occurrences, error } = await supabase
         .from("ocorrencias")
-        .select("id, aluno_id, categoria, tipo, descricao, data_ocorrido, professor_nome")
+        .select("id, aluno_id, categoria, tipo, descricao, data_ocorrido, professor_nome, ocorrencia_origem_id")
         .in("aluno_id", alunoIds);
 
       if (error) {
