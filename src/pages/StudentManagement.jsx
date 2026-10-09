@@ -207,6 +207,7 @@ export const StudentManagement = () => {
           descricao: occ.descricao || "—",
         }))
         : [{
+          aluno_id: aluno.id,
           aluno_nome: aluno.nome,
           matricula: aluno.matricula,
           turma: getTurmaName(aluno.turma_id),
