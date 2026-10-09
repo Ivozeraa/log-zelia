@@ -1124,17 +1124,20 @@ export const StudentManagement = () => {
           </table>
         </div>
 
-        <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+        <div className="grid w-full grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
+          <p className="text-center text-sm text-slate-500 dark:text-slate-400 sm:text-left">
             {filteredAlunos.length === 0
               ? "Nenhum aluno para exibir"
               : `Mostrando ${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, filteredAlunos.length)} de ${filteredAlunos.length} alunos`}
           </p>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
+          <div className="flex justify-center sm:col-start-2 sm:row-start-1">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+          <div aria-hidden="true" className="hidden sm:block" />
         </div>
       </div>
   );
