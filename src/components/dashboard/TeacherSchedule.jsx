@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FaCalendarAlt, FaChevronRight, FaClock, FaTimes } from 'react-icons/fa';
 import { supabase } from '../../utils/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -14,8 +14,6 @@ export const TeacherSchedule = () => {
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [weekOpen, setWeekOpen] = useState(false);
-  const [mountNode, setMountNode] = useState(null);
-  const mountNodeRef = useRef(null);
   const today = new Date().getDay();
   const todayValue = today >= 1 && today <= 5 ? today : 1;
 
@@ -78,40 +76,6 @@ export const TeacherSchedule = () => {
     return () => { active = false; };
   }, [user?.id, user?.escola_id]);
 
-  useEffect(() => {
-    let observer;
-    let disposed = false;
-
-    const placeSchedule = () => {
-      if (disposed || mountNodeRef.current) return true;
-
-      const heading = Array.from(document.querySelectorAll('h2')).find((element) => element.textContent?.trim() === 'Fluxo de Ocorrências');
-      const flowCard = heading?.closest('div.w-full');
-      if (!flowCard?.parentNode) return false;
-
-      const slot = document.createElement('div');
-      slot.setAttribute('data-teacher-schedule-slot', 'true');
-      flowCard.parentNode.insertBefore(slot, flowCard);
-      mountNodeRef.current = slot;
-      setMountNode(slot);
-      return true;
-    };
-
-    if (!placeSchedule()) {
-      observer = new MutationObserver(() => {
-        if (placeSchedule()) observer.disconnect();
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
-    }
-
-    return () => {
-      disposed = true;
-      observer?.disconnect();
-      mountNodeRef.current?.remove();
-      mountNodeRef.current = null;
-      setMountNode(null);
-    };
-  }, []);
 
   const todayLessons = useMemo(() => lessons.filter((lesson) => lesson.day === todayValue).sort((a, b) => a.slot - b.slot), [lessons, todayValue]);
   const weekGroups = useMemo(() => WEEK_DAYS.map((day) => ({ ...day, lessons: lessons.filter((lesson) => lesson.day === day.value).sort((a, b) => a.slot - b.slot) })), [lessons]);
@@ -147,7 +111,7 @@ export const TeacherSchedule = () => {
     document.body,
   );
 
-  return <>{mountNode ? createPortal(scheduleContent, mountNode) : null}{weekModal}</>;
+  return <>{scheduleContent}{weekModal}</>;
 };
 
 export default TeacherSchedule;
