@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { FaExclamationTriangle, FaCheckCircle } from "react-icons/fa";
 import { LineChart, Line, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { supabase } from "../utils/supabase";
@@ -17,6 +17,8 @@ import { RankingOcorrencias } from "../components/ui/Ranking";
 import { SuspensionDecisionPopup } from "../components/ui/SuspensionDecisionPopup";
 import { notify } from "../utils/notify";
 import { debugError, debugLog, debugQuery } from "../utils/debug";
+
+const TeacherSchedule = lazy(() => import("../components/dashboard/TeacherSchedule"));
 
 export const Home = () => {
   const { user } = useAuth();
@@ -119,31 +121,36 @@ export const Home = () => {
         setDashboardData(payload);
         setTurmas(Array.isArray(payload.turmas) ? payload.turmas : []);
 
-        // O backend já consolida os registros para evitar duplicar uma ocorrência
-        // quando ela possui uma suspensão derivada.
+        // API otimizada: agregados calculados pelo Postgres; nenhum histórico
+        // completo é transferido ao carregar a página inicial.
+        if (payload.totais && Array.isArray(payload.grafico)) {
+          setStats({
+            total: Number(payload.totais.total || 0),
+            mes: Number(payload.totais.mes || 0),
+            semana: Number(payload.totais.semana || 0),
+          });
+          setGraficoData(payload.grafico);
+          return;
+        }
+
+        // Compatibilidade temporária com o banco ainda sem a nova migration.
         const registros = consolidarOcorrencias(payload.ocorrencias || []);
-        const total = registros.length;
         const hoje = new Date();
         const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
         const inicioSemana = new Date(hoje);
         inicioSemana.setDate(hoje.getDate() - hoje.getDay());
         inicioSemana.setHours(0, 0, 0, 0);
-        const mes = registros.filter((o) => new Date(o.data_ocorrido) >= inicioMes).length;
-        const semana = registros.filter((o) => new Date(o.data_ocorrido) >= inicioSemana).length;
-
-        debugLog("HOME", "dashboard processado", { registros: registros.length, total, mes, semana });
-        setStats({ total, mes, semana });
-
+        setStats({
+          total: registros.length,
+          mes: registros.filter((o) => new Date(o.data_ocorrido) >= inicioMes).length,
+          semana: registros.filter((o) => new Date(o.data_ocorrido) >= inicioSemana).length,
+        });
         const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
         const dadosSemana = diasSemana.map((name) => ({ name, ocorrencias: 0 }));
-        registros.forEach((ocorrencia) => {
-          if (!ocorrencia.data_ocorrido) return;
-          const [ano, mesOcorrencia, dia] = ocorrencia.data_ocorrido.split("-").map(Number);
-          const dataOcorrencia = new Date(ano, mesOcorrencia - 1, dia);
-          dataOcorrencia.setHours(0, 0, 0, 0);
-          if (dataOcorrencia >= inicioSemana) {
-            dadosSemana[dataOcorrencia.getDay()].ocorrencias += 1;
-          }
+        registros.forEach((occ) => {
+          if (!occ.data_ocorrido) return;
+          const data = new Date(occ.data_ocorrido + "T12:00:00");
+          if (data >= inicioSemana) dadosSemana[data.getDay()].ocorrencias += 1;
         });
         setGraficoData(dadosSemana);
       } catch (loadError) {
@@ -379,6 +386,8 @@ export const Home = () => {
             />
           ))}
         </div>
+
+        {Number(user?.role_id) !== 1 && <Suspense fallback={null}><TeacherSchedule /></Suspense>}
 
         <div className={`relative mt-1 overflow-hidden rounded-2xl border px-4 py-3.5 shadow-sm ${dashboardLoading ? "border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900" : fluxoAlto ? "border-red-200 bg-red-50/80 dark:border-red-900/60 dark:bg-red-950/20" : "border-green-200 bg-green-50/80 dark:border-green-900/60 dark:bg-green-950/20"}`}>
           <div className="flex items-center gap-3">
