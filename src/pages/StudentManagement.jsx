@@ -9,8 +9,6 @@ import { CustomSelect } from "../components/ui/CustomSelect";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { Pagination } from "../components/ui/Pagination";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 import { addPdfFooter } from "../utils/pdfFooterPatch";
 import logoImg from "../assets/images/logoEEEP.png";
 
@@ -262,6 +260,10 @@ export const StudentManagement = () => {
   };
 
   const generatePdfReport = async (rows) => {
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
