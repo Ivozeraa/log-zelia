@@ -14,6 +14,7 @@ import { Table } from "../components/ui/Table";
 import { Pagination } from "../components/ui/Pagination";
 import { SectionTitle } from "../components/ui/SectionTitle";
 import { ActivityList } from "../components/ui/ActivityList";
+import { installSuspensionReportBridge } from "../utils/suspensionReportBridge";
 
 const PERIODO_OPTIONS = [
   { value: "", label: "Todos os períodos" },
@@ -214,6 +215,8 @@ const criarNotificacaoSuspensao = async ({ alunoNome, escolaId, alunoId, dataIni
 };
 
 export const Occurrences = () => {
+  // Carrega o bridge apenas nesta tela; evita observação do DOM na aplicação inteira.
+  useEffect(() => installSuspensionReportBridge(), []);
   const { user } = useAuth();
   const location = useLocation();
 
