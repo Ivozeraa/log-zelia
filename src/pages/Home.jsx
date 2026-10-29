@@ -103,11 +103,21 @@ export const Home = () => {
       await new Promise((resolve) => window.setTimeout(resolve, 0));
 
       try {
-        const { data, error } = await debugQuery(
+        let dashboardResult = await debugQuery(
           "HOME",
-          "carregar dashboard completo",
-          supabase.rpc("logview_get_home_dashboard", { p_escola_id: activeSchoolId }),
+          "carregar dashboard v2",
+          supabase.rpc("logview_get_home_dashboard_v2", { p_escola_id: activeSchoolId }),
         );
+
+        // Em ambientes que ainda não aplicaram a migration, continuar operando.
+        if (["PGRST202", "42883"].includes(dashboardResult.error?.code)) {
+          dashboardResult = await debugQuery(
+            "HOME",
+            "carregar dashboard legado",
+            supabase.rpc("logview_get_home_dashboard", { p_escola_id: activeSchoolId }),
+          );
+        }
+        const { data, error } = dashboardResult;
 
         if (error) {
           debugError("HOME", "Erro ao carregar dashboard", error);
