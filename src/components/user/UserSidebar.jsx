@@ -5,9 +5,10 @@ import { FaRegUserCircle, FaUserEdit, FaSignOutAlt, FaArrowLeft } from "react-ic
 import { Modal } from "../ui/Modal"
 import { Button } from "../ui/Button"
 import { lazy, Suspense } from "react"
-const EditProfile = lazy(() => import("./EditProfile").then((module) => ({ default: module.EditProfile })))
 import { SchoolSwitcher } from "../school/SchoolSwitcher"
 import { supabase } from "../../utils/supabase"
+
+const EditProfile = lazy(() => import("./EditProfile").then((module) => ({ default: module.EditProfile })))
 
 const achievements = [
   { threshold: 10, icon: "🥉", title: "Vigilante", desc: "Começou a acompanhar com atenção", linear: "from-amber-100 to-orange-50", border: "border-amber-200", badge: "bg-amber-100 text-amber-700" },
