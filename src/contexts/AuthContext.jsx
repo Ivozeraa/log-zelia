@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../utils/supabase";
 import { AuthContext } from "./AuthContextImpl";
 import { debugError, debugLog, debugQuery } from "../utils/debug";
+import { clearCached } from "../utils/requestCache";
 
 const AUTH_INIT_TIMEOUT_MS = 10000;
 
@@ -190,6 +191,7 @@ export function AuthProvider({ children }) {
         if (!mounted) return;
 
         if (event === "SIGNED_OUT") {
+          clearCached();
           setUser(null);
           setLoading(false);
           return;
@@ -221,6 +223,7 @@ export function AuthProvider({ children }) {
     try {
       await supabase.auth.signOut();
     } finally {
+      clearCached();
       setUser(null);
       setLoading(false);
     }
