@@ -77,6 +77,13 @@ export function SchoolProvider({ children }) {
         return;
       }
 
+      if (user.schoolDetails?.id === user.escola_id) {
+        setSchool(user.schoolDetails);
+        setSelectedSchoolId(String(user.escola_id));
+        setSchools([user.schoolDetails]);
+        return;
+      }
+
       // A escola já está determinada pelo perfil autenticado. Não bloqueamos
       // o restante da aplicação esperando nome/cidade: esses dados são carregados
       // em segundo plano.
@@ -114,7 +121,7 @@ export function SchoolProvider({ children }) {
       setLoading(false);
       debugLog("SCHOOL", "contexto de escola finalizado", { schoolId: selectedSchoolId });
     }
-  }, [authLoading, isGlobalAdmin, loadSchools, user?.escola_id]);
+  }, [authLoading, isGlobalAdmin, loadSchools, user?.escola_id, user?.schoolDetails]);
 
   useEffect(() => {
     void loadSchool();
