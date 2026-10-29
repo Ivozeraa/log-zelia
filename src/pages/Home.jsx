@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { FaExclamationTriangle, FaCheckCircle } from "react-icons/fa";
-import { LineChart, Line, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { useSchool } from "../hooks/useSchool";
@@ -18,6 +17,7 @@ import { notify } from "../utils/notify";
 import { debugError, debugLog, debugQuery } from "../utils/debug";
 
 const TeacherSchedule = lazy(() => import("../components/dashboard/TeacherSchedule"));
+const OccurrenceChart = lazy(() => import("../components/dashboard/OccurrenceChart"));
 const SuspensionDecisionPopup = lazy(() => import("../components/ui/SuspensionDecisionPopup").then((m) => ({ default: m.SuspensionDecisionPopup })));
 
 export const Home = () => {
@@ -420,13 +420,9 @@ export const Home = () => {
           </div>
           <div ref={chartContainerRef} className="h-[350px] w-full min-w-0 min-h-[350px] sm:h-[360px] sm:min-h-[360px] md:h-[380px] md:min-h-[380px] lg:h-[400px] lg:min-h-[400px]">
             {chartWidth > 0 ? (
-              <LineChart width={chartWidth} height={350} data={graficoData} margin={{ top: 12, right: 12, left: 0, bottom: 12 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" tick={{ fill: "#64748b", fontSize: 12 }} tickLine={false} axisLine={false} interval={0} />
-                <YAxis allowDecimals={false} tick={{ fill: "#64748b", fontSize: 12 }} tickLine={false} axisLine={false} width={30} />
-                <Tooltip contentStyle={{ borderRadius: "14px", border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }} />
-                <Line type="monotone" dataKey="ocorrencias" stroke="#16a34a" strokeWidth={3} dot={{ r: 4, fill: "#16a34a" }} activeDot={{ r: 6 }} />
-              </LineChart>
+              <Suspense fallback={<div className="h-[350px] w-full animate-pulse rounded-lg bg-slate-100 dark:bg-slate-900" />}>
+                <OccurrenceChart width={chartWidth} data={graficoData} />
+              </Suspense>
             ) : null}
           </div>
         </div>
