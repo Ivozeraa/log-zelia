@@ -7,124 +7,45 @@ import logo from "../assets/images/logo-login.png"
 import { notify } from "../utils/notify"
 import { FormInput } from "../components/ui/FormInput"
 import { useAuth } from "../hooks/useAuth"
-import { supabase } from "../utils/supabase"
 
 export const Login = () => {
   const [email, setEmail] = useState("")
   const [senha, setSenha] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [checkingSession, setCheckingSession] = useState(true)
   const navigate = useNavigate()
-  const { signIn, refreshUser } = useAuth()
-
-  async function verifyExistingSession() {
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-
-    if (sessionError) throw sessionError
-
-    let session = sessionData?.session ?? null
-
-    // Quando existe uma sessão persistida, tenta renová-la explicitamente.
-    if (session?.refresh_token) {
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession({
-        refresh_token: session.refresh_token,
-      })
-
-      if (refreshError || !refreshData?.session) {
-        await supabase.auth.signOut({ scope: "local" })
-        return null
-      }
-
-      session = refreshData.session
-    }
-
-    if (!session?.user) return null
-
-    // Confirma a sessão diretamente no Auth Server.
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-
-    if (userError || !userData?.user) {
-      await supabase.auth.signOut({ scope: "local" })
-      return null
-    }
-
-    return userData.user
-  }
+  const { user, loading, signIn } = useAuth()
 
   useEffect(() => {
-    let mounted = true
-
-    const checkPersistedSession = async () => {
-      try {
-        const existingUser = await verifyExistingSession()
-
-        if (existingUser && mounted) {
-          await refreshUser()
-          navigate("/app", { replace: true })
-          return
-        }
-      } catch (error) {
-        console.error("Erro verificando sessão persistida:", error)
-      } finally {
-        if (mounted) setCheckingSession(false)
-      }
-    }
-
-    void checkPersistedSession()
-
-    return () => {
-      mounted = false
-    }
-  }, [navigate, refreshUser])
+    if (!loading && user) navigate("/app", { replace: true })
+  }, [loading, user, navigate])
 
   async function handleLogin(e) {
     e.preventDefault()
     if (submitting) return
-
+    if (!email.trim() || !senha) {
+      notify.error("Informe seu e-mail e sua senha")
+      return
+    }
     setSubmitting(true)
-
     try {
-      // Também verifica a sessão no clique/submit do botão.
-      const existingUser = await verifyExistingSession()
-
-      if (existingUser) {
-        await refreshUser()
-        notify.success("Sessão válida encontrada. Entrando no sistema...")
-        navigate("/app", { replace: true })
-        return
-      }
-
-      if (!email.trim() || !senha) {
-        notify.error("Informe seu e-mail e sua senha")
-        return
-      }
-
+      // Uma única chamada de login e um carregamento de perfil no AuthProvider.
       const { error } = await signIn(email.trim(), senha)
-
       if (error) {
         notify.error("E-mail ou senha inválidos")
         return
       }
-
-      const authenticatedUser = await verifyExistingSession()
-
-      if (!authenticatedUser) {
-        notify.error("Não foi possível confirmar sua sessão. Tente novamente.")
-        return
-      }
-
       notify.success("Login realizado com sucesso!")
       navigate("/app", { replace: true })
     } catch (error) {
-      console.error("Erro verificando autenticação:", error)
+      console.error("Erro na autenticação:", error)
       notify.error("Não foi possível verificar seu acesso. Verifique sua conexão e tente novamente.")
     } finally {
       setSubmitting(false)
     }
   }
 
-  if (checkingSession) {
+  if (loading || user) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6">
         <div className="w-full max-w-sm rounded-3xl border border-slate-800 bg-slate-900 p-8 text-center shadow-2xl">
