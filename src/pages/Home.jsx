@@ -14,11 +14,11 @@ import { CustomSelect } from "../components/ui/CustomSelect";
 import { PageTitle } from "../components/ui/PageTitle";
 import { SectionTitle } from "../components/ui/SectionTitle";
 import { RankingOcorrencias } from "../components/ui/Ranking";
-import { SuspensionDecisionPopup } from "../components/ui/SuspensionDecisionPopup";
 import { notify } from "../utils/notify";
 import { debugError, debugLog, debugQuery } from "../utils/debug";
 
 const TeacherSchedule = lazy(() => import("../components/dashboard/TeacherSchedule"));
+const SuspensionDecisionPopup = lazy(() => import("../components/ui/SuspensionDecisionPopup").then((m) => ({ default: m.SuspensionDecisionPopup })));
 
 export const Home = () => {
   const { user } = useAuth();
@@ -469,11 +469,15 @@ export const Home = () => {
         </form>
       </Modal>
 
-      <SuspensionDecisionPopup
-        items={suspensionQueue}
-        onConfirm={handleConfirmSuspension}
-        onDismiss={handleDismissSuspension}
-      />
+      {suspensionQueue.length > 0 && (
+        <Suspense fallback={null}>
+          <SuspensionDecisionPopup
+            items={suspensionQueue}
+            onConfirm={handleConfirmSuspension}
+            onDismiss={handleDismissSuspension}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };
