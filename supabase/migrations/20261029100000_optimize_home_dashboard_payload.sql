@@ -1,7 +1,8 @@
+-- Nova função versionada: a RPC antiga permanece intacta para clientes anteriores.
 -- Dashboard retorna métricas já agregadas. Não transmite o histórico inteiro ao cliente.
 -- Mantém a mesma regra de consolidação: a ocorrência de origem não é contada
 -- novamente quando existe suspensão vinculada a ela.
-create or replace function public.logview_get_home_dashboard(p_escola_id uuid)
+create or replace function public.logview_get_home_dashboard_v2(p_escola_id uuid)
 returns jsonb
 language sql
 stable
@@ -101,3 +102,7 @@ as $$
     ), '[]'::jsonb)
   );
 $$;
+
+-- RLS de ocorrencias/turmas permanece aplicada porque a função é SECURITY INVOKER.
+revoke execute on function public.logview_get_home_dashboard_v2(uuid) from public, anon;
+grant execute on function public.logview_get_home_dashboard_v2(uuid) to authenticated;
