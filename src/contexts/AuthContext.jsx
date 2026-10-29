@@ -28,6 +28,7 @@ export function AuthProvider({ children }) {
     }
 
     try {
+      let schoolDetails = null;
       const result = await withTimeout(
         debugQuery("AUTH", "carregar perfil usuarios", supabase
           .from("usuarios")
@@ -48,7 +49,7 @@ export function AuthProvider({ children }) {
         const { data: escola, error: escolaError } = await withTimeout(
           debugQuery("AUTH", "verificar escola ativa", supabase
             .from("escolas")
-            .select("id, ativo")
+            .select("id, nome, cidade, created_at, ativo")
             .eq("id", perfil.escola_id)
             .maybeSingle()),
           AUTH_INIT_TIMEOUT_MS,
@@ -62,6 +63,7 @@ export function AuthProvider({ children }) {
           setUser(null);
           return null;
         }
+        schoolDetails = escola || null;
       }
 
       const nextUser = {
@@ -70,6 +72,7 @@ export function AuthProvider({ children }) {
         role_id: perfil?.role_id ?? null,
         escola_id: perfil?.escola_id ?? null,
         pdt: perfil?.pdt ?? false,
+        schoolDetails,
         email: authUser.email,
         avatar_url: authUser.user_metadata?.avatar_url || null,
       };
