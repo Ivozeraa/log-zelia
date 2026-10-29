@@ -41,7 +41,7 @@ export function SchoolProvider({ children }) {
     return nextSchools;
   }, [isGlobalAdmin]);
 
-  const loadSchool = useCallback(async () => {
+  const loadSchool = useCallback(async (force = false) => {
     if (authLoading) {
       debugLog("SCHOOL", "aguardando AuthProvider");
       return;
@@ -77,7 +77,7 @@ export function SchoolProvider({ children }) {
         return;
       }
 
-      if (user.schoolDetails?.id === user.escola_id) {
+      if (!force && user.schoolDetails?.id === user.escola_id) {
         setSchool(user.schoolDetails);
         setSelectedSchoolId(String(user.escola_id));
         setSchools([user.schoolDetails]);
@@ -140,7 +140,7 @@ export function SchoolProvider({ children }) {
   }, [canSwitchSchool, schools]);
 
   const refreshSchool = useCallback(async () => {
-    await loadSchool();
+    await loadSchool(true);
   }, [loadSchool]);
 
   const schoolId = resolveSchoolId({
