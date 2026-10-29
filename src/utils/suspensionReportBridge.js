@@ -351,13 +351,22 @@ export function installSuspensionReportBridge() {
   };
 
   document.addEventListener("click", onClick, true);
-  const observer = new MutationObserver(addActions);
-  observer.observe(document.body, { childList: true, subtree: true });
+  // O observer existe somente enquanto Occurrences estiver montado.
+  // Agrupamos mutações em um único frame para não varrer o DOM a cada nó alterado.
+  let frame = 0;
+  const observer = new MutationObserver(() => {
+    if (!frame) frame = requestAnimationFrame(() => {
+      frame = 0;
+      addActions();
+    });
+  });
+  observer.observe(document.getElementById("root") || document.body, { childList: true, subtree: true });
   addActions();
 
   return () => {
     document.removeEventListener("click", onClick, true);
     observer.disconnect();
+    if (frame) cancelAnimationFrame(frame);
     delete window.__logzeliaSuspensionReportBridge;
   };
 }
