@@ -22,7 +22,7 @@ const SuspensionDecisionPopup = lazy(() => import("../components/ui/SuspensionDe
 
 export const Home = () => {
   const { user } = useAuth();
-  const { school, schoolId, isGlobalAdmin } = useSchool();
+  const { school, schools: availableSchools, schoolId, isGlobalAdmin } = useSchool();
   const [open, setOpen] = useState(false);
   const [escolas, setEscolas] = useState([]);
   const [selectedEscola, setSelectedEscola] = useState("");
@@ -181,22 +181,12 @@ export const Home = () => {
         return;
       }
 
-      const { data, error } = await debugQuery(
-        "HOME",
-        "carregar escolas",
-        supabase.from("escolas").select("id, nome").order("nome", { ascending: true }),
-      );
-      if (error) {
-        notify.error("Erro carregando as escolas");
-        debugError("HOME", "Erro carregando escolas", error);
-        setEscolas([]);
-        return;
-      }
-      setEscolas(data || []);
-      if (data?.length > 0) setSelectedEscola((current) => current || data[0].id);
+      // A lista global já foi obtida por SchoolProvider. Evita refazê-la.
+      setEscolas(availableSchools);
+      setSelectedEscola((current) => current || schoolId || availableSchools[0]?.id || "");
     };
     loadEscolas();
-  }, [user, school, schoolId, isGlobalAdmin]);
+  }, [user?.id, school, schoolId, isGlobalAdmin, availableSchools]);
 
   useEffect(() => {
     const loadAlunos = async () => {
