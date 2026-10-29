@@ -19,9 +19,10 @@ suspensão, permissões, frequência e isolamento por escola.
 
 ## Sequência segura de implantação
 1. Validar o build do Pull Request e testar manualmente em uma implantação de preview.
-2. Aplicar a migration `20261029100000_optimize_home_dashboard_payload.sql`
-   no banco **antes ou depois** do frontend: a v1 continua intocada.
-3. Confirmar que a RPC v2 está presente e executável pelo papel `authenticated`.
+2. **Aplicada em 29/10/2026** a migration `20261029100000_optimize_home_dashboard_payload.sql`
+   no projeto Supabase LogZélia. A v1 continua intacta.
+3. **Confirmado**: a RPC v2 está presente, executável por `authenticated`
+   e não por `anon`; RLS está ativa em `ocorrencias` e `turmas`.
 4. Verificar tela inicial com escola vinculada e admin global, frequência e
    lançamento/edição/exclusão de ocorrências antes de mesclar na main.
 
@@ -48,3 +49,17 @@ em desenvolvimento, removendo o item ao terminar.
   altera bytes binários.
 - Confirmar índices adicionais apenas após `EXPLAIN (ANALYZE, BUFFERS)` com
   estatísticas reais e revisão das políticas RLS.
+
+## Validação executada em 29/10/2026
+- GitHub Actions `Performance changes validation`: **success** (npm install,
+  npm run build). O `package-lock.json` da main está desatualizado e impede
+  `npm ci`; a sincronização foi deixada como pendência.
+- Vercel: check de implantação da branch com **success**.
+- Banco (amostra de uma escola): 227 ocorrências consolidadas na v1 e v2;
+  JSON textual da v1 com 34.330 caracteres, da v2 com 3.292 (redução de 90,4%).
+  O novo gráfico apresentou 7 posições.
+- Os advisors do Supabase sinalizam riscos preexistentes: FKs sem índices,
+  índices duplicados, políticas RLS recalculadas por linha e avisos de segurança.
+  Ações nesses pontos requerem revisão isolada e testes com EXPLAIN/representante.
+- Isso não valida latência p95, segurança de permissões entre usuários nem testes
+  end-to-end; devem ser confirmados antes do merge.
