@@ -14,7 +14,6 @@ export default defineConfig({
           react: ['react', 'react-dom', 'react-router-dom'],
           supabase: ['@supabase/supabase-js'],
           charts: ['recharts'],
-          exports: ['exceljs', 'jspdf', 'jspdf-autotable', 'xlsx'],
           icons: ['react-icons'],
         },
       },
