@@ -29,15 +29,15 @@ import {
   generateHorario,
 } from '../services/horarioService';
 
-const pdfLibrariesPromise = Promise.all([
+// Bibliotecas pesadas só são baixadas quando o usuário exporta.
+const loadPdfLibraries = () => Promise.all([
   import('jspdf'),
   import('jspdf-autotable'),
 ]).then(([jspdfModule, autoTableModule]) => ({
   jsPDF: jspdfModule.jsPDF,
   autoTable: autoTableModule.default,
 }));
-
-const excelLibrariesPromise = import('exceljs').then((module) => module.default);
+const loadExcelLibrary = () => import('exceljs').then((module) => module.default);
 
 const emptyGrade = { grid: {}, schedule: [], validation: [], unscheduled: [] };
 const PROFESSOR_ROLE_ID = 4;
@@ -1152,7 +1152,7 @@ export const Horarios = () => {
   };
 
   const exportPdf = async ({ mode = 'separated', courseKey = '' } = {}) => {
-    const { jsPDF, autoTable } = await pdfLibrariesPromise;
+    const { jsPDF, autoTable } = await loadPdfLibraries();
     if (!generatedSchedule.schedule.length) return notify.error('Não há grade para exportar.');
     let turmaIds = currentConfig.turmas;
     if (mode === 'course') {
@@ -1211,7 +1211,7 @@ export const Horarios = () => {
   };
 
   const exportExcel = async () => {
-    const ExcelJS = await excelLibrariesPromise;
+    const ExcelJS = await loadExcelLibrary();
     if (!generatedSchedule.schedule.length) return notify.error('Não há grade para exportar.');
     try {
       const workbook = new ExcelJS.Workbook();
