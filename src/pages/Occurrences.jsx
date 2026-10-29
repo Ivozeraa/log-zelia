@@ -542,12 +542,13 @@ export const Occurrences = () => {
         const alunoQuery = supabase.from("alunos").select("id, nome, status, turma_id");
         const occurrenceQuery = supabase
           .from("ocorrencias")
-          .select("*")
+          .select("id, escola_id, aluno_id, turma_id, categoria, tipo, descricao, data_ocorrido, data_inicio, data_fim, data_aplicacao, professor_id, professor_nome, ocorrencia_origem_id")
           .order("data_ocorrido", { ascending: false });
         const historyQuery = supabase
           .from("ocorrencias_excluidas")
-          .select("*")
-          .order("excluido_em", { ascending: false });
+          .select("id, aluno_nome, categoria, tipo, excluido_por_nome, motivo_exclusao, excluido_em")
+          .order("excluido_em", { ascending: false })
+          .limit(30);
 
         if (user.role_id !== 1 && user.escola_id) {
           turmaQuery.eq("escola_id", user.escola_id);
