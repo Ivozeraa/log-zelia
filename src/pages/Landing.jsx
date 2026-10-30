@@ -4,6 +4,7 @@ import { startLandingMotion } from "../utils/landingMotion";
 import { Link } from "react-router-dom";
 import { FaArrowRight, FaBell, FaCalendarAlt, FaCheckCircle, FaClipboardList, FaFileAlt, FaGraduationCap, FaPaperPlane, FaStar, FaUsers } from "react-icons/fa";
 import logo from "../assets/images/logo.png";
+import { PublicThemeToggle } from "../components/ui/PublicThemeToggle";
 import { supabase } from "../utils/supabase";
 
 const features = [
@@ -128,7 +129,7 @@ export const Landing = () => {
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <a href="#inicio" className="flex min-w-0 items-center gap-2.5"><img src={logo} alt="LogView" width="40" height="40" className="h-9 w-9 rounded-xl object-contain sm:h-10 sm:w-10" /><span className="truncate font-montserrat text-base font-extrabold sm:text-lg">LOG <span className="text-orange-500">VIEW</span></span></a>
           <nav className="hidden items-center gap-6 text-sm font-semibold text-slate-600 md:flex dark:text-slate-300"><a href="#recursos" className="transition-colors duration-200 hover:text-green-700">Funcionalidades</a><a href="#como-funciona" className="transition-colors duration-200 hover:text-green-700">Como funciona</a><a href="#feedback" className="transition-colors duration-200 hover:text-green-700">Avaliações</a><a href="#portal" className="transition-colors duration-200 hover:text-green-700">Portal do aluno</a></nav>
-          <div className="flex items-center gap-2"><Link to="/consultar-ocorrencias" className="hidden rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition-colors duration-200 hover:bg-slate-100 sm:inline-flex dark:text-slate-300 dark:hover:bg-slate-900">Consultar ocorrência</Link><Link to="/login" className="inline-flex items-center gap-2 rounded-xl bg-green-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-green-800 hover:shadow-md active:scale-[0.97] active:duration-100">Entrar <FaArrowRight className="text-xs" /></Link></div>
+          <div className="flex items-center gap-2"><PublicThemeToggle compact /><Link to="/consultar-ocorrencias" className="hidden rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition-colors duration-200 hover:bg-slate-100 sm:inline-flex dark:text-slate-300 dark:hover:bg-slate-900">Consultar ocorrência</Link><Link to="/login" className="inline-flex items-center gap-2 rounded-xl bg-green-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-green-800 hover:shadow-md active:scale-[0.97] active:duration-100">Entrar <FaArrowRight className="text-xs" /></Link></div>
         </div>
       </header>
 
