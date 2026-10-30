@@ -7,6 +7,7 @@ import logo from "../assets/images/logo-login.png"
 import { notify } from "../utils/notify"
 import { FormInput } from "../components/ui/FormInput"
 import { useAuth } from "../hooks/useAuth"
+import { preloadPrivateApp } from "../utils/preloadPrivateApp"
 
 export const Login = () => {
   const [email, setEmail] = useState("")
@@ -30,7 +31,9 @@ export const Login = () => {
     setSubmitting(true)
     try {
       // Uma única chamada de login e um carregamento de perfil no AuthProvider.
-      const { error } = await signIn(email.trim(), senha)
+      const loginRequest = signIn(email.trim(), senha)
+      preloadPrivateApp()
+      const { error } = await loginRequest
       if (error) {
         notify.error("E-mail ou senha inválidos")
         return

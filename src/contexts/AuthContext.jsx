@@ -3,6 +3,7 @@ import { supabase } from "../utils/supabase";
 import { AuthContext } from "./AuthContextImpl";
 import { debugError, debugLog, debugQuery } from "../utils/debug";
 import { clearCached } from "../utils/requestCache";
+import { preloadPrivateApp } from "../utils/preloadPrivateApp";
 
 const AUTH_INIT_TIMEOUT_MS = 10000;
 
@@ -180,6 +181,8 @@ export function AuthProvider({ children }) {
         if (!mounted) return;
 
         if (session?.user) {
+          // Busca os módulos da área interna enquanto a sessão é validada.
+          preloadPrivateApp();
           // Só confirmar uma vez com Auth Server; nenhuma renovação forçada.
           const { data: verified, error: authError } = await withTimeout(
             supabase.auth.getUser(), AUTH_INIT_TIMEOUT_MS,

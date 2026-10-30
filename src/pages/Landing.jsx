@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import "../utils/landingMotion.css";
+import { startLandingMotion } from "../utils/landingMotion";
 import { Link } from "react-router-dom";
 import { FaArrowRight, FaBell, FaCalendarAlt, FaCheckCircle, FaClipboardList, FaFileAlt, FaGraduationCap, FaPaperPlane, FaStar, FaUsers } from "react-icons/fa";
 import logo from "../assets/images/logo.png";
@@ -93,6 +95,7 @@ const heroAnim = (delayMs, durationMs = 600, curve = "cubic-bezier(0.2,0,0,1)", 
 });
 
 export const Landing = () => {
+  useEffect(() => startLandingMotion(), []);
   const [feedbacks, setFeedbacks] = useState([]);
   const [form, setForm] = useState(initialFeedback);
   const [sending, setSending] = useState(false);
