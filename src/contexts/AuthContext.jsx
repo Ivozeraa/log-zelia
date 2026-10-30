@@ -20,15 +20,24 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const signingInRef = useRef(false);
+  const loadedUserIdRef = useRef(null);
+  const pendingProfileRef = useRef(null);
 
   const loadUser = useCallback(async (authUser) => {
-    debugLog("AUTH", "loadUser iniciado", { id: authUser?.id, email: authUser?.email });
     if (!authUser) {
+      loadedUserIdRef.current = null;
       setUser(null);
       return null;
     }
 
-    try {
+    // Reutiliza a consulta que estiver em andamento para o mesmo usuário.
+    if (pendingProfileRef.current?.id === authUser.id) {
+      return pendingProfileRef.current.promise;
+    }
+
+    const performLoad = async () => {
+      debugLog("AUTH", "loadUser iniciado", { id: authUser.id });
+      try {
       let schoolDetails = null;
       const result = await withTimeout(
         debugQuery("AUTH", "carregar perfil usuarios", supabase
@@ -79,9 +88,11 @@ export function AuthProvider({ children }) {
       };
 
       setUser(nextUser);
+      loadedUserIdRef.current = !perfilError && perfil ? authUser.id : null;
       debugLog("AUTH", "loadUser concluído", { role_id: nextUser.role_id, escola_id: nextUser.escola_id });
       return nextUser;
     } catch (err) {
+      loadedUserIdRef.current = null;
       debugError("AUTH", "Erro em loadUser", err);
 
       const fallbackUser = {
@@ -96,6 +107,15 @@ export function AuthProvider({ children }) {
 
       setUser(fallbackUser);
       return fallbackUser;
+      }
+    };
+
+    const promise = performLoad();
+    pendingProfileRef.current = { id: authUser.id, promise };
+    try {
+      return await promise;
+    } finally {
+      if (pendingProfileRef.current?.promise === promise) pendingProfileRef.current = null;
     }
   }, []);
 
@@ -107,6 +127,7 @@ export function AuthProvider({ children }) {
     );
     if (sessionError) throw sessionError;
     if (!sessionData?.session) {
+      loadedUserIdRef.current = null;
       setUser(null);
       return null;
     }
@@ -116,6 +137,7 @@ export function AuthProvider({ children }) {
     );
     if (error || !data?.user) {
       await supabase.auth.signOut({ scope: "local" });
+      loadedUserIdRef.current = null;
       setUser(null);
       return null;
     }
@@ -191,6 +213,7 @@ export function AuthProvider({ children }) {
         if (!mounted) return;
 
         if (event === "SIGNED_OUT") {
+          loadedUserIdRef.current = null;
           clearCached();
           setUser(null);
           setLoading(false);
@@ -200,7 +223,9 @@ export function AuthProvider({ children }) {
         // INITIAL_SESSION já é tratado por initializeAuth. Ignorar aqui
         // evita uma segunda consulta ao perfil durante a abertura do app.
         if (event === "INITIAL_SESSION") return;
-        if (event === "SIGNED_IN" && signingInRef.current) return;
+        // Focar novamente na aba pode emitir SIGNED_IN sem troca de usuário.
+        // Não consultar o mesmo perfil novamente se ele já foi carregado.
+        if (event === "SIGNED_IN" && (signingInRef.current || loadedUserIdRef.current === session?.user?.id)) return;
         if (!session?.user) return;
 
         // TOKEN_REFRESHED renova o JWT, mas não altera o perfil do usuário.
@@ -223,6 +248,7 @@ export function AuthProvider({ children }) {
     try {
       await supabase.auth.signOut();
     } finally {
+      loadedUserIdRef.current = null;
       clearCached();
       setUser(null);
       setLoading(false);
