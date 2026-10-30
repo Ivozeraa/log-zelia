@@ -119,7 +119,7 @@ export function SchoolProvider({ children }) {
       setError(loadError);
     } finally {
       setLoading(false);
-      debugLog("SCHOOL", "contexto de escola finalizado", { schoolId: selectedSchoolId });
+      debugLog("SCHOOL", "contexto de escola finalizado", { linkedSchoolId: user?.escola_id ?? null, isGlobalAdmin });
     }
   }, [authLoading, isGlobalAdmin, loadSchools, user?.escola_id, user?.schoolDetails]);
 
