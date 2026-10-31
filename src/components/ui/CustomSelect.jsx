@@ -161,11 +161,15 @@ export const CustomSelect = ({
         ref={triggerRef}
         type="button"
         disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={label || placeholder}
+        onKeyDown={(event) => { if (event.key === "Escape" && open) { event.preventDefault(); setOpen(false); } }}
         onClick={() => {
           if (!open) setSearchTerm("");
           setOpen((previous) => !previous);
         }}
-        className={`flex h-12 w-full items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-base leading-5 text-slate-900 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white ${
+        className={`flex h-12 w-full items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-left text-base leading-5 text-slate-900 outline-none transition-colors focus:border-slate-400 focus-visible:ring-2 focus-visible:ring-green-600/25 dark:border-slate-700 dark:bg-slate-950 dark:text-white ${
           disabled ? "cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-slate-800" : ""
         }`}
       >
@@ -202,6 +206,8 @@ export const CustomSelect = ({
       {open && !disabled && menuPosition && typeof document !== "undefined" && createPortal(
         <div
           ref={menuRef}
+          role="listbox"
+          aria-label={label || placeholder}
           className="fixed z-[10050] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
           style={{
             top: menuPosition.top,
@@ -241,6 +247,8 @@ export const CustomSelect = ({
                   <button
                     key={option.value}
                     type="button"
+                    role="option"
+                    aria-selected={multiple ? Boolean(isSelected) : option.value === value}
                     onClick={() => handleOptionClick(option.value)}
                     className={`flex w-full items-center gap-2 px-3 py-3 text-left text-slate-900 transition hover:bg-slate-100 dark:text-white dark:hover:bg-slate-800 ${
                       isSelected ? "bg-green-50 dark:bg-green-950" : ""

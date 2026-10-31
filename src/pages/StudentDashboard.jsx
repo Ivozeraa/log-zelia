@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  FaArrowLeft, FaBookOpen, FaCalendarAlt, FaCheckCircle, FaDownload,
-  FaExclamationCircle, FaExclamationTriangle, FaFilter, FaGraduationCap,
+  FaArrowLeft, FaBookOpen, FaCalendarAlt, FaCheckCircle,
+  FaExclamationCircle, FaFilter, FaGraduationCap,
   FaLock, FaPrint, FaSearch, FaSyncAlt, FaUserTie
 } from "react-icons/fa";
 import logo from "../assets/images/logo.png";
 import { PublicThemeToggle } from "../components/ui/PublicThemeToggle";
+import { CustomSelect } from "../components/ui/CustomSelect";
+import { StudentActionsMenu } from "../components/student/StudentActionsMenu";
 
 const categoryLabels = { ocorrencia: "Ocorrência", suspensao: "Suspensão" };
 const typeLabels = {
@@ -21,8 +23,19 @@ const formatDate = (value) => {
 const formatDateTime = (value) => value
   ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value))
   : "—";
-const fieldStyle = "h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-green-600 dark:border-slate-700 dark:bg-slate-950 dark:text-white";
-const buttonStyle = "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-green-300 hover:text-green-700 disabled:cursor-wait disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200";
+const fieldStyle = "student-soft-input h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-green-600 dark:border-slate-700 dark:bg-slate-950 dark:text-white";
+const buttonStyle = "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600/50 disabled:cursor-wait disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-white";
+const categoryOptions = [
+  { value: "all", label: "Todos os tipos" },
+  { value: "ocorrencia", label: "Ocorrências" },
+  { value: "suspensao", label: "Suspensões" },
+];
+const periodOptions = [
+  { value: "all", label: "Todo o período" },
+  { value: "30", label: "Últimos 30 dias" },
+  { value: "90", label: "Últimos 90 dias" },
+  { value: "year", label: "Este ano" },
+];
 
 function matchesPeriod(item, period) {
   if (period === "all") return true;
@@ -61,7 +74,7 @@ function PasswordSettings({ onChangePassword }) {
   };
 
   return (
-    <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7 print:hidden">
+    <section id="student-security" className="mt-6 scroll-mt-20 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7 print:hidden">
       <h2 className="flex items-center gap-2 text-xl font-bold"><FaLock className="text-green-600" /> Segurança da conta</h2>
       <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Altere sua senha sem precisar sair do portal. Não compartilhe suas credenciais.</p>
       <form onSubmit={changePassword} className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -110,7 +123,7 @@ export function StudentDashboard({ result, onNewConsultation, onRefresh, onChang
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white">
+    <main className="student-portal min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white">
       <style>{`@media print {
         @page { margin: 14mm; }
         body, html, #root { background: #fff !important; color: #000 !important; }
@@ -121,12 +134,30 @@ export function StudentDashboard({ result, onNewConsultation, onRefresh, onChang
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90 print:hidden">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
           <Link to="/" className="flex min-w-0 items-center gap-2.5"><img src={logo} alt="LogView" width="40" height="40" className="h-9 w-9 rounded-xl object-contain" /><span className="font-montserrat text-base font-extrabold">LOG <span className="text-orange-500">VIEW</span></span></Link>
-          <div className="flex items-center gap-2"><PublicThemeToggle compact /><button type="button" onClick={onNewConsultation} className={buttonStyle}>Sair do painel</button></div>
+          <div className="flex items-center gap-2">
+            <PublicThemeToggle compact />
+            <StudentActionsMenu
+              onOverview={() => document.getElementById("student-overview")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              onHistory={() => document.getElementById("student-history")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              onRefresh={refresh}
+              onPrint={() => window.print()}
+              onSecurity={() => {
+                setShowPasswordSettings(true);
+                window.setTimeout(() => document.getElementById("student-security")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+              }}
+              onHelp={() => {
+                setShowGuide(true);
+                window.setTimeout(() => document.getElementById("student-guide")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+              }}
+              onExit={onNewConsultation}
+              refreshing={refreshing}
+            />
+          </div>
         </div>
       </header>
       <div className="student-dashboard mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
         <Link to="/" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-green-700 dark:text-slate-400 print:hidden"><FaArrowLeft /> Página inicial</Link>
-        <section className="rounded-3xl border border-green-200 bg-gradient-to-br from-green-50 via-white to-white p-6 shadow-sm dark:border-green-900/50 dark:from-green-950/30 dark:via-slate-900 dark:to-slate-900 sm:p-8">
+        <section id="student-overview" className="scroll-mt-20 rounded-3xl border border-green-200 bg-gradient-to-br from-green-50 via-white to-white p-6 shadow-sm dark:border-green-900/50 dark:from-green-950/30 dark:via-slate-900 dark:to-slate-900 sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-green-700 dark:text-green-400">Portal do aluno · Visão geral</p>
           <h1 className="mt-2 break-words text-2xl font-black sm:text-3xl">{result.aluno.aluno_nome}</h1>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{result.aluno.turma_nome || "Turma não informada"} · {result.aluno.escola_nome || "Escola não informada"}</p>
@@ -146,21 +177,27 @@ export function StudentDashboard({ result, onNewConsultation, onRefresh, onChang
           </div>
         </section>
         <div className="mt-5 flex flex-wrap gap-2 print:hidden">
-          <button className={buttonStyle} type="button" disabled={refreshing} onClick={refresh}><FaSyncAlt className={refreshing ? "animate-spin" : ""} /> {refreshing ? "Atualizando..." : "Atualizar histórico"}</button>
+          <button className={buttonStyle} type="button" disabled={refreshing} onClick={refresh}><FaSyncAlt aria-hidden="true" className={refreshing ? "animate-spin" : ""} /> {refreshing ? "Atualizando..." : "Atualizar histórico"}</button>
           <button className={buttonStyle} type="button" onClick={() => window.print()}><FaPrint /> Imprimir / salvar PDF</button>
           <button className={buttonStyle} type="button" aria-expanded={showPasswordSettings} onClick={() => setShowPasswordSettings(value => !value)}><FaLock /> Alterar senha</button>
         </div>
         {refreshError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300 print:hidden">{refreshError}</p>}
         {showPasswordSettings && <PasswordSettings onChangePassword={onChangePassword} />}
-        <section className="mt-9">
+        <section id="student-history" className="mt-9 scroll-mt-20">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div><h2 className="text-xl font-bold">Histórico de registros</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Consulte seus registros, tipos e datas.</p></div>
             <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200 print:hidden">{filtered.length} de {registros.length}</span>
           </div>
-          <div className="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-[1fr_180px_150px] print:hidden">
-            <label className="relative block"><span className="sr-only">Buscar por motivo, tipo ou professor</span><FaSearch className="pointer-events-none absolute left-3 top-3.5 text-slate-400" /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar tipo, motivo ou professor" className={`${fieldStyle} pl-9`} /></label>
-            <label className="block"><span className="sr-only">Filtrar categoria</span><select value={category} onChange={e => setCategory(e.target.value)} className={fieldStyle}><option value="all">Todos os tipos</option><option value="ocorrencia">Ocorrências</option><option value="suspensao">Suspensões</option></select></label>
-            <label className="block"><span className="sr-only">Filtrar período</span><select value={period} onChange={e => setPeriod(e.target.value)} className={fieldStyle}><option value="all">Todo o período</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="year">Este ano</option></select></label>
+          <div className="mt-5 grid items-end gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-[minmax(0,1fr)_minmax(0,195px)_minmax(0,185px)] print:hidden">
+            <label className="relative block min-w-0">
+              <span className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Pesquisar registro</span>
+              <span className="relative block">
+                <FaSearch aria-hidden="true" className="pointer-events-none absolute left-3 top-4 text-slate-400" />
+                <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Tipo, motivo ou professor" className={`${fieldStyle} pl-9`} />
+              </span>
+            </label>
+            <CustomSelect label="Categoria" value={category} onChange={setCategory} options={categoryOptions} placeholder="Todos os tipos" className="min-w-0" />
+            <CustomSelect label="Período" value={period} onChange={setPeriod} options={periodOptions} placeholder="Todo o período" className="min-w-0" />
           </div>
           <div className="mt-4 space-y-4">
             {filtered.length === 0 ? (
@@ -189,8 +226,8 @@ export function StudentDashboard({ result, onNewConsultation, onRefresh, onChang
             ))}
           </div>
         </section>
-        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 print:hidden">
-          <button type="button" onClick={() => setShowGuide(value => !value)} aria-expanded={showGuide} className="flex w-full items-center justify-between gap-4 text-left text-sm font-bold"><span className="flex items-center gap-2"><FaBookOpen className="text-green-600" /> Entenda seu histórico</span><span className="text-green-700">{showGuide ? "Ocultar" : "Ver orientações"}</span></button>
+        <section id="student-guide" className="mt-8 scroll-mt-20 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 print:hidden">
+          <button type="button" onClick={() => setShowGuide(value => !value)} aria-expanded={showGuide} className="flex w-full items-center justify-between gap-4 rounded-xl text-left text-sm font-bold focus-visible:outline-2 focus-visible:outline-green-600/50"><span className="flex items-center gap-2"><FaBookOpen className="text-green-600" /> Entenda seu histórico</span><span className="text-green-700">{showGuide ? "Ocultar" : "Ver orientações"}</span></button>
           {showGuide && <div className="mt-4 space-y-2 text-sm leading-6 text-slate-600 dark:text-slate-300"><p><strong>Ocorrência:</strong> registro de uma situação informada pela escola.</p><p><strong>Suspensão:</strong> medida disciplinar registrada com período de aplicação quando informado.</p><p>Encontrou alguma informação incorreta? Procure a coordenação da sua escola para solicitar a revisão. O portal não altera registros.</p><p>Evite imprimir ou compartilhar seu histórico em dispositivos de outras pessoas.</p></div>}
         </section>
       </div>
