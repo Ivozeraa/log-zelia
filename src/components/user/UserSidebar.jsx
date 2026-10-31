@@ -4,9 +4,11 @@ import { useSchool } from "../../hooks/useSchool"
 import { FaRegUserCircle, FaUserEdit, FaSignOutAlt, FaArrowLeft } from "react-icons/fa"
 import { Modal } from "../ui/Modal"
 import { Button } from "../ui/Button"
-import { EditProfile } from "./EditProfile"
+import { lazy, Suspense } from "react"
 import { SchoolSwitcher } from "../school/SchoolSwitcher"
 import { supabase } from "../../utils/supabase"
+
+const EditProfile = lazy(() => import("./EditProfile").then((module) => ({ default: module.EditProfile })))
 
 const achievements = [
   { threshold: 10, icon: "🥉", title: "Vigilante", desc: "Começou a acompanhar com atenção", linear: "from-amber-100 to-orange-50", border: "border-amber-200", badge: "bg-amber-100 text-amber-700" },
@@ -90,7 +92,7 @@ export const UserSidebar = ({ open, setOpen }) => {
           {nextAchievement ? <div className="mt-1 rounded-2xl border border-slate-100 bg-linear-to-br from-slate-50 to-white px-4 py-3 dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/60 shadow-sm"><div className="flex justify-between items-center mb-2"><div><p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Próxima: {nextAchievement.icon} {nextAchievement.title}</p><p className="text-[10px] text-slate-400 mt-0.5">{nextAchievement.desc}</p></div><span className="text-xs font-bold text-green-600 dark:text-green-400 tabular-nums">{progressPct}%</span></div><div className="relative h-2.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"><div className="h-full rounded-full bg-linear-to-r from-green-500 to-emerald-400 transition-all duration-700 relative" style={{ width: `${progressPct}%` }}><div className="absolute inset-0 bg-white/20 rounded-full" /></div></div><p className="mt-2 text-[10px] text-slate-400 text-right tabular-nums">{ocorrenciasCount} / {nextAchievement.threshold} ocorrências</p></div> : <div className="mt-1 rounded-2xl border border-yellow-200 bg-linear-to-br from-yellow-50 to-amber-50 px-4 py-3 dark:border-yellow-900/40 dark:from-yellow-900/20 dark:to-amber-900/10 text-center shadow-sm"><p className="text-lg">🏆</p><p className="text-sm font-semibold text-yellow-700 dark:text-yellow-400 mt-0.5">Todas as conquistas desbloqueadas!</p><p className="text-xs text-yellow-600/70 dark:text-yellow-500/60 mt-0.5">Parabéns pela dedicação</p></div>}
         </div>
       </div>
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Editar Perfil"><EditProfile onClose={() => setIsModalOpen(false)} /></Modal>
+      {isModalOpen && <Suspense fallback={null}><Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Editar Perfil"><EditProfile onClose={() => setIsModalOpen(false)} /></Modal></Suspense>}
     </>
   )
 }

@@ -37,10 +37,11 @@ const sanitizeRichText = (value) => {
 export function AnnouncementPopup() {
   const { user, loading } = useAuth();
   const location = useLocation();
+  const inApp = location.pathname.startsWith("/app");
   const [announcement, setAnnouncement] = useState(null);
 
   useEffect(() => {
-    if (loading || !user || !location.pathname.startsWith("/app")) return;
+    if (loading || !user?.id || !inApp) return;
     let cancelled = false;
 
     const load = async () => {
@@ -51,7 +52,8 @@ export function AnnouncementPopup() {
         .eq("publicado", true)
         .or(`inicio_em.is.null,inicio_em.lte.${now}`)
         .or(`fim_em.is.null,fim_em.gt.${now}`)
-        .order("criado_em", { ascending: false });
+        .order("criado_em", { ascending: false })
+        .limit(30);
 
       if (cancelled || error) return;
 
@@ -71,7 +73,7 @@ export function AnnouncementPopup() {
     return () => {
       cancelled = true;
     };
-  }, [loading, user, location.pathname]);
+  }, [loading, user?.id, inApp]);
 
   if (!announcement || !user) return null;
 

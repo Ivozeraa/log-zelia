@@ -2,7 +2,6 @@ import { Suspense, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
-import { TeacherSchedule } from './components/dashboard/TeacherSchedule'
 
 function AppPageFallback() {
   return (
@@ -21,7 +20,6 @@ function AppPageFallback() {
 
 function Layout() {
   const location = useLocation()
-  const isHome = location.pathname === '/app' || location.pathname === '/app/'
   const [cameraMode, setCameraMode] = useState(false)
 
   useEffect(() => {
@@ -49,7 +47,6 @@ function Layout() {
 
         <main className={`w-full min-w-0 z-10 relative ${cameraMode ? 'min-h-screen' : 'md:ml-64 px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6'}`}>
           <div className={`w-full min-w-0 ${cameraMode ? 'min-h-screen' : 'mx-auto max-w-[1600px]'}`}>
-            {isHome && !cameraMode && <TeacherSchedule />}
             <Suspense fallback={<AppPageFallback />}>
               <Outlet />
             </Suspense>

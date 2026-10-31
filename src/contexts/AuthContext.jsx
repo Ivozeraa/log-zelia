@@ -1,30 +1,45 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../utils/supabase";
 import { AuthContext } from "./AuthContextImpl";
 import { debugError, debugLog, debugQuery } from "../utils/debug";
+import { clearCached } from "../utils/requestCache";
+import { preloadPrivateApp } from "../utils/preloadPrivateApp";
 
 const AUTH_INIT_TIMEOUT_MS = 10000;
 
-const withTimeout = (promise, timeoutMs, message) =>
-  Promise.race([
+const withTimeout = (promise, timeoutMs, message) => {
+  let timer;
+  return Promise.race([
     promise,
     new Promise((_, reject) => {
-      window.setTimeout(() => reject(new Error(message)), timeoutMs);
+      timer = window.setTimeout(() => reject(new Error(message)), timeoutMs);
     }),
-  ]);
+  ]).finally(() => window.clearTimeout(timer));
+};
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const signingInRef = useRef(false);
+  const loadedUserIdRef = useRef(null);
+  const pendingProfileRef = useRef(null);
 
   const loadUser = useCallback(async (authUser) => {
-    debugLog("AUTH", "loadUser iniciado", { id: authUser?.id, email: authUser?.email });
     if (!authUser) {
+      loadedUserIdRef.current = null;
       setUser(null);
       return null;
     }
 
-    try {
+    // Reutiliza a consulta que estiver em andamento para o mesmo usuário.
+    if (pendingProfileRef.current?.id === authUser.id) {
+      return pendingProfileRef.current.promise;
+    }
+
+    const performLoad = async () => {
+      debugLog("AUTH", "loadUser iniciado", { id: authUser.id });
+      try {
+      let schoolDetails = null;
       const result = await withTimeout(
         debugQuery("AUTH", "carregar perfil usuarios", supabase
           .from("usuarios")
@@ -45,7 +60,7 @@ export function AuthProvider({ children }) {
         const { data: escola, error: escolaError } = await withTimeout(
           debugQuery("AUTH", "verificar escola ativa", supabase
             .from("escolas")
-            .select("id, ativo")
+            .select("id, nome, cidade, created_at, ativo")
             .eq("id", perfil.escola_id)
             .maybeSingle()),
           AUTH_INIT_TIMEOUT_MS,
@@ -59,6 +74,7 @@ export function AuthProvider({ children }) {
           setUser(null);
           return null;
         }
+        schoolDetails = escola || null;
       }
 
       const nextUser = {
@@ -67,14 +83,17 @@ export function AuthProvider({ children }) {
         role_id: perfil?.role_id ?? null,
         escola_id: perfil?.escola_id ?? null,
         pdt: perfil?.pdt ?? false,
+        schoolDetails,
         email: authUser.email,
         avatar_url: authUser.user_metadata?.avatar_url || null,
       };
 
       setUser(nextUser);
+      loadedUserIdRef.current = !perfilError && perfil ? authUser.id : null;
       debugLog("AUTH", "loadUser concluído", { role_id: nextUser.role_id, escola_id: nextUser.escola_id });
       return nextUser;
     } catch (err) {
+      loadedUserIdRef.current = null;
       debugError("AUTH", "Erro em loadUser", err);
 
       const fallbackUser = {
@@ -89,71 +108,56 @@ export function AuthProvider({ children }) {
 
       setUser(fallbackUser);
       return fallbackUser;
+      }
+    };
+
+    const promise = performLoad();
+    pendingProfileRef.current = { id: authUser.id, promise };
+    try {
+      return await promise;
+    } finally {
+      if (pendingProfileRef.current?.promise === promise) pendingProfileRef.current = null;
     }
   }, []);
 
   const verifySession = useCallback(async () => {
+    // getSession já renova tokens expirados quando necessário; getUser faz a
+    // única validação remota da identidade antes de carregar o perfil.
     const { data: sessionData, error: sessionError } = await withTimeout(
-      supabase.auth.getSession(),
-      AUTH_INIT_TIMEOUT_MS,
-      "Tempo limite ao verificar a sessão.",
+      supabase.auth.getSession(), AUTH_INIT_TIMEOUT_MS, "Tempo limite ao verificar a sessão."
     );
-
     if (sessionError) throw sessionError;
-
-    let session = sessionData?.session ?? null;
-
-    if (session?.refresh_token) {
-      const { data: refreshData, error: refreshError } = await withTimeout(
-        supabase.auth.refreshSession({
-          refresh_token: session.refresh_token,
-        }),
-        AUTH_INIT_TIMEOUT_MS,
-        "Tempo limite ao renovar a sessão.",
-      );
-
-      if (refreshError || !refreshData?.session) {
-        await supabase.auth.signOut({ scope: "local" });
-        setUser(null);
-        return null;
-      }
-
-      session = refreshData.session;
-    }
-
-    if (!session?.user) {
+    if (!sessionData?.session) {
+      loadedUserIdRef.current = null;
       setUser(null);
       return null;
     }
 
-    const { data: userData, error: userError } = await withTimeout(
-      supabase.auth.getUser(),
-      AUTH_INIT_TIMEOUT_MS,
-      "Tempo limite ao confirmar o usuário.",
+    const { data, error } = await withTimeout(
+      supabase.auth.getUser(), AUTH_INIT_TIMEOUT_MS, "Tempo limite ao confirmar o usuário."
     );
-
-    if (userError || !userData?.user) {
+    if (error || !data?.user) {
       await supabase.auth.signOut({ scope: "local" });
+      loadedUserIdRef.current = null;
       setUser(null);
       return null;
     }
-
-    return await loadUser(userData.user);
+    return loadUser(data.user);
   }, [loadUser]);
 
   const signIn = useCallback(async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    signingInRef.current = true;
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error || !data?.user) return { data, error };
 
-    if (error || !data?.user) {
-      return { data, error };
+      // Este mesmo login dispara SIGNED_IN; o listener ignora esse evento
+      // enquanto a operação está ativa, evitando duas consultas ao perfil.
+      await loadUser(data.user);
+      return { data, error: null };
+    } finally {
+      signingInRef.current = false;
     }
-
-    await loadUser(data.user);
-
-    return { data, error: null };
   }, [loadUser]);
 
   useEffect(() => {
@@ -177,7 +181,19 @@ export function AuthProvider({ children }) {
         if (!mounted) return;
 
         if (session?.user) {
-          await loadUser(session.user);
+          // Busca os módulos da área interna enquanto a sessão é validada.
+          preloadPrivateApp();
+          // Só confirmar uma vez com Auth Server; nenhuma renovação forçada.
+          const { data: verified, error: authError } = await withTimeout(
+            supabase.auth.getUser(), AUTH_INIT_TIMEOUT_MS,
+            "Tempo limite ao confirmar a sessão inicial."
+          );
+          if (authError || !verified?.user) {
+            await supabase.auth.signOut({ scope: "local" });
+            if (mounted) setUser(null);
+          } else if (mounted) {
+            await loadUser(verified.user);
+          }
         } else {
           setUser(null);
         }
@@ -200,6 +216,8 @@ export function AuthProvider({ children }) {
         if (!mounted) return;
 
         if (event === "SIGNED_OUT") {
+          loadedUserIdRef.current = null;
+          clearCached();
           setUser(null);
           setLoading(false);
           return;
@@ -208,6 +226,9 @@ export function AuthProvider({ children }) {
         // INITIAL_SESSION já é tratado por initializeAuth. Ignorar aqui
         // evita uma segunda consulta ao perfil durante a abertura do app.
         if (event === "INITIAL_SESSION") return;
+        // Focar novamente na aba pode emitir SIGNED_IN sem troca de usuário.
+        // Não consultar o mesmo perfil novamente se ele já foi carregado.
+        if (event === "SIGNED_IN" && (signingInRef.current || loadedUserIdRef.current === session?.user?.id)) return;
         if (!session?.user) return;
 
         // TOKEN_REFRESHED renova o JWT, mas não altera o perfil do usuário.
@@ -230,6 +251,8 @@ export function AuthProvider({ children }) {
     try {
       await supabase.auth.signOut();
     } finally {
+      loadedUserIdRef.current = null;
+      clearCached();
       setUser(null);
       setLoading(false);
     }

@@ -1,15 +1,14 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter as Router, Navigate, Route, Routes } from "react-router-dom";
-import Layout from "./Layout";
+import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { useAuth } from "./hooks/useAuth";
 import ProtectedRoute from "./routers/ProtectedRoute";
 import FeatureRoute from "./routers/FeatureRoute";
 import { Login } from "./pages/Login";
 import { ToastProvider } from "./components/ui/ToastProvide";
-import { LegalAndFeedback } from "./components/ui/LegalAndFeedback";
-import { AnnouncementPopup } from "./components/ui/AnnouncementPopup";
-import { SuspensionDecisionPopup } from "./components/ui/SuspensionDecisionPopup";
-import "./utils/landingMotion.css";
-import "./utils/landingMotion";
+
+const Layout = lazy(() => import("./Layout"));
+const LegalAndFeedback = lazy(() => import("./components/ui/LegalAndFeedback").then((m) => ({ default: m.LegalAndFeedback })));
+const AnnouncementPopup = lazy(() => import("./components/ui/AnnouncementPopup").then((m) => ({ default: m.AnnouncementPopup })));
 
 const Landing = lazy(() => import("./pages/Landing").then((module) => ({ default: module.Landing })));
 const StudentOccurrenceLookup = lazy(() => import("./pages/StudentOccurrenceLookup").then((module) => ({ default: module.StudentOccurrenceLookup })));
@@ -40,7 +39,21 @@ function PublicPageFallback() {
 }
 
 function ProtectedAppRoutes() {
-  return <ProtectedRoute><Layout /></ProtectedRoute>;
+  return <ProtectedRoute><Suspense fallback={<PublicPageFallback />}><Layout /></Suspense></ProtectedRoute>;
+}
+
+function AppOverlays() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  const showAnnouncements = !loading && Boolean(user?.id) && location.pathname.startsWith("/app");
+
+  return (
+    <>
+      <Suspense fallback={null}><LegalAndFeedback /></Suspense>
+      {showAnnouncements && <Suspense fallback={null}><AnnouncementPopup /></Suspense>}
+      <ToastProvider />
+    </>
+  );
 }
 
 function App() {
@@ -86,10 +99,7 @@ function App() {
         <Route path="/avisos" element={<Navigate to="/app/avisos" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <LegalAndFeedback />
-      <AnnouncementPopup />
-      <SuspensionDecisionPopup />
-      <ToastProvider />
+      <AppOverlays />
     </Router>
   );
 }

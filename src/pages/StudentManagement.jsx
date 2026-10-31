@@ -9,8 +9,6 @@ import { CustomSelect } from "../components/ui/CustomSelect";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { Pagination } from "../components/ui/Pagination";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 import { addPdfFooter } from "../utils/pdfFooterPatch";
 import logoImg from "../assets/images/logoEEEP.png";
 
@@ -262,6 +260,10 @@ export const StudentManagement = () => {
   };
 
   const generatePdfReport = async (rows) => {
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -422,6 +424,9 @@ export const StudentManagement = () => {
       turma_id: aluno.turma_id || "",
       escola_id: aluno.escola_id || "",
       status: aluno.status || "",
+      responsavel_nome: aluno.responsavel_nome || "",
+      responsavel_whatsapp: aluno.responsavel_whatsapp || "",
+      whatsapp_opt_in: Boolean(aluno.responsavel_whatsapp_opt_in_em),
     });
     setEditModalOpen(true);
   };
@@ -429,7 +434,16 @@ export const StudentManagement = () => {
   const handleSaveAluno = async () => {
     if (!editingAluno || !editForm) return;
 
-    const { nome, matricula, turma_id, escola_id, status } = editForm;
+    const { nome, matricula, turma_id, escola_id, status, responsavel_nome, responsavel_whatsapp, whatsapp_opt_in } = editForm;
+    const phoneDigits = String(responsavel_whatsapp || "").replace(/\D/g, "");
+    if (phoneDigits && ![10, 11, 12, 13].includes(phoneDigits.length)) {
+      notify.error("Informe um WhatsApp válido com DDD (e código 55 opcional).");
+      return;
+    }
+    if (whatsapp_opt_in && (!phoneDigits || !responsavel_nome.trim())) {
+      notify.error("Para ativar avisos, preencha o nome e o número do responsável.");
+      return;
+    }
     if (!nome || !matricula || !turma_id || !escola_id) {
       notify.error("Preencha nome, matrícula, turma e escola.");
       return;
@@ -438,7 +452,13 @@ export const StudentManagement = () => {
     try {
       const { error } = await supabase
         .from("alunos")
-        .update({ nome, matricula, turma_id, escola_id, status })
+        .update({
+          nome, matricula, turma_id, escola_id, status,
+          responsavel_nome: responsavel_nome.trim() || null,
+          responsavel_whatsapp: responsavel_whatsapp.trim() || null,
+          responsavel_whatsapp_opt_in_em: null,
+          responsavel_whatsapp_opt_in_por: null,
+        })
         .eq("id", editingAluno.id);
 
       if (error) {
@@ -447,9 +467,27 @@ export const StudentManagement = () => {
         return;
       }
 
+      // Consent is recorded only after the phone update, because the DB trigger
+      // invalidates consent whenever the number is changed.
+      const consentTime = whatsapp_opt_in ? new Date().toISOString() : null;
+      if (whatsapp_opt_in) {
+        const { error: consentError } = await supabase.from("alunos")
+          .update({ responsavel_whatsapp_opt_in_em: consentTime, responsavel_whatsapp_opt_in_por: user?.id || null })
+          .eq("id", editingAluno.id);
+        if (consentError) {
+          notify.error("Dados salvos, mas não foi possível registrar a autorização do WhatsApp.");
+          return;
+        }
+      }
       setAlunos((prev) =>
         prev.map((aluno) =>
-          aluno.id === editingAluno.id ? { ...aluno, nome, matricula, turma_id, escola_id, status } : aluno,
+          aluno.id === editingAluno.id ? {
+            ...aluno, nome, matricula, turma_id, escola_id, status,
+            responsavel_nome: responsavel_nome.trim() || null,
+            responsavel_whatsapp: responsavel_whatsapp.trim() || null,
+            responsavel_whatsapp_opt_in_em: consentTime,
+            responsavel_whatsapp_opt_in_por: whatsapp_opt_in ? user?.id || null : null,
+          } : aluno,
         ),
       );
       setEditModalOpen(false);
@@ -533,7 +571,7 @@ export const StudentManagement = () => {
         const turmasQuery = supabase.from("turmas").select("id, nome, escola_id").order("nome", { ascending: true });
         const alunosQuery = supabase
           .from("alunos")
-          .select("id, nome, matricula, turma_id, escola_id, status")
+          .select("id, nome, matricula, turma_id, escola_id, status, responsavel_nome, responsavel_whatsapp, responsavel_whatsapp_opt_in_em")
           .order("nome", { ascending: true });
 
         if (user?.role_id !== 1 && user?.escola_id) {
@@ -853,6 +891,37 @@ export const StudentManagement = () => {
                 ]}
                 placeholder="Selecione o status"
               />
+
+              <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                <p className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">Avisos por WhatsApp aos responsáveis</p>
+                <div className="space-y-3">
+                  <FormInput
+                    label="Nome do responsável"
+                    value={editForm.responsavel_nome}
+                    onChange={(e) => setEditForm((p) => ({ ...p, responsavel_nome: e.target.value }))}
+                  />
+                  <FormInput
+                    label="WhatsApp do responsável (com DDD)"
+                    type="tel"
+                    placeholder="(88) 99999-9999"
+                    value={editForm.responsavel_whatsapp}
+                    onChange={(e) => setEditForm((p) => ({ ...p, responsavel_whatsapp: e.target.value, whatsapp_opt_in: false }))}
+                  />
+                  <label className="flex cursor-pointer items-start gap-3 text-sm leading-5 text-slate-700 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4 rounded accent-green-700"
+                      checked={editForm.whatsapp_opt_in}
+                      onChange={(e) => setEditForm((p) => ({ ...p, whatsapp_opt_in: e.target.checked }))}
+                    />
+                    <span>Confirmo que o responsável autorizou o recebimento de avisos escolares neste número de WhatsApp. Posso apresentar o registro dessa autorização.</span>
+                  </label>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Sem autorização, nenhum aviso automático será enviado. Alterar o telefone exige nova autorização.
+                    O envio também depende da ativação oficial pela escola.
+                  </p>
+                </div>
+              </div>
 
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => { setEditModalOpen(false); setEditingAluno(null); setEditForm(null); }}>

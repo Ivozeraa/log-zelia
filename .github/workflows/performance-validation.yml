@@ -1,0 +1,35 @@
+name: Performance changes validation
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "supabase/migrations/**"
+      - "vite.config.js"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/performance-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # O lockfile existente na main está incompleto em relação ao package.json.
+      # Instala sem gravar lockfile para validar o código sem false-negative.
+      - name: Install dependencies for build validation
+        run: npm install --no-audit --no-fund --package-lock=false
+      - name: Production bundle
+        run: npm run build

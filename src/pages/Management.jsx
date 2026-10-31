@@ -8,8 +8,6 @@ import { notify } from "../utils/notify";
 import { Button } from "../components/ui/Button";
 import { CustomSelect } from "../components/ui/CustomSelect";
 import { Modal } from "../components/ui/Modal";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 
 import { PageTitle } from "../components/ui/PageTitle";
 import { FormInput } from "../components/ui/FormInput";
@@ -85,7 +83,7 @@ export const Management = () => {
 
       let usersQuery = supabase
         .from("usuarios")
-        .select("*")
+        .select("id, nome, email, role_id, escola_id, pdt, created_at")
         .order("nome", { ascending: true });
 
       if (user.role_id !== 1 && user.escola_id) {
@@ -94,7 +92,7 @@ export const Management = () => {
 
       const schoolsQuery = supabase
         .from("escolas")
-        .select("*")
+        .select("id, nome, cidade, ativo")
         .order("nome", { ascending: true });
 
       if (user.role_id !== 1 && user.escola_id) {
@@ -372,6 +370,10 @@ export const Management = () => {
 
   async function handleExportPDF() {
     try {
+      const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
       const doc = new jsPDF();
 
       doc.setFontSize(18);

@@ -1,0 +1,42 @@
+/* Efeitos de interação discretos apenas no Portal do Aluno. */
+.student-portal button,
+.student-portal a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.student-portal button svg,
+.student-portal a svg {
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+.student-portal button:active,
+.student-portal a:active {
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.student-portal button:focus:not(:focus-visible),
+.student-portal a:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none !important;
+}
+
+.student-portal button:focus-visible,
+.student-portal a:focus-visible {
+  outline: 2px solid rgba(22, 163, 74, 0.45);
+  outline-offset: 2px;
+}
+
+.student-portal .student-soft-input:focus {
+  border-color: #16a34a !important;
+  box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.18) !important;
+}
+
+.student-portal .student-soft-input:focus:not(:focus-visible) {
+  box-shadow: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .student-portal svg { transition: none !important; }
+}

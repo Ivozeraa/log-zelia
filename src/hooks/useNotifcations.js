@@ -18,7 +18,7 @@ export const useNotificacoes = () => {
 
     const query = supabase
       .from("notificacoes")
-      .select("*")
+      .select("id, mensagem, lida, aluno_id, criado_em, escola_id, usuario_id")
       .order("criado_em", { ascending: false })
       .limit(30);
 
@@ -29,7 +29,7 @@ export const useNotificacoes = () => {
     const { data } = await query;
     setNotificacoes(data || []);
     setLoading(false);
-  }, [user]);
+  }, [user?.id, user?.escola_id, user?.role_id]);
 
   useEffect(() => {
     carregar();
@@ -74,7 +74,7 @@ export const useNotificacoes = () => {
       .subscribe();
 
     return () => supabase.removeChannel(channel);
-  }, [user]);
+  }, [user?.id, user?.escola_id, user?.role_id]);
 
   // Marca uma notificação como lida
   const marcarComoLida = useCallback(async (id) => {
