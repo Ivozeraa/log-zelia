@@ -3,12 +3,13 @@ import { Link } from "react-router-dom";
 import {
   FaArrowLeft, FaBookOpen, FaCalendarAlt, FaCheckCircle,
   FaExclamationCircle, FaFilter, FaGraduationCap,
-  FaLock, FaPrint, FaSearch, FaSyncAlt, FaUserTie
+  FaEnvelope, FaLock, FaPrint, FaSearch, FaSyncAlt, FaUserTie
 } from "react-icons/fa";
 import logo from "../assets/images/logo.png";
 import { PublicThemeToggle } from "../components/ui/PublicThemeToggle";
 import { CustomSelect } from "../components/ui/CustomSelect";
 import { StudentActionsMenu } from "../components/student/StudentActionsMenu";
+import { StudentEmailSettings } from "../components/student/StudentEmailSettings";
 
 const categoryLabels = { ocorrencia: "Ocorrência", suspensao: "Suspensão" };
 const typeLabels = {
@@ -88,11 +89,12 @@ function PasswordSettings({ onChangePassword }) {
   );
 }
 
-export function StudentDashboard({ result, onNewConsultation, onRefresh, onChangePassword }) {
+export function StudentDashboard({ result, onNewConsultation, onRefresh, onChangePassword, onEmailAction }) {
   const [category, setCategory] = useState("all");
   const [period, setPeriod] = useState("all");
   const [query, setQuery] = useState("");
   const [showPasswordSettings, setShowPasswordSettings] = useState(false);
+  const [showEmailSettings, setShowEmailSettings] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState("");
@@ -149,6 +151,10 @@ export function StudentDashboard({ result, onNewConsultation, onRefresh, onChang
                 setShowGuide(true);
                 window.setTimeout(() => document.getElementById("student-guide")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
               }}
+              onEmail={() => {
+                setShowEmailSettings(true);
+                window.setTimeout(() => document.getElementById("student-email")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+              }}
               onExit={onNewConsultation}
               refreshing={refreshing}
             />
@@ -180,9 +186,11 @@ export function StudentDashboard({ result, onNewConsultation, onRefresh, onChang
           <button className={buttonStyle} type="button" disabled={refreshing} onClick={refresh}><FaSyncAlt aria-hidden="true" className={refreshing ? "animate-spin" : ""} /> {refreshing ? "Atualizando..." : "Atualizar histórico"}</button>
           <button className={buttonStyle} type="button" onClick={() => window.print()}><FaPrint /> Imprimir / salvar PDF</button>
           <button className={buttonStyle} type="button" aria-expanded={showPasswordSettings} onClick={() => setShowPasswordSettings(value => !value)}><FaLock /> Alterar senha</button>
+          <button className={buttonStyle} type="button" aria-expanded={showEmailSettings} onClick={() => setShowEmailSettings(value => !value)}><FaEnvelope /> E-mail de recuperação</button>
         </div>
         {refreshError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300 print:hidden">{refreshError}</p>}
         {showPasswordSettings && <PasswordSettings onChangePassword={onChangePassword} />}
+        {showEmailSettings && <StudentEmailSettings onEmailAction={onEmailAction} />}
         <section id="student-history" className="mt-9 scroll-mt-20">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div><h2 className="text-xl font-bold">Histórico de registros</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Consulte seus registros, tipos e datas.</p></div>

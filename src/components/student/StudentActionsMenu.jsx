@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  FaBars, FaBookOpen, FaChevronDown, FaHome, FaLock, FaPrint,
+  FaBars, FaBookOpen, FaChevronDown, FaEnvelope, FaHome, FaLock, FaPrint,
   FaQuestionCircle, FaSignOutAlt, FaSyncAlt
 } from "react-icons/fa";
 
 export function StudentActionsMenu({
-  onOverview, onHistory, onRefresh, onPrint, onSecurity, onHelp, onExit, refreshing
+  onOverview, onHistory, onRefresh, onPrint, onSecurity, onEmail, onHelp, onExit, refreshing
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
@@ -42,6 +42,7 @@ export function StudentActionsMenu({
     { label: "Atualizar histórico", icon: FaSyncAlt, action: onRefresh, disabled: refreshing },
     { label: "Imprimir / salvar PDF", icon: FaPrint, action: onPrint },
     { label: "Segurança da conta", icon: FaLock, action: onSecurity },
+    { label: "E-mail de recuperação", icon: FaEnvelope, action: onEmail },
     { label: "Orientações", icon: FaQuestionCircle, action: onHelp },
     { label: "Sair do painel", icon: FaSignOutAlt, action: onExit, danger: true },
   ];
