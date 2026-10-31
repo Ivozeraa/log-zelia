@@ -34,7 +34,7 @@ export function StudentEmailSettings({ onEmailAction }) {
     try {
       const result = await onEmailAction("confirmar_solicitar", { email: email.trim() });
       setNotice(result.message || "Código solicitado.");
-      setPending(true);
+      setPending(!result.ja_confirmado && !String(result.message || "").includes("já está confirmado"));
     } catch (err) { setNotice(err.message); setFailed(true); }
     finally { setBusy(false); }
   };
